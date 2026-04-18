@@ -18,17 +18,11 @@
     <!-- Button that shows/hides the note form -->
     <button class="btn-new-note" onclick="toggleForm()">+ Skapa anteckning</button>
 
-    <!-- Note form — hidden by default, shown when button is clicked -->
+    <!-- Note form -->
     <section class="note-form-section" id="noteForm" style="display:none;">
       <h2>Ny anteckning</h2>
       <form method="POST" action="/notes" class="note-form">
-        <textarea
-          name="content"
-          placeholder="Skriv din anteckning här..."
-          rows="5"
-          required
-          autofocus
-        ></textarea>
+        <textarea name="content" placeholder="Skriv din anteckning här..." rows="5" required autofocus></textarea>
         <div class="form-actions">
           <button type="submit">Spara</button>
           <button type="button" class="btn-cancel" onclick="toggleForm()">Avbryt</button>
@@ -39,11 +33,9 @@
     <!-- Notes list -->
     <section class="notes-section">
       <h2>Mina anteckningar</h2>
-
       <% if (notes.length === 0) { %>
         <p class="empty">Du har inga anteckningar ännu. Klicka på "Skapa anteckning" för att börja.</p>
       <% } %>
-
       <div class="notes-grid">
         <% notes.forEach(function(note) { %>
           <div class="note-card">
@@ -61,10 +53,146 @@
 
   </div>
 
+  <!-- ── Chat bubble ───────────────────────────────────────────────────── -->
+
+  <!-- The round button in the bottom-right corner -->
+  <button class="chat-bubble" id="chatBubble" onclick="toggleChat()" title="Chatta med Alex">
+    <svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" fill="white" viewBox="0 0 24 24">
+      <path d="M20 2H4a2 2 0 0 0-2 2v18l4-4h14a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2z"/>
+    </svg>
+  </button>
+
+  <!-- Chat window (hidden by default) -->
+  <div class="chat-window" id="chatWindow">
+    <div class="chat-header">
+      <div class="chat-header-info">
+        <div class="chat-avatar">A</div>
+        <div>
+          <strong>Alex</strong>
+          <span class="chat-status">● Online</span>
+        </div>
+      </div>
+      <button class="chat-close" onclick="toggleChat()">✕</button>
+    </div>
+
+    <div class="chat-messages" id="chatMessages">
+      <!-- Messages appear here -->
+      <div class="chat-msg assistant">
+        <p>Hej! Vad kan jag hjälpa dig med? 😊</p>
+      </div>
+    </div>
+
+    <div class="chat-input-area">
+      <textarea
+        id="chatInput"
+        placeholder="Skriv ett meddelande..."
+        rows="1"
+        onkeydown="handleKey(event)"
+      ></textarea>
+      <button onclick="sendMessage()">
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="white" viewBox="0 0 24 24">
+          <path d="M2 21l21-9L2 3v7l15 2-15 2z"/>
+        </svg>
+      </button>
+    </div>
+  </div>
+
   <script>
+    // ── Notes toggle ──────────────────────────────────────────────────────────
+
     function toggleForm() {
       const form = document.getElementById('noteForm');
       form.style.display = form.style.display === 'none' ? 'block' : 'none';
+    }
+
+    // ── Chat ──────────────────────────────────────────────────────────────────
+
+    let chatOpen = false;
+    let messages = []; // full conversation history sent to the server
+
+    function toggleChat() {
+      chatOpen = !chatOpen;
+      document.getElementById('chatWindow').classList.toggle('open', chatOpen);
+      if (chatOpen) document.getElementById('chatInput').focus();
+    }
+
+    // Send on Enter (but Shift+Enter = new line)
+    function handleKey(e) {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        sendMessage();
+      }
+    }
+
+    async function sendMessage() {
+      const input = document.getElementById('chatInput');
+      const text = input.value.trim();
+      if (!text) return;
+
+      // Show the user's message in the chat window
+      appendMessage('user', text);
+      input.value = '';
+
+      // Add to conversation history
+      messages.push({ role: 'user', content: text });
+
+      // Show a typing indicator
+      const typingId = showTyping();
+
+      try {
+        const res = await fetch('/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ messages }),
+        });
+
+        const data = await res.json();
+        removeTyping(typingId);
+
+        const reply = data.reply || data.error || 'Något gick fel.';
+        appendMessage('assistant', reply);
+
+        // Add Alex's reply to history so he remembers the conversation
+        messages.push({ role: 'assistant', content: reply });
+
+      } catch (err) {
+        removeTyping(typingId);
+        appendMessage('assistant', 'Kunde inte nå Alex just nu. Försök igen.');
+      }
+    }
+
+    function appendMessage(role, text) {
+      const box = document.getElementById('chatMessages');
+      const div = document.createElement('div');
+      div.className = `chat-msg ${role}`;
+      div.innerHTML = `<p>${escapeHtml(text)}</p>`;
+      box.appendChild(div);
+      box.scrollTop = box.scrollHeight; // scroll to bottom
+    }
+
+    function showTyping() {
+      const box = document.getElementById('chatMessages');
+      const div = document.createElement('div');
+      div.className = 'chat-msg assistant typing-indicator';
+      div.id = 'typing-' + Date.now();
+      div.innerHTML = '<p><span></span><span></span><span></span></p>';
+      box.appendChild(div);
+      box.scrollTop = box.scrollHeight;
+      return div.id;
+    }
+
+    function removeTyping(id) {
+      const el = document.getElementById(id);
+      if (el) el.remove();
+    }
+
+    // Prevent XSS — escape special characters before inserting into HTML
+    function escapeHtml(text) {
+      return text
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/\n/g, '<br>');
     }
   </script>
 </body>
