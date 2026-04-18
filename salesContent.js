@@ -475,6 +475,465 @@ const blocks = [
     ],
   },
 
+
+  // ── 9. LinkedIn & Sociala Medier ──────────────────────────────────────────
+  {
+    id: 'linkedin',
+    title: 'LinkedIn & Sociala Medier',
+    subtitle: 'Social selling — bygg relationer innan du säljer',
+    icon: '💼',
+    gradient: 'linear-gradient(135deg, #0077b5, #00a0dc)',
+    color: '#0077b5',
+    youtubeId: 'DdqZIdoGGpI',
+    theory: `
+      <h3>Vad är Social Selling?</h3>
+      <p>Social selling handlar om att använda sociala medier — primärt LinkedIn — för att hitta, förstå och bygga relationer med potentiella kunder <em>innan</em> du försöker sälja till dem. Det ersätter inte traditionell försäljning — det värmer upp den.</p>
+      <p>LinkedIn Social Selling Index (SSI) visar att säljare med högt SSI-score skapar <strong>45% fler möjligheter</strong> och är <strong>51% mer benägna att nå sina kvoter</strong>.</p>
+
+      <h3>Optimera din LinkedIn-profil</h3>
+      <p>Din LinkedIn-profil är din digitala första intryck. Den ska inte läsas som ett CV — den ska läsas som en <strong>säljsida för dig</strong>.</p>
+      <ul>
+        <li><strong>Profilbild</strong> — professionell, leende, mot neutral bakgrund. Profiler med foto får 21x fler profilvisningar.</li>
+        <li><strong>Banner/bakgrundsbild</strong> — visa vad du gör och för vem. Utnyttja det visuella utrymmet.</li>
+        <li><strong>Rubrik (Headline)</strong> — inte bara din titel. "Hjälper B2B-företag att korta säljcykeln med 40%" slår "Account Executive på Företag X".</li>
+        <li><strong>Om-sektionen</strong> — skriv i första person. Berätta vem du hjälper, vilket problem du löser och vad som driver dig.</li>
+        <li><strong>Rekommendationer</strong> — be dina bästa kunder skriva en. De är guld för trovärdighet.</li>
+      </ul>
+
+      <h3>Innehållsstrategi på LinkedIn</h3>
+      <p>Regeln är enkel: <strong>ge värde innan du ber om något.</strong> Innehåll som fungerar:</p>
+      <ul>
+        <li>Insikter från kundmöten (anonymiserat)</li>
+        <li>Lärdomar från misstag — ärlighet skapar engagemang</li>
+        <li>Branschnyheter med din analys</li>
+        <li>Case studies och resultat</li>
+        <li>Frågor som startar diskussioner</li>
+      </ul>
+      <p>Posta <strong>3–5 gånger per vecka</strong>. Konsistens bygger räckvidd. Algoritmen belönar de som stannar kvar.</p>
+
+      <h3>Outreach som fungerar</h3>
+      <p>En connection request med ett personligt meddelande är startskottet — inte säljpitchen. Formel:</p>
+      <ul>
+        <li><strong>Varför just du</strong>: "Såg din artikel om X — träffade precis rätt"</li>
+        <li><strong>Gemensam nämnare</strong>: Bransch, grupp, person ni båda känner</li>
+        <li><strong>Ingen pitch</strong>: Bygg relationen först. Sälj senare.</li>
+      </ul>
+
+      <h3>SSI — Social Selling Index</h3>
+      <p>LinkedIn mäter din social selling-aktivitet i fyra dimensioner: professionellt varumärke, rätt personer, engagera med insikter, bygga relationer. Kolla ditt SSI-score på linkedin.com/sales/ssi. Sikta på 70+.</p>
+    `,
+    quiz: [
+      { q: 'Vad innebär Social Selling?', options: ['Att sälja produkter via Instagram', 'Att bygga relationer på sociala medier innan du säljer', 'Att lägga ut rabatter på LinkedIn', 'Att köpa annonser på sociala medier'], answer: 1 },
+      { q: 'Hur många fler profilvisningar får en LinkedIn-profil med foto?', options: ['5x', '10x', '21x', '50x'], answer: 2 },
+      { q: 'Vad ska din LinkedIn-rubrik (headline) kommunicera?', options: ['Din jobbtitel och ditt företag', 'Vem du hjälper och vilket resultat du skapar', 'Hur länge du jobbat i branschen', 'Din utbildningsbakgrund'], answer: 1 },
+      { q: 'Hur ofta bör du posta på LinkedIn för bäst räckvidd?', options: ['En gång i månaden', 'Varje dag', '3–5 gånger per vecka', 'En gång i veckan'], answer: 2 },
+      { q: 'Vad ska du INTE göra i din första LinkedIn-outreach?', options: ['Presentera dig kort', 'Referera till något specifikt om personen', 'Pitcha din produkt direkt', 'Nämna en gemensam nämnare'], answer: 2 },
+      { q: 'Vad är LinkedIn SSI?', options: ['Ett certifieringsprogram', 'Ett mått på din social selling-aktivitet i fyra dimensioner', 'En betald LinkedIn-funktion', 'En typ av annons'], answer: 1 },
+      { q: 'Vilket innehåll skapar mest engagemang på LinkedIn?', options: ['Produktlanseringar och erbjudanden', 'Ärlighet om misstag och insikter från verkligheten', 'Delningar av andras artiklar', 'Jobbannonser'], answer: 1 },
+      { q: 'Vad är det viktigaste syftet med Om-sektionen på LinkedIn?', options: ['Lista alla dina arbetsgivare', 'Berätta om dina hobbies', 'Kommunicera vem du hjälper och vilket problem du löser', 'Visa dina utbildningar'], answer: 2 },
+      { q: 'Vilket SSI-score bör du sikta på?', options: ['30+', '50+', '70+', '90+'], answer: 2 },
+      { q: 'Hur många fler möjligheter skapar säljare med högt SSI jämfört med lågt?', options: ['10% fler', '25% fler', '45% fler', '90% fler'], answer: 2 },
+    ],
+  },
+
+  // ── 10. Videosamtal & Digital Försäljning ─────────────────────────────────
+  {
+    id: 'videosamtal',
+    title: 'Videosamtal & Digital Försäljning',
+    subtitle: 'Sälj lika effektivt på skärm som i rummet',
+    icon: '📹',
+    gradient: 'linear-gradient(135deg, #7c3aed, #a855f7)',
+    color: '#7c3aed',
+    youtubeId: 'lDYPN4olqxk',
+    theory: `
+      <h3>Den digitala säljrealiteten</h3>
+      <p>Mer än 70% av B2B-köpprocesser inkluderar idag minst ett videosamtal. Förmågan att sälja digitalt är inte längre en bonus — det är en kärnkompetens. Och de flesta säljare är dåliga på det, vilket ger dig en enorm fördel om du tar det på allvar.</p>
+
+      <h3>Din digitala närvaro</h3>
+      <p>På video konkurrerar du med allt kunden ser på skärmen. Du måste sticka ut positivt:</p>
+      <ul>
+        <li><strong>Belysning</strong> — naturligt ljus framifrån är bäst. En ringlampa ($20) gör en enorm skillnad. Ljus bakifrån = silhuett. Undvik det.</li>
+        <li><strong>Kamera i ögonhöjd</strong> — en laptop på ett bord ger underifrånperspektiv. Höj datorn. Det signalerar auktoritet och närvaro.</li>
+        <li><strong>Bakgrund</strong> — ren, professionell. En bokhylla fungerar. En rörig sovrum gör det inte.</li>
+        <li><strong>Ljud</strong> — ett headset med mikrofon eliminerar eko och omgivningsljud. Dåligt ljud dödar ett möte snabbare än dålig video.</li>
+        <li><strong>Kläder</strong> — klä dig som du skulle till ett fysiskt möte. Överklänning (från midjan upp) påverkar hur du uppfattas.</li>
+      </ul>
+
+      <h3>Digital kroppsspråk</h3>
+      <p>Kroppsspråk på video är annorlunda än fysiskt:</p>
+      <ul>
+        <li><strong>Titta i kameran</strong> — inte på skärmen. Det ger ögonkontakt. Sätt ett litet papper bredvid kameran om du behöver en påminnelse.</li>
+        <li><strong>Sitt upprätt</strong> — lutad bakåt kommunicerar ointresse. Lite framåtlutad = engagemang.</li>
+        <li><strong>Nicka och reagera</strong> — på video syns passivitet tydligare. Visa aktivt att du lyssnar.</li>
+        <li><strong>Pauser</strong> — video skapar fördröjningar. Ge kunden lite mer tid att svara. Undvik att prata i mun på dem.</li>
+      </ul>
+
+      <h3>Strukturera videosamtalet</h3>
+      <ul>
+        <li><strong>De första 60 sekunderna</strong>: Småprat, men kort. Validera att ni är ensamma ("Är det bara vi?").</li>
+        <li><strong>Sätt agendan</strong>: "Jag tänkte vi gör så här — 5 min om er situation, 15 min demo, 10 min frågor. Låter det bra?"</li>
+        <li><strong>Dela skärm strategiskt</strong>: Visa bara när det tillför värde. Kameran är din starkaste kanal.</li>
+        <li><strong>Avsluta med konkreta nästa steg</strong>: Boka nästa möte direkt i samtalet — inte via e-post efteråt.</li>
+      </ul>
+
+      <h3>Tekniska problem — hantera dem med klass</h3>
+      <p>Tekniska problem händer alla. Hur du hanterar dem avslöjar din professionalism. Ha alltid: telefonuppringning som backup, länken klar att skicka igen, mötet sparad i kalender. Säg lugnt: "Tekniken var emot oss — låt mig skicka en ny länk direkt."</p>
+    `,
+    quiz: [
+      { q: 'Hur stor andel av B2B-köpprocesser inkluderar idag ett videosamtal?', options: ['30%', '50%', '70%+', '90%'], answer: 2 },
+      { q: 'Var ska kameran befinna sig för bäst närvaro?', options: ['Nedanför ansiktet', 'I ögonhöjd', 'Ovanför ansiktet', 'Spelar ingen roll'], answer: 1 },
+      { q: 'Varför är ljud viktigare än video i ett säljsamtal?', options: ['Det är det inte — video är viktigast', 'Dåligt ljud dödar ett möte snabbare än dålig video', 'Kunder stänger av videon men lyssnar alltid', 'Ljud är lättare att fixa'], answer: 1 },
+      { q: 'Var ska du titta under ett videosamtal?', options: ['På kunden på skärmen', 'I kameran', 'På dina anteckningar', 'Det spelar ingen roll'], answer: 1 },
+      { q: 'Vad är det rätta sättet att hantera ett tekniskt problem under ett säljmöte?', options: ['Avbryt mötet och kontakta kunden dagen efter', 'Bli stressad och be om ursäkt upprepade gånger', 'Hantera det lugnt och ha en backup-plan redo', 'Skylla på kundens teknik'], answer: 2 },
+      { q: 'Varför bör du sätta en agenda i början av ett videosamtal?', options: ['Det är ett krav för alla möten', 'Det skapar struktur och ger kunden trygghet', 'Det gör mötet längre', 'Det imponerar alltid på kunden'], answer: 1 },
+      { q: 'Vilken belysning är bäst för videosamtal?', options: ['Starkt ljus bakom dig', 'Naturligt ljus framifrån', 'Taklampan i rummet', 'Inget extra ljus behövs'], answer: 1 },
+      { q: 'När bör du boka nästa steg efter ett videosamtal?', options: ['Via e-post dagen efter', 'I slutet av samtalet — direkt', 'Ge kunden tid att tänka', 'När kunden hör av sig'], answer: 1 },
+      { q: 'Hur ska du sitta under ett videosamtal?', options: ['Bekvämt lutad bakåt', 'Upprätt, lätt framåtlutad', 'Spelar ingen roll', 'Stå upp för bäst energi'], answer: 1 },
+      { q: 'Varför ska du dela skärm strategiskt och inte hela tiden?', options: ['Det är tekniskt svårt', 'Kameran är din starkaste kanal — skärmdelning tar fokus från dig', 'Kunder vill inte se skärm', 'Det är dålig etikett'], answer: 1 },
+    ],
+  },
+
+  // ── 11. E-post & Skriftlig Kommunikation ──────────────────────────────────
+  {
+    id: 'epost',
+    title: 'E-post & Skriftlig Kommunikation',
+    subtitle: 'Ord som öppnas, läses och svaras på',
+    icon: '✉️',
+    gradient: 'linear-gradient(135deg, #0891b2, #0e7490)',
+    color: '#0891b2',
+    youtubeId: 'TlahSKEhFQY',
+    theory: `
+      <h3>Verkligheten om säljmail</h3>
+      <p>Den genomsnittliga öppningsraten för cold email är <strong>21%</strong>. Svarsraten är <strong>1–5%</strong>. Men toppsäljare når konsekvent 40–60% öppningsrater och 15–25% svarsrater. Skillnaden är inte tur — det är teknik.</p>
+
+      <h3>Ämnesraden — allt börjar här</h3>
+      <p>Om ämnesraden inte fångar uppmärksamhet spelar resten ingen roll. Principer:</p>
+      <ul>
+        <li><strong>Kort</strong> — max 6–8 ord. Mobilen visar de första 40 tecknen.</li>
+        <li><strong>Personlig</strong> — använd deras namn, företag eller en specifik detalj.</li>
+        <li><strong>Nyfiken eller värde</strong> — "Hur [Företag X] kan spara 3h/dag" slår "Information om vår tjänst"</li>
+        <li><strong>Undvik</strong>: stora bokstäver, utropstecken, "GRATIS", "Exklusivt erbjudande"</li>
+      </ul>
+
+      <h3>Mailstruktur: AIDA</h3>
+      <ul>
+        <li><strong>A — Attention (uppmärksamhet)</strong>: Öppna med något specifikt om dem. "Såg att ni expanderar till Norge..."</li>
+        <li><strong>I — Interest (intresse)</strong>: Koppla till ett relevant problem de troligtvis har.</li>
+        <li><strong>D — Desire (begär)</strong>: Visa värdet kort. En mening. Inte en roman.</li>
+        <li><strong>A — Action (handling)</strong>: En tydlig, enkel CTA. "Har du 15 min på torsdag?"</li>
+      </ul>
+
+      <h3>Kortkort-regeln</h3>
+      <p>Ett säljmail ska vara <strong>max 5–7 meningar</strong>. Om du behöver mer för att förklara din produkt är produkten för komplicerad — eller din positionering för svag. Respektera mottagarens tid.</p>
+
+      <h3>Uppföljningsmailens struktur</h3>
+      <p>De flesta svar kommer på uppföljning nr 2–4. Varje uppföljning ska:</p>
+      <ul>
+        <li>Referera till föregående mail kort ("Hörde av mig förra veckan...")</li>
+        <li>Tillföra ett nytt värde (ny insikt, case study, relevant artikel)</li>
+        <li>Inte öka pressen — minska den ("Förstår om tajmingen är fel")</li>
+      </ul>
+
+      <h3>Det sista mailet — break-up mail</h3>
+      <p>Om ingen svarar efter 4–5 försök, skicka ett "break-up mail": "Det verkar som tajmingen inte är rätt. Jag hör inte av mig mer — men om något förändras, vet du var jag finns." Paradoxalt nog svarar 10–20% på detta mail.</p>
+    `,
+    quiz: [
+      { q: 'Vad är den genomsnittliga svarsraten för cold email?', options: ['10–15%', '1–5%', '20–25%', '30%+'], answer: 1 },
+      { q: 'Hur lång bör en ämnesrad vara?', options: ['Max 3 ord', 'Max 6–8 ord', 'Max 15 ord', 'Längd spelar ingen roll'], answer: 1 },
+      { q: 'Vad står "A" för i slutet av AIDA-modellen?', options: ['Avslut', 'Attention', 'Action — en tydlig uppmaning till handling', 'Analys'], answer: 2 },
+      { q: 'Hur långt bör ett kallt säljmail vara?', options: ['Så detaljerat som möjligt', 'Max 5–7 meningar', 'Minst en hel A4-sida', '2–3 stycken med listor'], answer: 1 },
+      { q: 'Vad ska varje uppföljningsmail tillföra?', options: ['Samma budskap som förra mailet', 'Mer press och urgency', 'Ett nytt värde — insikt, case study eller relevant info', 'En rabatt'], answer: 2 },
+      { q: 'Vad är ett "break-up mail"?', options: ['Ett mail om att avsluta kontraktet', 'Ett sista mail som säger att du inte hör av dig mer — som paradoxalt genererar svar', 'Ett avskedsmejl till en kund', 'Ett mail med ett sista erbjudande'], answer: 1 },
+      { q: 'Vilket ämnesradsformat fungerar bäst?', options: ['STOR BOKSTAV + UTROPSTECKEN', 'Personlig och specifik med tydligt värde', 'Lång och detaljerad', 'Alltid en fråga'], answer: 1 },
+      { q: 'På vilket uppföljningsmailnummer kommer de flesta svar?', options: ['Nr 1 — första mailet', 'Nr 2–4', 'Nr 6–8', 'Svar kommer aldrig på uppföljningar'], answer: 1 },
+      { q: 'Vad ska det första stycket i ett cold email handla om?', options: ['Din produkt och dess fördelar', 'Ditt företag och historia', 'Något specifikt och relevant om mottagaren', 'Priset på din tjänst'], answer: 2 },
+      { q: 'Vilken CTA (call-to-action) fungerar bäst i ett säljmail?', options: ['"Hör av dig om du är intresserad"', '"Klicka här för mer info"', '"Har du 15 min på torsdag?"', '"Vänligen återkom snarast"'], answer: 2 },
+    ],
+  },
+
+  // ── 12. Förhandling ───────────────────────────────────────────────────────
+  {
+    id: 'forhandling',
+    title: 'Förhandling',
+    subtitle: 'Förhandla värde — inte bara pris',
+    icon: '🤜',
+    gradient: 'linear-gradient(135deg, #b45309, #d97706)',
+    color: '#d97706',
+    youtubeId: 'MXW0bx_Ooq4',
+    theory: `
+      <h3>Förhandling är inte krig</h3>
+      <p>De flesta ser förhandling som ett nollsummespel — en vinner, en förlorar. Det är fel ramverk. Den bästa förhandlingen skapar ett avtal där båda parter känner att de fick det de behövde. Det kallas <strong>principled negotiation</strong> (Harvard Negotiation Project).</p>
+
+      <h3>BATNA — din förhandlingsstyrka</h3>
+      <p>BATNA = Best Alternative To a Negotiated Agreement. Det är vad du gör om förhandlingen misslyckas. Din BATNA avgör din styrka:</p>
+      <ul>
+        <li><strong>Stark BATNA</strong>: Du har andra alternativ. Du kan gå därifrån. Det ger dig frihet att hålla dina villkor.</li>
+        <li><strong>Svag BATNA</strong>: Du behöver den här affären. Det skapar desperation — och kunden känner det.</li>
+      </ul>
+      <p>Bygg alltid fler alternativ i din pipeline. Det är din bästa förhandlingsstrategi.</p>
+
+      <h3>Anchoring — ankaret</h3>
+      <p>Den som nämner ett nummer först sätter ankaret för förhandlingen. Forskning visar att det slutliga priset tenderar att vara nära det första ankaret.</p>
+      <ul>
+        <li>Om kunden ber om pris — ge ditt fullpris, inte ett rabatterat.</li>
+        <li>Om kunden ankar lågt — kommentera det ("Det är långt ifrån vad vi jobbar med") innan du ger ditt nummer.</li>
+      </ul>
+
+      <h3>Chris Voss: Taktisk empati</h3>
+      <p>FBI:s f.d. chefförhandlare Chris Voss lär ut att empati är det kraftfullaste förhandlingsverktyget. Tekniker:</p>
+      <ul>
+        <li><strong>Mirroring</strong>: Repetera de sista 1–3 orden. Kunden utvecklar spontant.</li>
+        <li><strong>Labeling</strong>: "Det verkar som att priset är en känslig fråga för er." Bekräftelse disarmar motstånd.</li>
+        <li><strong>"Nej" är ett bra svar</strong>: "Nej" ger kunden kontroll och öppnar faktisk dialog.</li>
+      </ul>
+
+      <h3>Ge aldrig en rabatt utan att ta något</h3>
+      <p>Varje gång du ger något — ge det villkorligt. "Om ni kan bestämma er den här veckan, kan vi se vad vi kan göra på priset." Att ge rabatt utan villkor underminerar värdet och signalerar desperation.</p>
+      <p>Alternativ till prissänkning: kortare avtalstid, enklare implementering, reducerade features — inte lägre pris.</p>
+    `,
+    quiz: [
+      { q: 'Vad är BATNA?', options: ['En förhandlingsteknik för att sänka priset', 'Ditt bästa alternativ om förhandlingen misslyckas', 'En metod för att hantera invändningar', 'En typ av avslutsstrategi'], answer: 1 },
+      { q: 'Vad är "anchoring" i en prisförhandling?', options: ['Att hålla fast vid ditt pris', 'Att den som nämner ett nummer först sätter referenspunkten', 'Att be kunden föreslå ett pris', 'Att ge ett lägre pris för att starta förhandlingen'], answer: 1 },
+      { q: 'Vad är principled negotiation?', options: ['Att alltid hålla ditt ursprungspris', 'Att förhandla så att båda parter känner sig nöjda', 'Att vinna förhandlingen till varje pris', 'Att undvika förhandling helt'], answer: 1 },
+      { q: 'Vad är Chris Voss mest känd för?', options: ['SPIN Selling', 'Taktisk empati och FBI-förhandlingstekniker', 'BATNA-modellen', 'The Challenger Sale'], answer: 1 },
+      { q: 'Vad innebär "Labeling" enligt Chris Voss?', options: ['Att märka upp alla dina argument', 'Att verbalt bekräfta kundens känsla — "Det verkar som..."', 'Att lista alla produktens features', 'Att namnge din förhandlingsstrategi'], answer: 1 },
+      { q: 'Varför bör du aldrig ge rabatt utan villkor?', options: ['Det är olagligt', 'Det underminerar värdet och signalerar desperation', 'Kunder gillar inte rabatter', 'Det minskar din provision'], answer: 1 },
+      { q: 'Vad bör du göra om kunden ankar med ett lågt pris?', options: ['Acceptera och förhandla därifrån', 'Tacka nej direkt', 'Kommentera att det är långt från er nivå innan du ger ditt pris', 'Ge ett ännu lägre pris'], answer: 2 },
+      { q: 'Varför är en stark BATNA viktig?', options: ['Den gör att du aldrig behöver kompromissa', 'Den ger dig frihet att hålla dina villkor utan desperation', 'Den garanterar att du vinner förhandlingen', 'Den gör att kunden alltid accepterar ditt pris'], answer: 1 },
+      { q: 'Vad är "mirroring" i Voss-modellen?', options: ['Att spegla kundens kroppsspråk', 'Att repetera de sista 1–3 orden kunden sa för att de ska utveckla', 'Att visa kunden en presentation', 'Att matcha kundens tonläge'], answer: 1 },
+      { q: 'Vilka alternativ till prissänkning kan du erbjuda?', options: ['Det finns inga alternativ till prissänkning', 'Kortare avtalstid, enklare implementering eller reducerade features', 'Alltid mer service', 'Längre betalningsplan'], answer: 1 },
+    ],
+  },
+
+  // ── 13. Personligt Varumärke ──────────────────────────────────────────────
+  {
+    id: 'personligt-varumarke',
+    title: 'Personligt Varumärke',
+    subtitle: 'Bli känd, gillad och anlitad — i rätt ordning',
+    icon: '⭐',
+    gradient: 'linear-gradient(135deg, #db2777, #be185d)',
+    color: '#db2777',
+    youtubeId: 'ZXsQAXx_ao0',
+    theory: `
+      <h3>Vad är ett personligt varumärke?</h3>
+      <p>Ditt personliga varumärke är vad folk säger om dig när du inte är i rummet. Det är ryktet, expertisen och energin du förknippas med. I en värld där kunder googlar dig innan de svarar på ditt samtal — är ditt personliga varumärke din dörroppnare.</p>
+      <p>Jeff Bezos: "Ditt varumärke är vad andra säger om dig när du inte är i rummet."</p>
+
+      <h3>Definiera din nisch</h3>
+      <p>Det vanligaste misstaget: försöka appellera till alla. Resultatet: du appellerar till ingen. En stark positionering kräver att du väljer:</p>
+      <ul>
+        <li><strong>Vem</strong> du hjälper (specifik målgrupp)</li>
+        <li><strong>Vilket problem</strong> du löser (specifikt pain point)</li>
+        <li><strong>Hur</strong> du löser det annorlunda (din unika metod)</li>
+      </ul>
+      <p>Exempel: "Jag hjälper SaaS-startups att strukturera sin första säljprocess" är starkare än "Jag hjälper företag att sälja mer".</p>
+
+      <h3>Thought Leadership — bli experten</h3>
+      <p>Thought leadership innebär att du delar insikter och perspektiv som positionerar dig som en auktoritet i din nisch. Det är inte skryt — det är service.</p>
+      <ul>
+        <li>Skriv om vad du lär dig, inte bara vad du kan</li>
+        <li>Ta ställning — neutrala åsikter glöms direkt</li>
+        <li>Vara konsistent — varumärken byggs över månader, inte dagar</li>
+        <li>Engagera dig i andras innehåll — kommentera med värde</li>
+      </ul>
+
+      <h3>Konsistens > Perfektion</h3>
+      <p>De flesta väntar på att deras innehåll ska vara perfekt. Resultatet: de publicerar aldrig. En okej post som publiceras slår en perfekt post som aldrig skickas. Bygg vanan, förbättra kvaliteten längs vägen.</p>
+
+      <h3>Offline-varumärke</h3>
+      <p>Ditt varumärke byggs inte bara online. Hur du uppträder på möten, hur du följer upp, hur du behandlar folk som inte kan ge dig något direkt — det är ditt verkliga varumärke. Nätverk är det sammanlagda intrycket av varje interaktion.</p>
+    `,
+    quiz: [
+      { q: 'Vad är ett personligt varumärke?', options: ['Din logga och dina visitkort', 'Vad folk säger om dig när du inte är i rummet', 'Din LinkedIn-profil', 'Ditt CV'], answer: 1 },
+      { q: 'Vad är det vanligaste misstaget i personlig positionering?', options: ['Att vara för specifik', 'Att försöka appellera till alla och därmed ingen', 'Att publicera för ofta', 'Att ha ett för smalt nätverk'], answer: 1 },
+      { q: 'Vad är Thought Leadership?', options: ['Att ha en chefsroll', 'Att dela insikter som positionerar dig som auktoritet i din nisch', 'Att ha många följare', 'Att skriva långa artiklar'], answer: 1 },
+      { q: 'Vad definierar Jeff Bezos som ditt varumärke?', options: ['Din omsättning och tillväxt', 'Vad andra säger om dig när du inte är i rummet', 'Din produktkvalitet', 'Din marknadsföring'], answer: 1 },
+      { q: 'Vad är viktigare — konsistens eller perfektion i innehållsskapande?', options: ['Perfektion — kvalitet är allt', 'Konsistens — en okej post som publiceras slår en perfekt som aldrig skickas', 'Det beror på plattformen', 'De är lika viktiga'], answer: 1 },
+      { q: 'Hur bör du kommentera andras LinkedIn-innehåll för att stärka ditt varumärke?', options: ['Kort och artigt: "Bra post!"', 'Med ett eget perspektiv och värde', 'Aldrig — fokusera på ditt eget innehåll', 'Bara om du håller med'], answer: 1 },
+      { q: 'Vad innebär att "ta ställning" i thought leadership?', options: ['Att argumentera med alla', 'Att ha och kommunicera ett tydligt perspektiv — neutralitet glöms', 'Att kritisera konkurrenter', 'Att dela politiska åsikter'], answer: 1 },
+      { q: 'Varför är offline-beteende en del av ditt varumärke?', options: ['Det är det inte — varumärke är digitalt', 'Hur du behandlar folk i alla lägen bygger det verkliga ryktet', 'Offline-möten är föråldrade', 'Bara i B2C-branscher'], answer: 1 },
+      { q: 'Vad är en stark nischpositionering?', options: ['Bred — hjälpa alla typer av kunder', 'Specifik målgrupp + specifikt problem + unik metod', 'Fokus på lägst pris i marknaden', 'Störst möjliga geografisk täckning'], answer: 1 },
+      { q: 'Hur länge tar det att bygga ett starkt personligt varumärke?', options: ['Några dagar med rätt innehåll', 'En vecka med viral post', 'Månader av konsistent aktivitet', 'Det går inte att bygga avsiktligt'], answer: 2 },
+    ],
+  },
+
+  // ── 14. Träning & Hälsa ───────────────────────────────────────────────────
+  {
+    id: 'traning-halsa',
+    title: 'Träning & Hälsa',
+    subtitle: 'Din kropp är ditt viktigaste säljverktyg',
+    icon: '💪',
+    gradient: 'linear-gradient(135deg, #16a34a, #15803d)',
+    color: '#16a34a',
+    youtubeId: 'V1bFr2SWP1I',
+    theory: `
+      <h3>Prestation börjar med kroppen</h3>
+      <p>En säljare är en kognitiv atlet. Du fattar beslut, hanterar stress, läser av folk och håller energin uppe — hela dagen, varje dag. Din fysiska kondition avgör din mentala skärpa, emotionella reglering och uthållighet under press.</p>
+      <p>Forskning från Harvard Business Review: toppresterande chefer och säljare är signifikant mer fysiskt aktiva än genomsnittet. Det är inte en slump.</p>
+
+      <h3>Träningens effekt på säljprestation</h3>
+      <ul>
+        <li><strong>Fokus</strong> — regelbunden träning ökar koncentrationsförmågan med upp till 20%</li>
+        <li><strong>Stresshantering</strong> — träning sänker kortisolnivåer och ökar toleransen för press</li>
+        <li><strong>Energi</strong> — paradoxalt ökar träning energin snarare än att tömma den</li>
+        <li><strong>Sömn</strong> — aktiva människor sover djupare och är mer utvilade</li>
+        <li><strong>Självförtroende</strong> — att hålla löften till sig själv bygger mentalt kapital</li>
+      </ul>
+
+      <h3>Sömnens roll</h3>
+      <p>Matthew Walker (Why We Sleep): efter 17–19 timmars vakenhet presterar du kognitivt som om du vore berusad. De flesta säljare underskattar dramatiskt sömnens effekt på deras resultat.</p>
+      <ul>
+        <li>Sov 7–9 timmar — det är inte lathet, det är prestation</li>
+        <li>Konsistent sömnschema — gå upp samma tid varje dag</li>
+        <li>Undvik skärmar 30–60 min före sömn</li>
+        <li>Svalt, mörkt rum — optimerar sömnkvaliteten</li>
+      </ul>
+
+      <h3>Energihantering under dagen</h3>
+      <p>Du har inte oändlig kognitiv energi. Tony Schwartz (The Power of Full Engagement) visar att prestation handlar om energihantering, inte tidshantering.</p>
+      <ul>
+        <li><strong>Morgon</strong> — din skärpaste tid. Lägg de viktigaste säljsamtalen här.</li>
+        <li><strong>Efter lunch</strong> — energidipp. Lägg administrativa uppgifter.</li>
+        <li><strong>Sen eftermiddag</strong> — andra topp. Bra för möten och uppföljningar.</li>
+      </ul>
+      <p>Ta mikropausar var 90:e minut. 5 minuter promenad återställer fokus.</p>
+
+      <h3>Kost och hydrering</h3>
+      <p>Hjärnan är 73% vatten. Mild dehydrering (1–2%) sänker kognitiv prestation med upp till 20%. Drick vatten — hela dagen. Undvik sockerruschen som följs av energidipp. Prioritera protein och komplexa kolhydrater för stabilt blodsocker och jämn energi.</p>
+    `,
+    quiz: [
+      { q: 'Hur påverkar regelbunden träning koncentrationsförmågan?', options: ['Den minskar den med 10%', 'Den ökar den med upp till 20%', 'Den har ingen effekt', 'Den ökar den med 5%'], answer: 1 },
+      { q: 'Vad säger Matthew Walker om sömnbrist?', options: ['7 timmars sömn är onödigt mycket', 'Efter 17–19 timmars vakenhet presterar du kognitivt som om du vore berusad', 'Man vänjer sig vid lite sömn', 'Sömn är viktigast för kreativa yrken'], answer: 1 },
+      { q: 'Vad handlar prestation om enligt Tony Schwartz?', options: ['Tidshantering', 'Energihantering', 'Produktivitetssystem', 'Rätt verktyg'], answer: 1 },
+      { q: 'Vilken tid på dagen är du generellt skarpast kognitivt?', options: ['Sent på kvällen', 'Direkt efter lunch', 'På morgonen', 'Det varierar slumpmässigt'], answer: 2 },
+      { q: 'Hur mycket sänker mild dehydrering den kognitiva prestationen?', options: ['1–2%', '5–10%', 'Upp till 20%', 'Det har ingen effekt'], answer: 2 },
+      { q: 'Varför bygger träning självförtroende?', options: ['Man ser bättre ut', 'Att hålla löften till sig själv bygger mentalt kapital', 'Man träffar fler människor', 'Det är en myt'], answer: 1 },
+      { q: 'Hur ofta bör du ta en mikropausa för att hålla fokus?', options: ['En gång per dag', 'Var 30:e minut', 'Var 90:e minut', 'Bara när du känner dig trött'], answer: 2 },
+      { q: 'Hur många timmars sömn rekommenderas för optimal prestation?', options: ['4–5 timmar', '5–6 timmar', '7–9 timmar', '10+ timmar'], answer: 2 },
+      { q: 'Varför är konsistent sömnschema viktigt?', options: ['Det är mest viktigt för barn', 'Det optimerar din biologiska klocka och sömnkvalitet', 'Det gör att du sover kortare', 'Det är viktigt bara om du tränar'], answer: 1 },
+      { q: 'Vad bör du prioritera i kosten för jämn energi under säljdagen?', options: ['Socker och snabba kolhydrater för snabb energi', 'Protein och komplexa kolhydrater för stabilt blodsocker', 'Kaffe och energidrycker', 'Fasta tills lunch för mental klarhet'], answer: 1 },
+    ],
+  },
+
+  // ── 15. Tidshantering & Produktivitet ─────────────────────────────────────
+  {
+    id: 'tidshantering',
+    title: 'Tidshantering & Produktivitet',
+    subtitle: 'Gör rätt saker — inte fler saker',
+    icon: '⏱️',
+    gradient: 'linear-gradient(135deg, #475569, #334155)',
+    color: '#64748b',
+    youtubeId: 'n3kNlFMXslo',
+    theory: `
+      <h3>Det stora missförståndet om produktivitet</h3>
+      <p>Produktivitet handlar inte om att göra fler saker. Det handlar om att göra <strong>rätt saker</strong> — och ha energi nog att göra dem väl. En säljare som gör 50 aktiviteter av fel typ presterar sämre än en som gör 15 rätt.</p>
+
+      <h3>80/20-regeln i sälj</h3>
+      <p>Pareto-principen: 20% av dina aktiviteter ger 80% av dina resultat. I sälj:</p>
+      <ul>
+        <li>20% av dina kunder ger 80% av din omsättning</li>
+        <li>20% av dina prospekts konverterar till 80% av affärerna</li>
+        <li>20% av din tid på rätt aktiviteter ger 80% av dina resultat</li>
+      </ul>
+      <p>Uppgiften: Identifiera vilka 20% av dina aktiviteter och kunder som ger mest. Maximera dem. Minimera resten.</p>
+
+      <h3>Time Blocking</h3>
+      <p>Time blocking innebär att du schemalägger specifika block i kalendern för specifika aktiviteter — och skyddar dem som möten.</p>
+      <ul>
+        <li><strong>09:00–11:00</strong>: Prospektering och utgående samtal (hög energi)</li>
+        <li><strong>11:00–12:00</strong>: Uppföljningar och e-post</li>
+        <li><strong>13:00–15:00</strong>: Kundmöten och demos</li>
+        <li><strong>15:00–16:30</strong>: CRM-uppdatering och admin</li>
+      </ul>
+      <p>Skydda dina block. "Har du tid för ett snabbt möte?" är ett angrepp på din produktivitet.</p>
+
+      <h3>Eat the Frog</h3>
+      <p>Mark Twain: "Om du äter en groda på morgonen kan ingenting värre hända dig resten av dagen." Gör din svåraste, viktigaste uppgift <strong>först</strong> — innan du öppnar e-post, LinkedIn eller Slack. Det bygger momentum och eliminerar den mentala energin du lägger på att skjuta upp det.</p>
+
+      <h3>Elimineringsmatrisen</h3>
+      <p>Eisenhower-matrisen: sortera uppgifter efter Viktig/Inte viktig och Brådskande/Inte brådskande:</p>
+      <ul>
+        <li><strong>Viktig + Brådskande</strong>: Gör nu</li>
+        <li><strong>Viktig + Inte brådskande</strong>: Schemalägg (detta är ditt fokusarbete)</li>
+        <li><strong>Inte viktig + Brådskande</strong>: Delegera</li>
+        <li><strong>Inte viktig + Inte brådskande</strong>: Eliminera</li>
+      </ul>
+
+      <h3>Batching och singeltasking</h3>
+      <p>Multitasking är en myt. Hjärnan byter fokus, den gör inte flera saker simultant. Varje switch kostar kognitiv energi. Samla liknande uppgifter (alla samtal i ett block, all e-post i ett block) och kör dem i sekvens.</p>
+    `,
+    quiz: [
+      { q: 'Vad handlar produktivitet egentligen om?', options: ['Att göra fler saker', 'Att göra rätt saker med rätt energi', 'Att jobba fler timmar', 'Att delegera allt'], answer: 1 },
+      { q: 'Vad säger Pareto-principen (80/20) om säljkunder?', options: ['Alla kunder är lika viktiga', '20% av kunderna ger 80% av omsättningen', '80% av kunderna kräver 20% av arbetet', 'Det varierar per bransch'], answer: 1 },
+      { q: 'Vad är Time Blocking?', options: ['Att blockera störande webbplatser', 'Att schemalägga specifika tidsblock för specifika aktiviteter', 'Att arbeta i 25-minutersintervaller', 'Att ha färre möten'], answer: 1 },
+      { q: 'Vad innebär "Eat the Frog"?', options: ['Äta frukost för bättre prestation', 'Göra den svåraste, viktigaste uppgiften först på dagen', 'Ta de svåraste kundsamtalen sist', 'Att jobba under lunchen'], answer: 1 },
+      { q: 'Vad är Eisenhower-matrisen?', options: ['En säljmetodik', 'Ett verktyg för att prioritera uppgifter efter vikt och brådskande', 'En metod för att hantera invändningar', 'En kommunikationsmodell'], answer: 1 },
+      { q: 'Vad bör du göra med uppgifter som är "Inte viktiga + Brådskande"?', options: ['Gör dem direkt', 'Schemalägg dem', 'Delegera dem', 'Eliminera dem'], answer: 2 },
+      { q: 'Varför är multitasking ineffektivt?', options: ['Man gör för lite', 'Hjärnan byter fokus — varje switch kostar kognitiv energi', 'Det fungerar bara för vissa uppgifter', 'Det är mest ett problem för nybörjare'], answer: 1 },
+      { q: 'Vilken aktivitet bör en säljare lägga på morgonen (hög energi)?', options: ['E-post och admin', 'CRM-uppdateringar', 'Prospektering och utgående samtal', 'Rapportskrivning'], answer: 2 },
+      { q: 'Vad är "batching" i tidshantering?', options: ['Att arbeta i 90-minutersblock', 'Att samla liknande uppgifter och köra dem i sekvens', 'Att delegera uppgifter', 'Att schemalägga möten i grupp'], answer: 1 },
+      { q: 'Hur identifierar du dina 20% mest värdefulla aktiviteter?', options: ['Fråga din chef', 'Analysera vilka aktiviteter som genererar mest pipeline och affärer', 'Välj de enklaste uppgifterna', 'Fokusera på det som är roligast'], answer: 1 },
+    ],
+  },
+
+  // ── 16. Mental Styrka & Resiliens ─────────────────────────────────────────
+  {
+    id: 'mental-styrka',
+    title: 'Mental Styrka & Resiliens',
+    subtitle: 'Prestationen du inte ser — det mentala spelet',
+    icon: '🧠',
+    gradient: 'linear-gradient(135deg, #be123c, #9f1239)',
+    color: '#be123c',
+    youtubeId: 'mgmVOuLgFB0',
+    theory: `
+      <h3>Sälj är ett mentalt yrke</h3>
+      <p>Toppsäljare och mediokra säljare har ofta liknande produktkunskap och teknik. Skillnaden är framförallt mental — hur de hanterar avvisanden, perioder med dåliga resultat, press och osäkerhet. Mental styrka är en inlärd kompetens, inte ett personlighetsdrag.</p>
+
+      <h3>Stoicism i sälj</h3>
+      <p>Stoiska filosofer (Marcus Aurelius, Epiktetos) identifierade en fundamental distinktion:</p>
+      <ul>
+        <li><strong>Inom din kontroll</strong>: dina tankar, handlingar, reaktioner, ditt arbete</li>
+        <li><strong>Utanför din kontroll</strong>: andras beslut, marknaden, timing, resultaten</li>
+      </ul>
+      <p>Fokusera all energi på det du kontrollerar. Acceptera det du inte gör. Det eliminerar en enorm källa till onödig stress.</p>
+
+      <h3>Cognitiv reframing</h3>
+      <p>Reframing innebär att du medvetet väljer hur du tolkar en händelse. Samma situation kan tolkas på radikalt olika sätt:</p>
+      <ul>
+        <li>"Jag fick nej" → "Jag lärde mig något och kom närmre ett ja"</li>
+        <li>"Det var en dålig månad" → "Jag vet nu vad jag ska ändra"</li>
+        <li>"Kunden var otrevlig" → "Det handlade om dem, inte mig"</li>
+      </ul>
+      <p>Det är inte naivt positivt tänkande — det är strategisk tolkning av verkligheten.</p>
+
+      <h3>Visualisering</h3>
+      <p>Elitidrottare och toppchefer använder visualisering som ett träningsverktyg. Hjärnan kan inte fullt ut skilja på en levande föreställd händelse och en verklig. Visualisera det svåra säljsamtalet — din röst, kundens reaktioner, hur du hanterar invändningarna — innan det händer. Det reducerar prestationsångest.</p>
+
+      <h3>Bygg resiliens systematiskt</h3>
+      <ul>
+        <li><strong>Daglig reflektion</strong>: 5 minuter varje kväll. Vad gick bra? Vad lärde jag mig? Det omvandlar negativa upplevelser till lärande.</li>
+        <li><strong>Fira aktiviteter</strong> — inte bara resultat. Du kontrollerar aktiviteten, inte affären.</li>
+        <li><strong>Identifiera mönster</strong> — när tappar du energi? Vilka situationer triggar dig negativt? Medvetenhet är första steget.</li>
+        <li><strong>Socialt stöd</strong> — toppsäljare bygger relationer med kollegor som utmanar och stöder dem. Isolering förstärker negativt tänkande.</li>
+      </ul>
+
+      <h3>Flödes-tillståndet (Flow)</h3>
+      <p>Mihaly Csikszentmihalyi visade att vi presterar bäst i "flow" — ett tillstånd av djup koncentration där tid verkar stanna. Flow uppstår när utmaningens nivå matchar din kompetensnivå. För lite utmaning = tristess. För mycket = ångest. Hitta den balansen.</p>
+    `,
+    quiz: [
+      { q: 'Vad är den huvudsakliga skillnaden mellan toppsäljare och mediokra säljare?', options: ['Produktkunskap', 'Mental styrka och hantering av motgångar', 'Antal år i branschen', 'Utbildningsnivå'], answer: 1 },
+      { q: 'Vad fokuserar stoicismen på i säljkontext?', options: ['Att alltid vara positiv', 'Att fokusera energi på det du kontrollerar och acceptera det du inte gör', 'Att undvika alla konflikter', 'Att alltid leverera mer än förväntat'], answer: 1 },
+      { q: 'Vad är cognitiv reframing?', options: ['Att ignorera negativa händelser', 'Att medvetet välja hur du tolkar en händelse', 'Att ljuga för sig själv om resultaten', 'En typ av medicinsk terapi'], answer: 1 },
+      { q: 'Varför använder elitidrottare visualisering?', options: ['Det är ett superstition', 'Hjärnan kan inte fullt skilja på levande föreställda och verkliga händelser', 'Det är ett modernt trendigt verktyg', 'Det minskar träningsbehovet'], answer: 1 },
+      { q: 'Vad är flow-tillståndet?', options: ['Att arbeta snabbt', 'Djup koncentration där utmaning matchar kompetens', 'Att vara stressfri', 'Att arbeta utan pauser'], answer: 1 },
+      { q: 'Vad händer när utmaningen är för låg jämfört med kompetensen?', options: ['Flow uppstår', 'Ångest uppstår', 'Tristess uppstår', 'Prestation ökar'], answer: 2 },
+      { q: 'Hur omvandlar du negativa upplevelser till lärande?', options: ['Ignorera dem', 'Daglig reflektion: vad gick bra, vad lärde jag mig', 'Prata med en terapeut', 'Fokusera på nästa mål direkt'], answer: 1 },
+      { q: 'Vad bör du fira för att bygga resiliens?', options: ['Bara stora affärer', 'Aktiviteter och insatser — inte bara resultat', 'Resultat som överstiger kvoten', 'Ingenting — fira förminskar ambitionen'], answer: 1 },
+      { q: 'Vad är stoicismens grundprincip om kontroll?', options: ['Du kan kontrollera allt med tillräcklig vilja', 'Du kontrollerar dina handlingar och tankar — inte yttre resultat', 'Resultat är viktigast att fokusera på', 'Kontroll är en illusion'], answer: 1 },
+      { q: 'Vem identifierade flow-tillståndet?', options: ['Viktor Frankl', 'Marcus Aurelius', 'Mihaly Csikszentmihalyi', 'Martin Seligman'], answer: 2 },
+    ],
+  },
+
 ];
 
 module.exports = blocks;
