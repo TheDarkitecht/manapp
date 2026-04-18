@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Login</title>
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body class="login-page">
+  <div class="card">
+    <h1>Logga in</h1>
+
+    <% if (error) { %>
+      <p class="error"><%= error %></p>
+    <% } %>
+
+    <% if (success) { %>
+      <p class="success"><%= success %></p>
+    <% } %>
+
+    <form method="POST" action="/">
+      <label for="username">Användarnamn</label>
+      <input type="text" id="username" name="username" placeholder="Ange användarnamn" required autofocus />
+
+      <label for="password">Lösenord</label>
+      <input type="password" id="password" name="password" placeholder="Ange lösenord" required />
+
+      <button type="submit">Logga in</button>
+    </form>
+
+    <!-- Button that opens the register modal -->
+    <button class="btn-register-open" onclick="openModal()">Skapa ny användare</button>
+  </div>
+
+  <!-- ── Register modal ───────────────────────────────────────── -->
+  <div class="modal-backdrop" id="modalBackdrop" onclick="closeModal(event)">
+    <div class="modal">
+      <h2>Skapa ny användare</h2>
+
+      <% if (registerError) { %>
+        <p class="error"><%= registerError %></p>
+      <% } %>
+
+      <form method="POST" action="/register">
+        <label for="reg-username">Användarnamn</label>
+        <input type="text" id="reg-username" name="username" placeholder="Välj ett användarnamn" required />
+
+        <label for="reg-password">Lösenord</label>
+        <input type="password" id="reg-password" name="password" placeholder="Välj ett lösenord" required />
+
+        <label for="reg-confirm">Bekräfta lösenord</label>
+        <input type="password" id="reg-confirm" name="confirmPassword" placeholder="Upprepa lösenordet" required />
+
+        <div class="form-actions">
+          <button type="submit">Skapa konto</button>
+          <button type="button" class="btn-cancel" onclick="closeModalDirect()">Avbryt</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    // Open modal
+    function openModal() {
+      document.getElementById('modalBackdrop').classList.add('open');
+    }
+
+    // Close when clicking the dark backdrop outside the modal
+    function closeModal(e) {
+      if (e.target === document.getElementById('modalBackdrop')) {
+        closeModalDirect();
+      }
+    }
+
+    function closeModalDirect() {
+      document.getElementById('modalBackdrop').classList.remove('open');
+    }
+
+    // If there was a register error, keep the modal open on page load
+    <% if (registerError) { %>
+      openModal();
+    <% } %>
+  </script>
+</body>
+</html>

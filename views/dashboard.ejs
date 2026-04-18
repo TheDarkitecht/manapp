@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard</title>
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+  <div class="container">
+
+    <!-- Top bar -->
+    <header class="topbar">
+      <span>Inloggad som <strong><%= username %></strong></span>
+      <a href="/logout" class="btn-logout">Logga ut</a>
+    </header>
+
+    <!-- Button that shows/hides the note form -->
+    <button class="btn-new-note" onclick="toggleForm()">+ Skapa anteckning</button>
+
+    <!-- Note form — hidden by default, shown when button is clicked -->
+    <section class="note-form-section" id="noteForm" style="display:none;">
+      <h2>Ny anteckning</h2>
+      <form method="POST" action="/notes" class="note-form">
+        <textarea
+          name="content"
+          placeholder="Skriv din anteckning här..."
+          rows="5"
+          required
+          autofocus
+        ></textarea>
+        <div class="form-actions">
+          <button type="submit">Spara</button>
+          <button type="button" class="btn-cancel" onclick="toggleForm()">Avbryt</button>
+        </div>
+      </form>
+    </section>
+
+    <!-- Notes list -->
+    <section class="notes-section">
+      <h2>Mina anteckningar</h2>
+
+      <% if (notes.length === 0) { %>
+        <p class="empty">Du har inga anteckningar ännu. Klicka på "Skapa anteckning" för att börja.</p>
+      <% } %>
+
+      <div class="notes-grid">
+        <% notes.forEach(function(note) { %>
+          <div class="note-card">
+            <p class="note-content"><%= note.content %></p>
+            <div class="note-footer">
+              <span class="note-date"><%= note.created_at %></span>
+              <form method="POST" action="/notes/<%= note.id %>/delete" class="delete-form">
+                <button type="submit" class="btn-delete">Ta bort</button>
+              </form>
+            </div>
+          </div>
+        <% }); %>
+      </div>
+    </section>
+
+  </div>
+
+  <script>
+    function toggleForm() {
+      const form = document.getElementById('noteForm');
+      form.style.display = form.style.display === 'none' ? 'block' : 'none';
+    }
+  </script>
+</body>
+</html>
