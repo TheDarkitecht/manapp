@@ -19,6 +19,8 @@ body.login-page {
   display: flex;
   align-items: center;
   justify-content: center;
+  padding: 1rem;
+  min-height: 100vh;
 }
 
 .card {
@@ -28,6 +30,14 @@ body.login-page {
   padding: 2.5rem 2rem;
   width: 100%;
   max-width: 380px;
+}
+
+/* On small phones, remove rounded corners and shadow for full-width feel */
+@media (max-width: 420px) {
+  .card {
+    padding: 2rem 1.25rem;
+    border-radius: 8px;
+  }
 }
 
 .card h1 {
@@ -49,12 +59,14 @@ label {
 }
 
 input {
-  padding: 0.65rem 0.85rem;
+  padding: 0.75rem 0.85rem;
   border: 1px solid #d1d5db;
   border-radius: 6px;
-  font-size: 1rem;
+  font-size: 1rem;   /* must be ≥ 16px to prevent iOS auto-zoom */
   outline: none;
   transition: border-color 0.2s;
+  width: 100%;
+  -webkit-appearance: none; /* fix iOS styling quirks */
 }
 
 input:focus {
@@ -63,7 +75,7 @@ input:focus {
 
 button[type="submit"] {
   margin-top: 0.5rem;
-  padding: 0.75rem;
+  padding: 0.85rem;
   background: #4f46e5;
   color: #fff;
   border: none;
@@ -72,6 +84,9 @@ button[type="submit"] {
   font-weight: 600;
   cursor: pointer;
   transition: background 0.2s;
+  width: 100%;
+  -webkit-appearance: none;
+  touch-action: manipulation; /* faster tap response on mobile */
 }
 
 button[type="submit"]:hover {
@@ -145,6 +160,14 @@ button[type="submit"]:hover {
   width: 100%;
   max-width: 380px;
   animation: slideIn 0.18s ease;
+  margin: 1rem;
+}
+
+@media (max-width: 420px) {
+  .modal {
+    padding: 1.5rem 1.25rem;
+    margin: 0.75rem;
+  }
 }
 
 @keyframes slideIn {
@@ -1078,4 +1101,93 @@ textarea:focus {
 .block-nav-btn:hover { background: rgba(255,255,255,0.12); color: #fff; }
 .block-nav-btn.outline { border-color: rgba(99,102,241,0.4); color: #a5b4fc; }
 .block-nav-btn.outline:hover { background: rgba(99,102,241,0.15); }
+
+/* ═══════════════════════════════════════════════════════════════
+   MOBILE RESPONSIVE
+═══════════════════════════════════════════════════════════════ */
+
+@media (max-width: 600px) {
+
+  /* Dashboard */
+  .container {
+    padding: 1rem 0.85rem 5rem;
+  }
+
+  .topbar {
+    font-size: 0.85rem;
+    margin-bottom: 1.25rem;
+  }
+
+  .notes-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .btn-new-note {
+    width: 100%;
+    text-align: center;
+  }
+
+  .learn-banner {
+    gap: 0.75rem;
+    padding: 0.85rem 1rem;
+  }
+
+  /* Chat window full-screen on mobile */
+  .chat-window {
+    bottom: 0;
+    right: 0;
+    left: 0;
+    width: 100%;
+    height: 75vh;
+    border-radius: 14px 14px 0 0;
+  }
+
+  .chat-bubble {
+    bottom: 1.25rem;
+    right: 1.25rem;
+  }
+
+  /* Learn page */
+  .blocks-grid {
+    grid-template-columns: 1fr;
+    padding: 0 1rem 3rem;
+  }
+
+  .learn-hero {
+    padding: 2.5rem 1.25rem 2rem;
+  }
+
+  .learn-nav {
+    padding: 0.85rem 1rem;
+  }
+
+  .learn-nav-title {
+    font-size: 0.8rem;
+  }
+
+  /* Block page */
+  .block-hero {
+    padding: 1.5rem 1rem;
+    gap: 1rem;
+  }
+
+  .block-hero-icon { font-size: 2rem; }
+
+  .block-hero h1 { font-size: 1.2rem; }
+
+  .tabs-wrapper { padding: 0 0.5rem; }
+
+  .tab { padding: 0.75rem 0.85rem; font-size: 0.82rem; }
+
+  .tab-content-wrapper { padding: 1.25rem 1rem; }
+
+  .theory-body { padding: 1.25rem; }
+
+  .block-nav-footer {
+    padding: 1.25rem 1rem 2rem;
+    gap: 0.5rem;
+  }
+
+  .block-nav-btn { font-size: 0.78rem; padding: 0.55rem 0.85rem; }
+}
 
