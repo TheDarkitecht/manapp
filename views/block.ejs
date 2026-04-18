@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title><%= block.title %></title>
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body class="block-page">
+
+  <nav class="learn-nav">
+    <a href="/learn" class="learn-nav-back">← Alla block</a>
+    <span class="learn-nav-title"><%= block.title %></span>
+    <span class="learn-nav-user"><%= username %></span>
+  </nav>
+
+  <!-- Block hero -->
+  <div class="block-hero" style="background: <%= block.gradient %>;">
+    <div class="block-hero-icon"><%= block.icon %></div>
+    <div>
+      <h1><%= block.title %></h1>
+      <p><%= block.subtitle %></p>
+    </div>
+  </div>
+
+  <!-- Tabs -->
+  <div class="tabs-wrapper">
+    <div class="tabs">
+      <button class="tab active" onclick="showTab('theory', this)">📖 Teori</button>
+      <button class="tab" onclick="showTab('video', this)">🎬 Video</button>
+      <button class="tab" onclick="showTab('quiz', this)">🧠 Prov</button>
+    </div>
+  </div>
+
+  <div class="tab-content-wrapper">
+
+    <!-- ── THEORY ───────────────────────────────────────────────── -->
+    <div id="tab-theory" class="tab-content active">
+      <div class="theory-body">
+        <%- block.theory %>
+      </div>
+    </div>
+
+    <!-- ── VIDEO ────────────────────────────────────────────────── -->
+    <div id="tab-video" class="tab-content">
+      <div class="video-wrapper">
+        <div class="video-label">Rekommenderad video om <strong><%= block.title %></strong></div>
+        <div class="video-embed">
+          <iframe
+            src="https://www.youtube.com/embed/<%= block.youtubeId %>?rel=0&modestbranding=1"
+            title="<%= block.title %>"
+            frameborder="0"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowfullscreen
+          ></iframe>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── QUIZ ──────────────────────────────────────────────────── -->
+    <div id="tab-quiz" class="tab-content">
+      <div class="quiz-wrapper" id="quizWrapper">
+        <div class="quiz-header">
+          <h2>🧠 Prov — <%= block.title %></h2>
+          <p>10 frågor. Välj ett svar per fråga och klicka sedan "Rätta provet".</p>
+        </div>
+
+        <form id="quizForm">
+          <% block.quiz.forEach(function(q, qi) { %>
+            <div class="quiz-question" id="qq-<%= qi %>">
+              <p class="quiz-q-text"><span class="q-num"><%= qi + 1 %></span> <%= q.q %></p>
+              <div class="quiz-options">
+                <% q.options.forEach(function(opt, oi) { %>
+                  <label class="quiz-option" data-qi="<%= qi %>" data-oi="<%= oi %>">
+                    <input type="radio" name="q<%= qi %>" value="<%= oi %>" />
+                    <span class="option-letter"><%= ['A','B','C','D'][oi] %></span>
+                    <span><%= opt %></span>
+                  </label>
+                <% }); %>
+              </div>
+            </div>
+          <% }); %>
+
+          <button type="button" class="quiz-submit-btn" onclick="submitQuiz()">Rätta provet →</button>
+        </form>
+
+        <!-- Result panel (hidden until submitted) -->
+        <div id="quizResult" class="quiz-result" style="display:none;"></div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Block navigation -->
+  <div class="block-nav-footer">
+    <% const idx = blocks.findIndex(b => b.id === block.id); %>
+    <% if (idx > 0) { %>
+      <a href="/learn/<%= blocks[idx-1].id %>" class="block-nav-btn">← <%= blocks[idx-1].title %></a>
+    <% } else { %>
+      <span></span>
+    <% } %>
+    <a href="/learn" class="block-nav-btn outline">Alla block</a>
+    <% if (idx < blocks.length - 1) { %>
+      <a href="/learn/<%= blocks[idx+1].id %>" class="block-nav-btn"><%= blocks[idx+1].title %> →</a>
+    <% } else { %>
+      <span></span>
+    <% } %>
+  </div>
+
+  <script>
+    // ── Tabs ────────────────────────────────────────────────────────────────
+
+    function showTab(name, btn) {
+      document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+      document.getElementById('tab-' + name).classList.add('active');
+      btn.classList.add('active');
+    }
+
+    // ── Quiz ────────────────────────────────────────────────────────────────
+
+    const correctAnswers = <%- JSON.stringify(block.quiz.map(q => q.answer)) %>;
+
+    function submitQuiz() {
+      const form = document.getElementById('quizForm');
+      let score = 0;
+      let allAnswered = true;
+
+      correctAnswers.forEach((correct, qi) => {
+        const selected = form.querySelector(`input[name="q${qi}"]:checked`);
+        if (!selected) { allAnswered = false; return; }
+
+        const value = parseInt(selected.value);
+        const questionEl = document.getElementById('qq-' + qi);
+        const options = questionEl.querySelectorAll('.quiz-option');
+
+        // Disable all options
+        options.forEach(opt => {
+          opt.style.pointerEvents = 'none';
+          const oi = parseInt(opt.dataset.oi);
+          if (oi === correct) {
+            opt.classList.add('correct');
+          } else if (oi === value && value !== correct) {
+            opt.classList.add('wrong');
+          }
+        });
+
+        if (value === correct) score++;
+      });
+
+      if (!allAnswered) {
+        alert('Svara på alla frågor innan du rättar!');
+        return;
+      }
+
+      // Show result
+      const resultEl = document.getElementById('quizResult');
+      const pct = Math.round((score / correctAnswers.length) * 100);
+      const emoji = pct >= 80 ? '🏆' : pct >= 60 ? '👍' : '📚';
+      const msg   = pct >= 80 ? 'Utmärkt! Du behärskar det här blocket.'
+                  : pct >= 60 ? 'Bra jobbat! Lite mer repetition gör dig till expert.'
+                  : 'Läs igenom teorin igen — du klarar det!';
+
+      resultEl.innerHTML = `
+        <div class="result-score">${emoji} ${score} / ${correctAnswers.length} rätt (${pct}%)</div>
+        <p class="result-msg">${msg}</p>
+        <button onclick="retryQuiz()" class="retry-btn">Försök igen</button>
+      `;
+      resultEl.style.display = 'block';
+      resultEl.scrollIntoView({ behavior: 'smooth' });
+
+      document.querySelector('.quiz-submit-btn').style.display = 'none';
+    }
+
+    function retryQuiz() {
+      location.reload();
+    }
+  </script>
+
+</body>
+</html>

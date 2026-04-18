@@ -13,6 +13,7 @@ const {
   createNote,
   deleteNote,
 } = require('./database');
+const salesBlocks = require('./salesContent');
 
 const app    = express();
 const PORT   = process.env.PORT || 3000;
@@ -164,6 +165,18 @@ app.post('/notes', requireLogin, (req, res) => {
 app.post('/notes/:id/delete', requireLogin, (req, res) => {
   deleteNote(Number(req.params.id), req.session.userId);
   res.redirect('/dashboard');
+});
+
+// ── Learn routes ─────────────────────────────────────────────────────────────
+
+app.get('/learn', requireLogin, (req, res) => {
+  res.render('learn', { username: req.session.username, blocks: salesBlocks });
+});
+
+app.get('/learn/:id', requireLogin, (req, res) => {
+  const block = salesBlocks.find(b => b.id === req.params.id);
+  if (!block) return res.redirect('/learn');
+  res.render('block', { username: req.session.username, block, blocks: salesBlocks });
 });
 
 // ── Chat route ────────────────────────────────────────────────────────────────

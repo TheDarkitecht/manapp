@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Säljutbildning</title>
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body class="learn-page">
+
+  <nav class="learn-nav">
+    <a href="/dashboard" class="learn-nav-back">← Dashboard</a>
+    <span class="learn-nav-title">Säljutbildning</span>
+    <span class="learn-nav-user"><%= username %></span>
+  </nav>
+
+  <div class="learn-hero">
+    <h1>Bli en bättre säljare</h1>
+    <p>8 block — från första intrycket till avslut. Teori, video och prov per block.</p>
+  </div>
+
+  <div class="blocks-grid">
+    <% blocks.forEach(function(block, i) { %>
+      <a href="/learn/<%= block.id %>" class="block-card" style="--card-gradient: <%= block.gradient %>;">
+        <div class="block-card-number"><%= i + 1 %></div>
+        <div class="block-card-icon"><%= block.icon %></div>
+        <div class="block-card-body">
+          <h3><%= block.title %></h3>
+          <p><%= block.subtitle %></p>
+        </div>
+        <div class="block-card-arrow">→</div>
+      </a>
+    <% }); %>
+  </div>
+
+</body>
+</html>
