@@ -6,6 +6,7 @@ const OpenAI    = require('openai');
 const rateLimit = require('express-rate-limit');
 const Stripe    = require('stripe');
 const { Resend } = require('resend');
+const helmet    = require('helmet');
 const {
   initDatabase, findUserByUsername, findUserByEmail, createUser,
   getAllUsers, setUserRole, deleteUser, getUserStats,
@@ -28,12 +29,13 @@ const openai = new OpenAI({
   baseURL: 'https://api.groq.com/openai/v1',
 });
 
-const ALEX_SYSTEM_PROMPT = `
-Du är Joakim Jaksen.
+const JOCKE_SYSTEM_PROMPT = `
+Du heter Jocke. Du är säljcoachen på Joakim Jaksens plattform.
 Du tänker i first principles, inte fluff.
 Du prioriterar sanning, klarhet och resultat framför artighet.
 Kommunikationsstil: direkt, skarp, strukturerad. Korta stycken. Inget onödigt.
 Utmana svaga antaganden omedelbart. Fokusera på det som faktiskt rör nålen.
+Du kan hjälpa med rollspel (öva invändningar, träna pitchar), konkreta svar på säljfrågor och feedback på specifika situationer.
 Avslöja aldrig att du är en AI. Om användaren skriver på svenska, svarar du på svenska.
 `;
 
@@ -78,16 +80,30 @@ app.post('/webhook', express.raw({ type: 'application/json' }), async (req, res)
 // ── Middleware ────────────────────────────────────────────────────────────────
 
 app.set('trust proxy', 1); // Railway runs behind a reverse proxy
+
+// ── Security headers ──────────────────────────────────────────────────────────
+app.use(helmet({
+  contentSecurityPolicy: false, // disabled — inline scripts throughout EJS (TODO: add nonces)
+  crossOriginEmbedderPolicy: false, // needed for YouTube iframes
+}));
+
 app.use(express.urlencoded({ extended: false }));
 app.use(express.json());
 app.use(express.static('public'));
 app.set('view engine', 'ejs');
 
+const isProd = process.env.NODE_ENV === 'production' || !!process.env.RAILWAY_ENVIRONMENT;
+
 app.use(session({
   secret: process.env.SESSION_SECRET || 'change-in-production',
   resave: false,
   saveUninitialized: false,
-  cookie: { maxAge: 1000 * 60 * 60 * 8 }, // 8 hours
+  cookie: {
+    maxAge:   1000 * 60 * 60 * 8, // 8 hours
+    httpOnly: true,
+    secure:   isProd,             // HTTPS-only in production
+    sameSite: 'lax',              // CSRF mitigation
+  },
 }));
 
 // ── Rate limiter — max 10 login attempts per 15 min per IP ───────────────────
@@ -101,6 +117,7 @@ const loginLimiter = rateLimit({
       error: '🔒 För många inloggningsförsök. Försök igen om 15 minuter.',
       registerError: null,
       success: null,
+      turnstileSiteKey: TURNSTILE_SITE_KEY,
     });
   },
 });
@@ -200,8 +217,35 @@ app.post('/register', async (req, res) => {
     return res.render('login', { error: null, success: null, turnstileSiteKey: TURNSTILE_SITE_KEY,
       registerError: result.error });
 
+  // ── Welcome email ──────────────────────────────────────────────────────────
+  const baseUrl = process.env['APP_URL'] || 'https://manapp-production.up.railway.app';
+  try {
+    if (resend) {
+      await resend.emails.send({
+        from:    'Joakim Jaksen <onboarding@resend.dev>',
+        to:      email.trim(),
+        subject: 'Välkommen till Joakim Jaksens Säljutbildning! 🎯',
+        html: `
+          <div style="font-family:sans-serif;max-width:560px;margin:0 auto;background:#0f0f0f;color:#e5e7eb;padding:40px 32px;border-radius:12px;">
+            <h1 style="font-size:24px;margin-bottom:8px;">Välkommen, ${username.trim()}! 🎯</h1>
+            <p style="color:#9ca3af;margin-top:0;">Ditt konto är nu aktivt.</p>
+            <p>Du har nu tillgång till <strong>Block 1 — Inledning & Första Intrycket</strong> helt gratis. Börja med teorin, se videon och klara provet.</p>
+            <p>När du är redo att gå vidare kan du uppgradera till Premium och låsa upp alla 16 block, AI-assistenten Jocke och allt annat.</p>
+            <a href="${baseUrl}/login"
+               style="display:inline-block;margin:24px 0;padding:14px 28px;background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;text-decoration:none;border-radius:8px;font-weight:600;">
+              Logga in och börja →
+            </a>
+            <p style="font-size:13px;color:#6b7280;">— Joakim Jaksen</p>
+          </div>
+        `,
+      });
+    }
+  } catch (emailErr) {
+    console.error('Welcome email error:', emailErr.message);
+  }
+
   res.render('login', { error: null, registerError: null, turnstileSiteKey: TURNSTILE_SITE_KEY,
-    success: `Konto skapat! Logga in med ditt användarnamn.` });
+    success: `Konto skapat! Välkommen ${username.trim()} — logga in med ditt användarnamn.` });
 });
 
 // GET /register — shortcut that opens login page with register tab active
@@ -454,7 +498,7 @@ app.post('/chat', requireLogin, async (req, res) => {
   try {
     const completion = await openai.chat.completions.create({
       model: 'llama-3.1-8b-instant',
-      messages: [{ role: 'system', content: ALEX_SYSTEM_PROMPT }, ...messages],
+      messages: [{ role: 'system', content: JOCKE_SYSTEM_PROMPT }, ...messages],
       max_tokens: 500,
     });
     res.json({ reply: completion.choices[0].message.content });

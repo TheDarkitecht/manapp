@@ -250,6 +250,16 @@
     </div>
   </section>
 
+  <!-- ══ GDPR COOKIE BANNER ══════════════════════════════════════════════════ -->
+  <div class="cookie-banner" id="cookieBanner">
+    <p>Vi använder nödvändiga cookies för att sajten ska fungera. Inga spårningscookies används utan ditt samtycke.
+       <a href="#" onclick="openPrivacyCookie(event)">Läs integritetspolicyn</a></p>
+    <div class="cookie-banner-btns">
+      <button class="cookie-btn-decline" onclick="dismissCookies(false)">Bara nödvändiga</button>
+      <button class="cookie-btn-accept" onclick="dismissCookies(true)">Okej →</button>
+    </div>
+  </div>
+
   <!-- ══ FOOTER ══════════════════════════════════════════════════════════════ -->
   <footer class="lp-footer">
     <div class="lp-footer-inner">
@@ -288,6 +298,23 @@
         if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
       });
     });
+
+    // Cookie consent banner
+    (function() {
+      if (!localStorage.getItem('cookieConsent')) {
+        setTimeout(() => document.getElementById('cookieBanner').classList.add('visible'), 1200);
+      }
+    })();
+
+    function dismissCookies(accepted) {
+      localStorage.setItem('cookieConsent', accepted ? 'all' : 'essential');
+      document.getElementById('cookieBanner').classList.remove('visible');
+    }
+
+    function openPrivacyCookie(e) {
+      e.preventDefault();
+      openPrivacy();
+    }
   </script>
 
 </body>

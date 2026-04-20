@@ -2339,3 +2339,54 @@ body.landing-page {
   .lp-why-grid { grid-template-columns: 1fr; }
 }
 
+/* ── Cookie consent banner ──────────────────────────────────────────────────── */
+.cookie-banner {
+  position: fixed; bottom: 0; left: 0; right: 0; z-index: 9000;
+  background: #131320; border-top: 1px solid rgba(99,102,241,0.3);
+  padding: 1.25rem 2rem;
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 1.5rem; flex-wrap: wrap;
+  transform: translateY(100%); transition: transform 0.35s ease;
+}
+.cookie-banner.visible { transform: translateY(0); }
+.cookie-banner p {
+  color: #94a3b8; font-size: 0.875rem; margin: 0; line-height: 1.5; flex: 1; min-width: 240px;
+}
+.cookie-banner a { color: #818cf8; text-decoration: underline; }
+.cookie-banner-btns { display: flex; gap: 0.75rem; flex-shrink: 0; }
+.cookie-btn-accept {
+  background: linear-gradient(135deg,#6366f1,#8b5cf6); color: #fff;
+  border: none; padding: 0.55rem 1.25rem; border-radius: 8px;
+  font-size: 0.875rem; font-weight: 600; cursor: pointer; transition: opacity 0.2s;
+}
+.cookie-btn-accept:hover { opacity: 0.85; }
+.cookie-btn-decline {
+  background: transparent; color: #64748b; border: 1px solid #334155;
+  padding: 0.55rem 1.25rem; border-radius: 8px;
+  font-size: 0.875rem; cursor: pointer; transition: border-color 0.2s;
+}
+.cookie-btn-decline:hover { border-color: #6366f1; color: #a5b4fc; }
+
+/* ── Upgrade page social proof / quotes ─────────────────────────────────────── */
+.upgrade-quotes {
+  max-width: 780px; margin: 3rem auto 0;
+  display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;
+}
+.upgrade-quotes blockquote {
+  background: #0d0d1a; border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 12px; padding: 1.5rem; margin: 0;
+}
+.upgrade-quotes blockquote p {
+  color: #cbd5e1; font-size: 0.9rem; line-height: 1.65;
+  font-style: italic; margin: 0 0 0.75rem;
+}
+.upgrade-quotes blockquote cite {
+  color: #6366f1; font-size: 0.8rem; font-style: normal; font-weight: 600;
+}
+@media (max-width: 600px) {
+  .upgrade-quotes { grid-template-columns: 1fr; }
+}
+
+/* ── Auth page language fix ──────────────────────────────────────────────────── */
+html[lang="sv"] { -webkit-hyphens: auto; hyphens: auto; }
+

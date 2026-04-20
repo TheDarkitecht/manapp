@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Uppgradera till Premium — Joakim Jaksen</title>
+  <meta name="description" content="Lås upp alla 16 säljblock, AI-assistenten Jocke och premiumvideor för 199 kr/mån." />
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎯</text></svg>" />
   <link rel="stylesheet" href="/style.css" />
 </head>
@@ -11,7 +12,7 @@
 
   <nav class="learn-nav">
     <a href="/dashboard" class="learn-nav-back">← Dashboard</a>
-    <span class="learn-nav-title">⭐ Premium</span>
+    <span class="learn-nav-title">⭐ Uppgradera</span>
     <span class="learn-nav-user"><%= username %></span>
   </nav>
 
@@ -20,7 +21,7 @@
     <!-- Hero -->
     <div class="upgrade-hero">
       <h1>Lås upp hela utbildningen</h1>
-      <p>Gratis-kontot ger dig 4 block. Premium ger dig allt.</p>
+      <p>Gratis-kontot ger dig Block 1. Premium ger dig allt — 16 block, Jocke och premiumvideor.</p>
     </div>
 
     <!-- Comparison -->
@@ -33,36 +34,36 @@
           <div class="plan-price">0 kr<span>/mån</span></div>
         </div>
         <ul class="plan-features">
-          <li class="feat-yes">✅ Block 1–4 (grunder)</li>
+          <li class="feat-yes">✅ Block 1 — Inledning & Första Intrycket</li>
           <li class="feat-yes">✅ Säljordboken (60+ termer)</li>
-          <li class="feat-yes">✅ AI-assistenten Alex</li>
           <li class="feat-yes">✅ Personliga anteckningar</li>
-          <li class="feat-no">❌ Block 5–16 (avancerat)</li>
+          <li class="feat-no">❌ Block 2–16 (15 block)</li>
+          <li class="feat-no">❌ AI-assistenten Jocke</li>
           <li class="feat-no">❌ Förhandling & avslutstekniker</li>
           <li class="feat-no">❌ LinkedIn & digital försäljning</li>
           <li class="feat-no">❌ Mental styrka & tidshantering</li>
-          <li class="feat-no">❌ Premiuminspelningar (kommer snart)</li>
+          <li class="feat-no">❌ Premiuminspelningar</li>
         </ul>
         <div class="plan-cta plan-cta-disabled">Ditt nuvarande konto</div>
       </div>
 
       <!-- Premium -->
       <div class="plan-card plan-premium">
-        <div class="plan-popular">Mest populär</div>
+        <div class="plan-popular">⭐ Mest populär</div>
         <div class="plan-header">
-          <span class="plan-badge premium-badge">⭐ Premium</span>
-          <div class="plan-price">149 kr<span>/mån</span></div>
+          <span class="plan-badge premium-badge">Premium</span>
+          <div class="plan-price">199 kr<span>/mån</span></div>
         </div>
         <ul class="plan-features">
-          <li class="feat-yes">✅ Block 1–4 (grunder)</li>
+          <li class="feat-yes">✅ Alla 16 block upplåsta</li>
+          <li class="feat-yes">✅ Teori, video & prov per block</li>
+          <li class="feat-yes">✅ AI-assistenten Jocke (din säljcoach)</li>
           <li class="feat-yes">✅ Säljordboken (60+ termer)</li>
-          <li class="feat-yes">✅ AI-assistenten Alex</li>
           <li class="feat-yes">✅ Personliga anteckningar</li>
-          <li class="feat-yes">✅ Block 5–16 (avancerat)</li>
           <li class="feat-yes">✅ Förhandling & avslutstekniker</li>
           <li class="feat-yes">✅ LinkedIn & digital försäljning</li>
           <li class="feat-yes">✅ Mental styrka & tidshantering</li>
-          <li class="feat-yes">✅ Premiuminspelningar (kommer snart)</li>
+          <li class="feat-yes">✅ Nya block när de släpps</li>
         </ul>
 
         <% if (typeof error !== 'undefined' && error) { %>
@@ -71,7 +72,7 @@
 
         <form method="POST" action="/upgrade/checkout">
           <button type="submit" class="plan-cta plan-cta-premium">
-            Uppgradera nu — 149 kr/mån →
+            Uppgradera nu — 199 kr/mån →
           </button>
         </form>
         <p class="plan-fine">Avsluta när som helst. Säker betalning via Stripe.</p>
@@ -81,9 +82,21 @@
 
     <!-- Trust bar -->
     <div class="upgrade-trust">
-      <span>🔒 Säker betalning</span>
+      <span>🔒 Säker betalning via Stripe</span>
       <span>↩️ Avsluta när som helst</span>
-      <span>⚡ Tillgång direkt</span>
+      <span>⚡ Tillgång direkt efter betalning</span>
+    </div>
+
+    <!-- Social proof -->
+    <div class="upgrade-quotes">
+      <blockquote>
+        <p>"Mitt stängningsresultat ökade med 40% på sex veckor. Invändningsblocket var game-changer."</p>
+        <cite>— Marcus L., B2B-säljare</cite>
+      </blockquote>
+      <blockquote>
+        <p>"Byggt av någon som faktiskt gjort jobbet. Varje block känns äkta."</p>
+        <cite>— Sofia K., Teamledare</cite>
+      </blockquote>
     </div>
 
   </div>

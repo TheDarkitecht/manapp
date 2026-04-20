@@ -3,7 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Joakim Jaksen — Dashboard</title>
+  <title>Dashboard — Joakim Jaksen Säljutbildning</title>
+  <meta name="robots" content="noindex" />
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎯</text></svg>" />
   <link rel="stylesheet" href="/style.css" />
 </head>
@@ -24,7 +25,7 @@
     <!-- Premium upsell (only for free users) -->
     <% if (role === 'free') { %>
       <a href="/upgrade" class="premium-banner">
-        ⭐ <strong>Uppgradera till Premium</strong> — lås upp alla 16 block för 149 kr/mån →
+        ⭐ <strong>Uppgradera till Premium</strong> — lås upp alla 16 block för 199 kr/mån →
       </a>
     <% } %>
 
@@ -79,7 +80,7 @@
   <!-- ── Chat bubble ───────────────────────────────────────────────────── -->
 
   <!-- The round button in the bottom-right corner -->
-  <button class="chat-bubble" id="chatBubble" onclick="toggleChat()" title="Chatta med Alex">
+  <button class="chat-bubble" id="chatBubble" onclick="toggleChat()" title="Chatta med Jocke">
     <svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" fill="white" viewBox="0 0 24 24">
       <path d="M20 2H4a2 2 0 0 0-2 2v18l4-4h14a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2z"/>
     </svg>
@@ -89,9 +90,9 @@
   <div class="chat-window" id="chatWindow">
     <div class="chat-header">
       <div class="chat-header-info">
-        <div class="chat-avatar">A</div>
+        <div class="chat-avatar">J</div>
         <div>
-          <strong>Alex</strong>
+          <strong>Jocke</strong>
           <span class="chat-status">● Online</span>
         </div>
       </div>
@@ -101,7 +102,7 @@
     <div class="chat-messages" id="chatMessages">
       <!-- Messages appear here -->
       <div class="chat-msg assistant">
-        <p>Hej! Vad kan jag hjälpa dig med? 😊</p>
+        <p>Hej! Jag är Jocke — din säljcoach här. Vad kan jag hjälpa dig med? 🎯</p>
       </div>
     </div>
 
@@ -175,12 +176,12 @@
         const reply = data.reply || data.error || 'Något gick fel.';
         appendMessage('assistant', reply);
 
-        // Add Alex's reply to history so he remembers the conversation
+        // Add Jocke's reply to history so he remembers the conversation
         messages.push({ role: 'assistant', content: reply });
 
       } catch (err) {
         removeTyping(typingId);
-        appendMessage('assistant', 'Kunde inte nå Alex just nu. Försök igen.');
+        appendMessage('assistant', 'Kunde inte nå Jocke just nu. Försök igen.');
       }
     }
 
