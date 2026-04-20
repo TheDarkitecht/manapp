@@ -1,8 +1,9 @@
 // server.js
-const express  = require('express');
-const session  = require('express-session');
-const bcrypt   = require('bcryptjs');
-const OpenAI   = require('openai');
+const express   = require('express');
+const session   = require('express-session');
+const bcrypt    = require('bcryptjs');
+const OpenAI    = require('openai');
+const rateLimit = require('express-rate-limit');
 const {
   initDatabase, findUserByUsername, createUser,
   getAllUsers, setUserRole, deleteUser, getUserStats,
@@ -42,6 +43,21 @@ app.use(session({
   cookie: { maxAge: 1000 * 60 * 60 * 8 }, // 8 hours
 }));
 
+// ── Rate limiter — max 10 login attempts per 15 min per IP ───────────────────
+
+const loginLimiter = rateLimit({
+  windowMs:         15 * 60 * 1000, // 15 minutes
+  max:              10,
+  skipSuccessfulRequests: true,      // only count failed/all POST attempts
+  handler: (req, res) => {
+    res.render('login', {
+      error: '🔒 För många inloggningsförsök. Försök igen om 15 minuter.',
+      registerError: null,
+      success: null,
+    });
+  },
+});
+
 // ── Auth helpers ──────────────────────────────────────────────────────────────
 
 function requireLogin(req, res, next) {
@@ -61,7 +77,7 @@ app.get('/', (req, res) => {
   res.render('login', { error: null, registerError: null, success: null });
 });
 
-app.post('/', async (req, res) => {
+app.post('/', loginLimiter, async (req, res) => {
   const { username, password } = req.body;
   const user = findUserByUsername(username);
 

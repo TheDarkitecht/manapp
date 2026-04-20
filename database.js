@@ -71,6 +71,15 @@ async function initDatabase() {
     db.run(`UPDATE users SET role = 'admin' WHERE username = 'admin' AND role = 'free'`);
   }
 
+  // ── Emergency admin password reset via env var ────────────────────────────
+  // Set ADMIN_RESET_PASSWORD=nyttLösenord in Railway → deploy → remove the var.
+  const resetPw = process.env.ADMIN_RESET_PASSWORD;
+  if (resetPw) {
+    const newHash = bcrypt.hashSync(resetPw, 10);
+    db.run(`UPDATE users SET password_hash = ? WHERE username = 'admin'`, [newHash]);
+    console.log('✅ Admin password has been reset via ADMIN_RESET_PASSWORD env var. Remove it now!');
+  }
+
   saveDb();
 }
 
