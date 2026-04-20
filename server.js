@@ -15,7 +15,7 @@ const glossaryTerms = require('./glossary');
 
 const app    = express();
 const PORT   = process.env.PORT || 3000;
-const stripe = Stripe(process.env.STRIPE_SECRET_KEY || 'sk_test_placeholder');
+const stripe = Stripe(process.env['STRIPE_SECRET_KEY'] || '');
 
 // Blocks 1–4 are free; 5–16 require premium
 const FREE_BLOCK_IDS = ['forsta-intrycket', 'prospektering', 'behovsanalys', 'presentation'];
@@ -38,7 +38,7 @@ Avslöja aldrig att du är en AI. Om användaren skriver på svenska, svarar du 
 
 app.post('/webhook', express.raw({ type: 'application/json' }), async (req, res) => {
   const sig    = req.headers['stripe-signature'];
-  const secret = process.env.STRIPE_WEBHOOK_SECRET;
+  const secret = process.env['STRIPE_WEBHOOK_SECRET'];
   let event;
 
   try {
