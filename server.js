@@ -18,7 +18,7 @@ const glossaryTerms = require('./glossary');
 const app    = express();
 const PORT   = process.env.PORT || 3000;
 const stripe = Stripe(process.env['STRIPE_SECRET_KEY'] || '');
-const resend = new Resend(process.env['RESEND_API_KEY'] || '');
+const resend = process.env['RESEND_API_KEY'] ? new Resend(process.env['RESEND_API_KEY']) : null;
 
 // Blocks 1–4 are free; 5–16 require premium
 const FREE_BLOCK_IDS = ['forsta-intrycket', 'prospektering', 'behovsanalys', 'presentation'];
@@ -222,6 +222,7 @@ app.post('/forgot-password', async (req, res) => {
   const link    = `${baseUrl}/reset-password/${token}`;
 
   try {
+    if (!resend) throw new Error('RESEND_API_KEY not configured');
     await resend.emails.send({
       from:    'Joakim Jaksen <noreply@joakimjaksen.se>',
       to:      user.email,
