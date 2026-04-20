@@ -50,6 +50,41 @@ const blocks = [
       <h3>Rapport — grunden för allt sälj</h3>
       <p>Rapport är den känsla av samhörighet och förtroende som gör att kunden <em>vill</em> köpa av just dig. Det är inte ett trick — det är en äkta mänsklig koppling.</p>
       <p>Rapport byggs genom: gemensamma intressen, aktiv lyssning, att använda personens namn, att visa genuint intresse och att matcha deras kommunikationsstil.</p>
+
+      <h3>Telefonsamtalets öppning — de kritiska 10 sekunderna</h3>
+      <p>I telefonsälj har du ungefär 10 sekunder innan kunden bestämmer om de ska lyssna vidare. Det är ännu snävare än ett fysiskt möte. Din röst är ditt enda verktyg — det finns inget kroppsspråk att luta sig mot.</p>
+      <p>Det du säger under de första 10 sekunderna avgör om du får ytterligare 2 minuter. Och de 2 minuterna avgör om du får en behovsanalys. Och behovsanalysen avgör om du får en affär.</p>
+
+      <h3>Intresseväckaren — din dörroppnare</h3>
+      <p>En intresseväckare är din öppningsmening som fångar kundens uppmärksamhet och skapar nyfikenhet. Den ska sälja samtalet — inte produkten.</p>
+      <p>En stark intresseväckare:</p>
+      <ul>
+        <li>Är kopplad till något kunden bryr sig om (kostnad, trygghet, tid, bekvämlighet)</li>
+        <li>Skapar en frågeställning i kundens huvud: <em>"Vad menar de?"</em></li>
+        <li>Är kort — en mening, max två</li>
+        <li>Involverar kunden direkt med "du" eller "ni"</li>
+      </ul>
+      <p>Exempel: <em>"Hej, jag ringer för att de flesta vi pratar med faktiskt betalar mer än de behöver — och ofta utan att veta om det."</em></p>
+      <p>Den meningen skapar nyfikenhet utan att sälja något. Kunden undrar: <em>vad menar de? Gäller det mig?</em></p>
+
+      <h3>Fem steg i en stark samtalsöppning</h3>
+      <ol>
+        <li><strong>Hälsning & presentation</strong> — Ditt namn, varifrån du ringer. Enkelt och tydligt utan att rabbla upp en lång företagsbeskrivning.</li>
+        <li><strong>Intresseväckaren</strong> — Din öppningsmening. Se ovan. Gör den specifik för din bransch.</li>
+        <li><strong>Aktiverande fråga</strong> — En enkel fråga som sätter kunden i en dialogisk position och aktiverar dem. <em>"Det stämmer väl att ni hanterar [X] idag?"</em></li>
+        <li><strong>Bryggan till behovsanalys</strong> — En naturlig övergång till frågefasen. <em>"För att veta om vi är rätt matchning för er behöver jag förstå er situation lite bättre — okej om jag ställer några korta frågor?"</em></li>
+        <li><strong>Rapport-moment</strong> — Använd kundens namn. Visa att du lyssnar. En person som känner sig sedd lyssnar i sin tur på dig.</li>
+      </ol>
+
+      <h3>Tonläge och tempo i telefon</h3>
+      <p>I telefon syns du inte — du hörs. Varje känsla du projicerar gör det via rösten. Tonläge och tempo är allt.</p>
+      <ul>
+        <li><strong>Tempo</strong> — Naturligt och lugnt. För snabbt upplevs som nervöst. Matcha kundens tempo gradvis under samtalet.</li>
+        <li><strong>Tonläge</strong> — En varm, trygg röst skapar förtroende. En hög, pressad röst skapar stress hos mottagaren. Andas ut innan du ringer.</li>
+        <li><strong>Leendet hörs</strong> — Ler du när du ringer? Det hörs faktiskt. Kunder reagerar mer positivt utan att förstå varför.</li>
+        <li><strong>Pauser</strong> — Var inte rädd för tystnad efter en fråga. En kort paus signalerar att du faktiskt väntar på svaret — inte bara fyller luften.</li>
+      </ul>
+      <p><strong>Övning:</strong> Spela in dig själv under ett samtal och lyssna tillbaka. Hur låter du? Är du den du skulle vilja prata med?</p>
     `,
     quiz: [
       { q: 'Enligt Mehrabians regel, hur stor andel av kommunikation utgörs av kroppsspråk?', options: ['7%', '38%', '55%', '70%'], answer: 2 },
@@ -74,6 +109,11 @@ const blocks = [
     gradient: 'linear-gradient(135deg, #0ea5e9, #0284c7)',
     color: '#0ea5e9',
     youtubeId: 'u68KCMTGXSk',
+    teaser: `
+      <h3>Vad är prospektering?</h3>
+      <p>Prospektering är processen att identifiera och kvalificera potentiella kunder. Det är säljprocessens fundament — utan en fylld pipeline finns inget att sälja till.</p>
+      <p>Men de flesta förstår inte vad som skiljer toppsäljaren från medelmåttan. Det handlar inte om att ringa flest samtal — det handlar om att ringa <strong>rätt samtal, till rätt person, med rätt förberedelse</strong>. Det är den kunskapen som väntar dig i det här blocket.</p>
+    `,
     theory: `
       <h3>Vad är prospektering?</h3>
       <p>Prospektering är processen att identifiera och kvalificera potentiella kunder (prospects) som passar din produkt eller tjänst. Det är säljprocessens fundament — utan en fylld pipeline finns inget att sälja till.</p>
@@ -111,7 +151,30 @@ const blocks = [
 
       <h3>Pipeline-tänkandet</h3>
       <p>Din pipeline är din säljtratt. Prospektering fyller toppen av tratten. Om du slutar prospektera idag, töms din pipeline om 60–90 dagar. Prospektering är inte något du gör när det är lugnt — det är något du gör <strong>varje dag</strong>.</p>
-      <p>Sätt ett dagligt mål: t.ex. 10 nya kontakter, 5 uppföljningar och 2 boka möten.</p>
+      <p>Sätt ett dagligt mål: t.ex. 10 nya kontakter, 5 uppföljningar och 2 bokade möten.</p>
+
+      <h3>Förberedelse inför samtalet — hemarbetet</h3>
+      <p>De säljare som ringer mest blandar inte alltid bäst. De som förbereder sig vinner. Fem minuters förberedelse per prospect kan dubblera din konverteringsgrad.</p>
+      <p>Vad du bör veta innan du ringer:</p>
+      <ul>
+        <li><strong>Namn och titel</strong> — Vet du vem du pratar med? Att säga "Hej [namn]" istället för "Hej, är det ägaren?" ger en helt annan start.</li>
+        <li><strong>Branschen</strong> — Vilka utmaningar är vanliga i den här branschen just nu? Kan du relatera ditt erbjudande till dem direkt?</li>
+        <li><strong>Företagets storlek och situation</strong> — Är de i tillväxt? Nyligen nyanställda? Det ger ledtrådar om behov.</li>
+        <li><strong>Varför dem och varför nu?</strong> — Det starkaste du kan säga är: "Anledningen att jag hörde av mig just till er är..." Det visar att du inte ringer alla.</li>
+      </ul>
+
+      <h3>Att komma förbi grindvakten</h3>
+      <p>I B2B tar du ofta vägen via en receptionist eller assistent (grindvakten) innan du når beslutsfattaren. Fel approach: försöka lura dem eller undvika dem. Rätt approach: behandla dem som en allierad.</p>
+      <ul>
+        <li>Presentera dig med för- och efternamn — det låter mer trovärdigt och professionellt</li>
+        <li>Var kortfattad och tydlig om ändamålet: "Jag behöver prata med er IT-chef om [specifikt ämne]"</li>
+        <li>Be om hjälp snarare än att ställa krav: "Kan du hjälpa mig att komma i kontakt med rätt person?"</li>
+        <li>Lär dig grindvaktens namn. Ring tillbaka och fråga efter dem specifikt nästa gång.</li>
+      </ul>
+
+      <h3>Kvalitet framför kvantitet — varje gång</h3>
+      <p>100 samtal till fel persons är sämre än 20 samtal till rätt person. Prospektering handlar om att investera tid i de prospects som faktiskt har förutsättningar att bli kunder.</p>
+      <p>Fråga dig innan varje samtal: <em>Om allt går perfekt — kan den här personen faktiskt bli en kund?</em> Om svaret är nej — prioritera inte dem.</p>
     `,
     quiz: [
       { q: 'Vad är syftet med prospektering?', options: ['Att presentera din produkt så snabbt som möjligt', 'Att identifiera och kvalificera potentiella kunder', 'Att skicka massutskick', 'Att ringa så många samtal som möjligt'], answer: 1 },
@@ -136,6 +199,11 @@ const blocks = [
     gradient: 'linear-gradient(135deg, #10b981, #059669)',
     color: '#10b981',
     youtubeId: 'HiEjkMQtZuI',
+    teaser: `
+      <h3>Varför behovsanalys är nyckeln</h3>
+      <p>De flesta säljare pratar för mycket. De presenterar, förklarar och argumenterar — utan att först förstå vad kunden faktiskt behöver. Resultatet: en presentation som missar målet och en kund som inte känner sig förstådd.</p>
+      <p>En stark behovsanalys vänder dynamiken helt. Kunden pratar 70% av tiden. Du lyssnar och ställer de rätta frågorna. Och när du väl presenterar din lösning — passar den perfekt. Det här blocket ger dig de exakta frågorna och teknikerna som skiljer toppsäljare från resten.</p>
+    `,
     theory: `
       <h3>Varför behovsanalys är nyckeln</h3>
       <p>De flesta säljare pratar för mycket. De presenterar, förklarar och argumenterar — utan att först förstå vad kunden faktiskt behöver. Resultatet: en presentation som missar målet och en kund som inte känner sig förstådd.</p>
@@ -166,6 +234,30 @@ const blocks = [
 
       <h3>Regeln om 70/30</h3>
       <p>I en behovsanalys bör kunden prata <strong>70%</strong> av tiden. Du pratar <strong>30%</strong> — och mestadels för att ställa frågor. Ju mer kunden pratar, desto mer information har du. Ju mer de berättar om sina problem, desto mer säljer de sig själva på lösningen.</p>
+
+      <h3>Konkreta följdfrågor som öppnar samtal</h3>
+      <p>Generella frågor ger generella svar. Specifika frågor ger användbar information. Här är exempel på följdfrågor som faktiskt fungerar i B2B:</p>
+      <ul>
+        <li><em>"Hur ser ni på [ämne] idag — vad fungerar bra och vad skulle ni vilja förändra?"</em></li>
+        <li><em>"Vad är det som gör att ni har [nuvarande lösning] — vad var det som avgjorde det beslutet?"</em></li>
+        <li><em>"Hur påverkar [problemet] er verksamhet i praktiken?"</em></li>
+        <li><em>"Om ni hade fria händer — hur hade ni löst det idealt?"</em></li>
+        <li><em>"Vem är det som påverkas mest av det här i er organisation?"</em></li>
+        <li><em>"Vad är viktigast för er — kostnad, enkelhet eller trygghet?"</em></li>
+      </ul>
+      <p>Fråga inte allt på en gång. Välj 2–3 frågor och fördjupa baserat på svaren.</p>
+
+      <h3>Låsningstekniken — bekräfta behovet innan du pitchar</h3>
+      <p>En av de vanligaste misstagen är att börja pitcha innan kunden faktiskt har formulerat sitt behov. Låsningstekniken löser det.</p>
+      <p>När du identifierat ett behov — bekräfta det högt och be kunden instämma:</p>
+      <p><em>"Så om jag förstår dig rätt — det viktigaste för er är att [behov 1] och att [behov 2] stämmer det?"</em></p>
+      <p>Kunden säger ja → behovet är låst. Nu kan du presentera din lösning kopplad direkt till det de just bekräftat. Det är inte du som säljer — det är deras egna ord som motiverar beslutet.</p>
+      <p>Sträva efter att låsa 2–3 konkreta behov innan du presenterar. Pitchar du mot ett låst behov är chansen att höra "det behöver vi inte" i princip noll.</p>
+
+      <h3>Plantering av behov — det omedvetna behovet</h3>
+      <p>Ibland vet inte kunden att de har ett problem förrän du ställer rätt fråga. Det kallas att plantera ett behov — att hjälpa kunden att se något de inte sett.</p>
+      <p>Exempel: Om din produkt löser ineffektivitet, fråga: <em>"Hur mycket tid lägger ni per vecka på [manuell process]?"</em> Kunden räknar — och inser att det är mer än de tänkt. Det behovet ägde de alltid, men du hjälpte dem att se det.</p>
+      <p>Det är inte manipulation — det är konsultativ försäljning. Du hjälper kunden förstå sin situation bättre.</p>
     `,
     quiz: [
       { q: 'Vad står "I" för i SPIN Selling?', options: ['Introduction', 'Implikationsfrågor', 'Information', 'Insight'], answer: 1 },
@@ -190,6 +282,11 @@ const blocks = [
     gradient: 'linear-gradient(135deg, #f59e0b, #d97706)',
     color: '#f59e0b',
     youtubeId: 'IiD-0kFdp2k',
+    teaser: `
+      <h3>Det vanligaste misstaget i presentationen</h3>
+      <p>De flesta säljare presenterar <em>features</em> — vad produkten kan göra. Kunderna köper <em>outcomes</em> — vad det gör för <strong>dem</strong>. Det är en fundamental skillnad som avgör om kunden köper eller inte.</p>
+      <p>Det finns ett enkelt ramverk som omvandlar vilken presentation som helst till en som kunden direkt känner är gjord för just dem. Du lär dig det — och mycket mer — i det här blocket.</p>
+    `,
     theory: `
       <h3>Det vanligaste misstaget i presentationen</h3>
       <p>De flesta säljare presenterar <em>features</em> — vad produkten kan göra. Kunderna köper <em>outcomes</em> — vad det gör för <strong>dem</strong>. Det är en fundamental skillnad.</p>
@@ -226,7 +323,26 @@ const blocks = [
 
       <h3>Anpassa presentationen till kunden</h3>
       <p>Använd det du lärde dig i behovsanalysen. En presentation som speglar kundens egna ord och problem är extremt kraftfull. De känner sig sedda.</p>
-      <p>Börja presentationen med: "Baserat på vad ni berättade — att X är er största utmaning och att Y kostar er mest — vill jag visa hur vi löser just det."</p>
+      <p>Börja presentationen med: <em>"Baserat på vad ni berättade — att X är er största utmaning och att Y kostar er mest — vill jag visa hur vi löser just det."</em></p>
+
+      <h3>Bygg pitchen från låsta behov</h3>
+      <p>Om du gjort en bra behovsanalys och låst 2–3 behov, är din presentation ett logiskt nästa steg — inte ett försäljningsgrepp. Strukturen:</p>
+      <ol>
+        <li><strong>Anknyt till det låsta behovet</strong>: <em>"Ni sa att [behov 1] var centralt för er..."</em></li>
+        <li><strong>Presentera lösningen kopplad till just det</strong>: <em>"Det är exakt det [produkt/tjänst] är byggt för..."</em></li>
+        <li><strong>Visa outcome, inte feature</strong>: <em>"Det innebär att ni kan [konkret resultat] utan att..."</em></li>
+        <li><strong>Bekräfta att det stämmer</strong>: <em>"Ser ni hur det löser det ni beskrev?"</em></li>
+      </ol>
+      <p>Upprepa för varje låst behov. En presentation som kopplar direkt till kundens egna ord är mycket svårare att avvisa.</p>
+
+      <h3>Tempot i presentationen — sälj inte för snabbt</h3>
+      <p>Ett vanligt misstag är att rusa igenom presentationen. Kunden behöver tid att processa och bilda en bild. Bromsa medvetet:</p>
+      <ul>
+        <li>Pausa efter varje nyckelpunkt</li>
+        <li>Fråga om de har frågor under genomgången — inte bara efteråt</li>
+        <li>Kontrollera förståelse: <em>"Är det tydligt hur det fungerar?"</em></li>
+      </ul>
+      <p>En kund som förstår presentationen köper. En kund som inte förstår säger: <em>"Jag tänker på det"</em> — och gör det aldrig.</p>
     `,
     quiz: [
       { q: 'Vad köper kunder egentligen, enligt en stark presentation?', options: ['Features', 'Tekniska specifikationer', 'Outcomes och värde', 'Priset'], answer: 2 },
@@ -251,6 +367,11 @@ const blocks = [
     gradient: 'linear-gradient(135deg, #ef4444, #dc2626)',
     color: '#ef4444',
     youtubeId: 'KwlB04OoBds',
+    teaser: `
+      <h3>En invändning är ett köpsignal i förklädnad</h3>
+      <p>Många säljare fruktar invändningar. Det är fel reaktion. En invändning visar att kunden är engagerad — de är fortfarande i samtalet, de behöver mer övertygelse. En tyst kund som inte invänder är farligare.</p>
+      <p>Det här blocket täcker hela invändningsspektrumet — från de reflexmässiga "inte intresserad"-svaren i samtalets första sekunder, till de tuffa avslutsavvisningarna som kräver precision och lugn. Du får konkreta scripts och tekniker för varje scenario.</p>
+    `,
     theory: `
       <h3>Vad en invändning verkligen är</h3>
       <p>Många säljare fruktar invändningar. Det är fel reaktion. En invändning visar att kunden är engagerad — de är fortfarande i samtalet, de vill förstå mer, de behöver mer övertygelse. En tyst kund som inte invänder är farligare.</p>
@@ -280,6 +401,61 @@ const blocks = [
 
       <h3>Emotionella vs. rationella invändningar</h3>
       <p>Rationella invändningar (pris, timing, features) är lättare att hantera — de har faktasvar. Emotionella invändningar (rädsla för förändring, förtroendebrist) kräver mer lyssning och empati. Identifiera vilken typ du möter.</p>
+
+      <h3>Inställningen är allt — mantrat som förändrar spelet</h3>
+      <p>Toppsäljare och mediokra säljare möter samma invändningar. Skillnaden är inte tekniken — det är inställningen. Mediokra säljare hör ett nej och tror det är slutet. Toppsäljare hör ett nej och tänker: <em>"Okej, vilken fråga gömmer sig bakom det här?"</em></p>
+      <p><strong>Mantrat:</strong> Varje invändning är en fråga i förklädnad. Din uppgift är att förstå frågan, inte slå tillbaka mot den.</p>
+      <p>Gör det till en vana att efter varje invändning fråga dig: <em>Vad är det kunden egentligen vill veta?</em> Det svaret berättar vad du behöver göra härnäst.</p>
+
+      <h3>Tidiga invändningar — de reflexmässiga nejen</h3>
+      <p>De tidiga invändningarna kommer innan kunden vet vad du erbjuder. De är inte genomtänkta — de är reflexer. Det betyder: ta inte dem bokstavligt, och argumentera aldrig direkt mot dem.</p>
+      <ul>
+        <li><strong>"Inte intresserad"</strong> — Kunden vet inte vad de tackar nej till än. Svara med nyfikenhet: <em>"Det förstår jag — de flesta jag pratar med säger det i första sekunden. Anledningen att jag ringer är [intresseväckare]. Passar det att prata 2 minuter?"</em></li>
+        <li><strong>"Har inte tid just nu"</strong> — Bekräfta och ankra: <em>"Absolut, det förstår jag. Det tar bara ett par minuter — och om det inte är relevant för dig lovar jag att inte ta mer av din tid. Passar det nu?"</em></li>
+        <li><strong>"Nöjd med det jag har"</strong> — Bygg en bro, utmana inte: <em>"Kul att höra! Det bästa läget att lyssna är faktiskt när man är nöjd — då har man inget att förlora på att ta reda på om det finns ett bättre alternativ. Får jag berätta kort?"</em></li>
+        <li><strong>"Skicka information"</strong> — Mjuk avvisning. Svara: <em>"Självklart. Men för att skicka rätt information behöver jag förstå er situation lite — okej om jag ställer en fråga eller två?"</em></li>
+      </ul>
+
+      <h3>Bryggan — tekniken för att komma förbi ett nej</h3>
+      <p>Bryggan är ett av de mest kraftfulla verktygen i telefonsälj. Den används när kunden sagt nej och du vill komma vidare utan att kännas påträngande.</p>
+      <p>Struktur:</p>
+      <ol>
+        <li><strong>Bekräfta</strong>: <em>"Jag förstår det."</em></li>
+        <li><strong>Normalisera</strong>: <em>"Det är många som säger det i första sekunden."</em></li>
+        <li><strong>Bro</strong>: <em>"Men det som är annorlunda med det vi gör är [en konkret, specifik sak]..."</em></li>
+        <li><strong>Ny fråga</strong>: <em>"Vad har du idag för [relevant aspekt]?"</em></li>
+      </ol>
+      <p>Bryggan är inte argumentation — det är en redirection. Du tar emot nejet, erkänner det, och leder samtalet åt ett nytt håll. Kunden känner sig hörd snarare än pressad.</p>
+
+      <h3>Invändningar vid avslut — de tuffaste</h3>
+      <p>Sena invändningar — de som kommer precis när du försöker avsluta — är de svåraste. Kunden har lyssnat, kanske visat intresse, och säger ändå nej. Det är här de flesta säljare ger upp — och det är precis där toppsäljare vinner affärer.</p>
+      <ul>
+        <li><strong>"Jag vill tänka på det"</strong> — Fråga vad de behöver tänka på: <em>"Absolut. Är det priset, om det passar er situation, eller är det något annat?"</em> Isolera invändningen — annars tänker de på allt och inget.</li>
+        <li><strong>"Jag vill läsa mer / få det skriftligt"</strong> — Fråga vad de vill läsa om: <em>"Självklart. Vad är det du vill veta mer om? Kan jag besvara det nu istället, så sparar du tid?"</em> Ofta har du svaret — de söker bekräftelse, inte papper.</li>
+        <li><strong>"Jag måste prata med min partner / chef"</strong> — Engagera dem i processen: <em>"Det är klokt. Vad tror du de kommer att fråga? Jag kan ge dig svaren nu så att du har dem."</em></li>
+        <li><strong>"Det känns inte rätt just nu"</strong> — Fråga vad rätt tid innebär: <em>"Det förstår jag. Vad behöver förändras för att tajmingen ska kännas bättre?"</em> Det avslöjar den verkliga invändningen.</li>
+      </ul>
+
+      <h3>Behåll kunden — när nejet verkar definitivt</h3>
+      <p>Ibland säger kunden ett tydligt nej vid avslut. Det är inte slutet — det är ett tillfälle att resonera och skapa ett bättre utgångsläge för nästa kontakt.</p>
+      <ol>
+        <li><strong>Acceptera utan att kapitulera</strong>: <em>"Jag respekterar det. Låt mig bara förstå lite bättre..."</em></li>
+        <li><strong>Ställ en öppen fråga om nuläget</strong>: <em>"Vad har du idag för [produkt/tjänst]?"</em> Få dem att prata om sin situation — då hittar du öppningar.</li>
+        <li><strong>Hitta något att resonera kring</strong>: Finns det något i deras nuläge som inte är optimalt? Lyft det sakligt och nyfiket.</li>
+        <li><strong>Plantera ett frö</strong>: Lämna dem med något de tar med sig: <em>"Det jag kan säga är att [unik styrka hos din lösning]. Tänk på det. Får jag höra av mig om ett par veckor?"</em></li>
+      </ol>
+      <p>En kund som lämnar samtalet med ett positivt intryck av dig — trots att de inte köpte — är en potentiell kund nästa månad. En kund som lämnar frustrerad stänger dörren permanent.</p>
+
+      <h3>Zig Ziglar: De fem skälen till att kunder inte köper</h3>
+      <p>Säljlegenden Zig Ziglar identifierade fem grundläggande skäl till att en kund inte köper. Alla invändningar du möter kan reduceras till ett av dem:</p>
+      <ul>
+        <li><strong>1. Inget behov</strong> — Kunden ser inte att de har ett problem att lösa. <em>Lösning: Hjälp dem se behovet de inte uppmärksammat. Ställ problemfrågor. "Vad händer om [situation] fortsätter ett år till?"</em></li>
+        <li><strong>2. Inga pengar</strong> — Kunden tror att de inte har råd. <em>Lösning: Koppla till ROI. "Vad kostar det er att INTE lösa det här?" Flytta fokus från kostnad till investering.</em></li>
+        <li><strong>3. Ingen brådska</strong> — Kunden ser inget skäl att agera nu. <em>Lösning: Visa konsekvensen av att vänta. Finns det ett genuint tidsbegränsat skäl att agera?</em></li>
+        <li><strong>4. Inget begär</strong> — Kunden vill inte ha det du säljer. <em>Lösning: Gå tillbaka till behovsanalysen. Koppla erbjudandet tydligare till det de faktiskt bryr sig om.</em></li>
+        <li><strong>5. Inget förtroende</strong> — Kunden litar inte på dig, din produkt eller ditt företag. <em>Lösning: Socialbevis, garantier, transparens. Bygg relationen — press gör det värre.</em></li>
+      </ul>
+      <p>Nästa gång du möter en invändning: identifiera vilket av de fem det är. Svaret berättar exakt vad du behöver adressera.</p>
     `,
     quiz: [
       { q: 'Vad signalerar en invändning från kunden?', options: ['Att de inte vill köpa', 'Att de är engagerade och behöver mer övertygelse', 'Att priset är fel', 'Att mötet bör avslutas'], answer: 1 },
@@ -304,6 +480,11 @@ const blocks = [
     gradient: 'linear-gradient(135deg, #8b5cf6, #7c3aed)',
     color: '#8b5cf6',
     youtubeId: 'q9QmsJMdIno',
+    teaser: `
+      <h3>Varför säljare misslyckas med avslut</h3>
+      <p>Forskning visar att 48% av säljare aldrig ber om affären. De lämnar möten utan ett tydligt nästa steg — och hoppas att kunden tar initiativet. Det är ett kostsamt misstag.</p>
+      <p>Avslut handlar inte om manipulation — det handlar om att guida kunden till ett beslut de redan är nära att fatta. Det här blocket lär dig avslutstekniker som faktiskt fungerar, hur du läser köpsignaler, och vad du gör när kunden säger nej.</p>
+    `,
     theory: `
       <h3>Varför säljare misslyckas med avslut</h3>
       <p>Forskning visar att 48% av säljare aldrig ber om affären. De lämnar möten utan ett tydligt nästa steg, hoppas att kunden ska ta initiativet, och undviker den obehagliga känslan av ett eventuellt nej.</p>
@@ -359,6 +540,11 @@ const blocks = [
     gradient: 'linear-gradient(135deg, #14b8a6, #0d9488)',
     color: '#14b8a6',
     youtubeId: 'uSMBHFvDhQE',
+    teaser: `
+      <h3>Uppföljningens verklighet</h3>
+      <p>80% av affärer kräver 5 eller fler uppföljningskontakter. Ändå ger 44% av säljare upp efter ett enda försök. Det är precis där affärer förloras — inte i mötet, utan i efterarbetet.</p>
+      <p>Det här blocket ger dig ett konkret system för uppföljning som skapar värde vid varje kontakt — och som kunder faktiskt uppskattar att ta emot.</p>
+    `,
     theory: `
       <h3>Uppföljningens verklighet</h3>
       <p>Statistik som varje säljare bör känna till:</p>
@@ -418,6 +604,11 @@ const blocks = [
     gradient: 'linear-gradient(135deg, #f97316, #ea580c)',
     color: '#f97316',
     youtubeId: 'V1bFr2SWP1I',
+    teaser: `
+      <h3>Motivation vs. System</h3>
+      <p>Motivation är en känsla. System är en struktur. Framgångsrika säljare förlitar sig inte på att de "känner för att" ringa samtal — de har ett system som levererar oavsett dagsform.</p>
+      <p>Det här blocket lär dig hur du sätter mål som faktiskt håller, aktivitetssystem som ger konsekventa resultat, och hur du hanterar de perioder när motivationen sviktar.</p>
+    `,
     theory: `
       <h3>Motivation vs. System</h3>
       <p>Motivation är känsla. System är struktur. Framgångsrika säljare förlitar sig inte på att de "känner för att" ringa samtal — de har ett system som kör oavsett hur de mår.</p>
@@ -485,6 +676,11 @@ const blocks = [
     gradient: 'linear-gradient(135deg, #0077b5, #00a0dc)',
     color: '#0077b5',
     youtubeId: 'DdqZIdoGGpI',
+    teaser: `
+      <h3>LinkedIn som säljverktyg</h3>
+      <p>LinkedIn är idag det kraftfullaste B2B-verktyget som finns — men de flesta använder det fel. De skickar generella meddelanden, spammar med pitch direkt och undrar varför ingen svarar.</p>
+      <p>Det här blocket lär dig hur du bygger en profil som attraherar rätt kunder, hur du prospekterar strategiskt, och hur du skriver outreach som faktiskt får svar.</p>
+    `,
     theory: `
       <h3>Vad är Social Selling?</h3>
       <p>Social selling handlar om att använda sociala medier — primärt LinkedIn — för att hitta, förstå och bygga relationer med potentiella kunder <em>innan</em> du försöker sälja till dem. Det ersätter inte traditionell försäljning — det värmer upp den.</p>
@@ -545,6 +741,11 @@ const blocks = [
     gradient: 'linear-gradient(135deg, #7c3aed, #a855f7)',
     color: '#7c3aed',
     youtubeId: 'lDYPN4olqxk',
+    teaser: `
+      <h3>Videosamtalet — en ny säljmiljö</h3>
+      <p>Teams, Zoom och Google Meet har förändrat hur sälj sker. Men de flesta behandlar ett videosamtal som ett telefonsamtal med kamera — och missar de specifika reglerna som gäller.</p>
+      <p>Det här blocket täcker allt från teknisk setup och digital kroppsspråk till hur du strukturerar ett videosamtal för maximal effekt.</p>
+    `,
     theory: `
       <h3>Den digitala säljrealiteten</h3>
       <p>Mer än 70% av B2B-köpprocesser inkluderar idag minst ett videosamtal. Förmågan att sälja digitalt är inte längre en bonus — det är en kärnkompetens. Och de flesta säljare är dåliga på det, vilket ger dig en enorm fördel om du tar det på allvar.</p>
@@ -602,6 +803,11 @@ const blocks = [
     gradient: 'linear-gradient(135deg, #0891b2, #0e7490)',
     color: '#0891b2',
     youtubeId: 'TlahSKEhFQY',
+    teaser: `
+      <h3>Säljmailens verklighet</h3>
+      <p>Den genomsnittliga öppningsgraden för cold outreach är under 20%. Det betyder att 80% av din tid på att skriva mail är bortkastade — om du inte vet vad som faktiskt fungerar.</p>
+      <p>Det här blocket lär dig formeln bakom säljmail som öppnas, läses och besvaras — från ämnesraden till break-up mailet.</p>
+    `,
     theory: `
       <h3>Verkligheten om säljmail</h3>
       <p>Den genomsnittliga öppningsraten för cold email är <strong>21%</strong>. Svarsraten är <strong>1–5%</strong>. Men toppsäljare når konsekvent 40–60% öppningsrater och 15–25% svarsrater. Skillnaden är inte tur — det är teknik.</p>
@@ -660,6 +866,11 @@ const blocks = [
     gradient: 'linear-gradient(135deg, #b45309, #d97706)',
     color: '#d97706',
     youtubeId: 'MXW0bx_Ooq4',
+    teaser: `
+      <h3>Förhandling är inte krig</h3>
+      <p>De flesta associerar förhandling med att en part vinner och en förlorar. Det är fel ramverk — och det är kostsamt. De bästa förhandlarna skapar avtal där båda parter känner sig nöjda och vill samarbeta igen.</p>
+      <p>Det här blocket ger dig FBI:s Chris Voss-tekniker, BATNA-principen och hur du aldrig ger en rabatt utan att få något tillbaka.</p>
+    `,
     theory: `
       <h3>Förhandling är inte krig</h3>
       <p>De flesta ser förhandling som ett nollsummespel — en vinner, en förlorar. Det är fel ramverk. Den bästa förhandlingen skapar ett avtal där båda parter känner att de fick det de behövde. Det kallas <strong>principled negotiation</strong> (Harvard Negotiation Project).</p>
@@ -714,6 +925,11 @@ const blocks = [
     gradient: 'linear-gradient(135deg, #db2777, #be185d)',
     color: '#db2777',
     youtubeId: 'ZXsQAXx_ao0',
+    teaser: `
+      <h3>Vad är ett personligt varumärke?</h3>
+      <p>Ditt personliga varumärke är vad folk säger om dig när du inte är i rummet. I en värld där kunder googlar dig innan de svarar på ditt samtal — är ditt varumärke din dörroppnare.</p>
+      <p>Det här blocket lär dig hur du positionerar dig, bygger thought leadership och skapar ett digitalt och analogt varumärke som attraherar rätt kunder till dig.</p>
+    `,
     theory: `
       <h3>Vad är ett personligt varumärke?</h3>
       <p>Ditt personliga varumärke är vad folk säger om dig när du inte är i rummet. Det är ryktet, expertisen och energin du förknippas med. I en värld där kunder googlar dig innan de svarar på ditt samtal — är ditt personliga varumärke din dörroppnare.</p>
@@ -766,6 +982,11 @@ const blocks = [
     gradient: 'linear-gradient(135deg, #16a34a, #15803d)',
     color: '#16a34a',
     youtubeId: 'V1bFr2SWP1I',
+    teaser: `
+      <h3>Prestation börjar med kroppen</h3>
+      <p>En säljare är en kognitiv atlet. Du fattar beslut, hanterar stress, läser av folk och håller energin uppe — hela dagen, varje dag. Din fysiska kondition avgör din mentala skärpa och emotionella reglering.</p>
+      <p>Det här blocket tar upp träningens direkta effekt på säljprestation, sömnens roll, energihantering under arbetsdagen och hur du bygger vanor som håller.</p>
+    `,
     theory: `
       <h3>Prestation börjar med kroppen</h3>
       <p>En säljare är en kognitiv atlet. Du fattar beslut, hanterar stress, läser av folk och håller energin uppe — hela dagen, varje dag. Din fysiska kondition avgör din mentala skärpa, emotionella reglering och uthållighet under press.</p>
@@ -824,6 +1045,11 @@ const blocks = [
     gradient: 'linear-gradient(135deg, #475569, #334155)',
     color: '#64748b',
     youtubeId: 'n3kNlFMXslo',
+    teaser: `
+      <h3>Det stora missförståndet om produktivitet</h3>
+      <p>Produktivitet handlar inte om att göra fler saker — det handlar om att göra rätt saker. De flesta säljare är fullt sysselsatta hela dagen men lyckas ändå inte nå sina mål. Anledningen: de arbetar hårt på fel saker.</p>
+      <p>Det här blocket ger dig 80/20-tänket i sälj, time blocking, och konkreta system för att skydda din tid och maximera varje arbetsdag.</p>
+    `,
     theory: `
       <h3>Det stora missförståndet om produktivitet</h3>
       <p>Produktivitet handlar inte om att göra fler saker. Det handlar om att göra <strong>rätt saker</strong> — och ha energi nog att göra dem väl. En säljare som gör 50 aktiviteter av fel typ presterar sämre än en som gör 15 rätt.</p>
@@ -885,6 +1111,11 @@ const blocks = [
     gradient: 'linear-gradient(135deg, #be123c, #9f1239)',
     color: '#be123c',
     youtubeId: 'mgmVOuLgFB0',
+    teaser: `
+      <h3>Sälj är ett mentalt yrke</h3>
+      <p>Toppsäljare och mediokra säljare har ofta liknande produktkunskap och teknik. Skillnaden är nästan alltid mental — hur de hanterar avvisanden, dåliga perioder, press och osäkerhet.</p>
+      <p>Mental styrka är en inlärd kompetens, inte ett personlighetsdrag. Det här blocket ger dig stoicismens verktyg, kognitiv reframing, visualisering och ett system för att bygga resiliens som håller långsiktigt.</p>
+    `,
     theory: `
       <h3>Sälj är ett mentalt yrke</h3>
       <p>Toppsäljare och mediokra säljare har ofta liknande produktkunskap och teknik. Skillnaden är framförallt mental — hur de hanterar avvisanden, perioder med dåliga resultat, press och osäkerhet. Mental styrka är en inlärd kompetens, inte ett personlighetsdrag.</p>

@@ -20,8 +20,8 @@ const PORT   = process.env.PORT || 3000;
 const stripe = Stripe(process.env['STRIPE_SECRET_KEY'] || '');
 const resend = process.env['RESEND_API_KEY'] ? new Resend(process.env['RESEND_API_KEY']) : null;
 
-// Blocks 1–4 are free; 5–16 require premium
-const FREE_BLOCK_IDS = ['forsta-intrycket', 'prospektering', 'behovsanalys', 'presentation'];
+// Block 1 is free; 2–16 require premium (teaser shown for locked blocks)
+const FREE_BLOCK_IDS = ['forsta-intrycket'];
 
 const openai = new OpenAI({
   apiKey:  process.env.GROQ_API_KEY,
@@ -323,17 +323,15 @@ app.get('/learn/:id', requireLogin, (req, res) => {
 
   const isPremium  = !FREE_BLOCK_IDS.includes(block.id);
   const hasAccess  = req.session.role === 'premium' || req.session.role === 'admin';
-
-  if (isPremium && !hasAccess) {
-    return res.redirect('/upgrade');
-  }
+  const isTeaser   = isPremium && !hasAccess;
 
   res.render('block', {
-    username: req.session.username,
-    role:     req.session.role,
+    username:     req.session.username,
+    role:         req.session.role,
     block,
     blocks:       salesBlocks,
     freeBlockIds: FREE_BLOCK_IDS,
+    isTeaser,
   });
 });
 

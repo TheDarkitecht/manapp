@@ -26,7 +26,7 @@
   <div class="blocks-grid">
     <% blocks.forEach(function(block, i) { %>
       <% const isLocked = role === 'free' && !freeBlockIds.includes(block.id); %>
-      <a href="<%= isLocked ? '/upgrade' : '/learn/' + block.id %>"
+      <a href="/learn/<%= block.id %>"
          class="block-card <%= isLocked ? 'block-locked' : '' %>"
          style="--card-gradient: <%= block.gradient %>;">
         <div class="block-card-number"><%= i + 1 %></div>
@@ -35,7 +35,7 @@
           <h3><%= block.title %></h3>
           <p><%= block.subtitle %></p>
         </div>
-        <div class="block-card-arrow"><%= isLocked ? '⭐' : '→' %></div>
+        <div class="block-card-arrow"><%= isLocked ? '👁' : '→' %></div>
       </a>
     <% }); %>
   </div>

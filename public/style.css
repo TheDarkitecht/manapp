@@ -2006,3 +2006,119 @@ textarea:focus {
   .upgrade-hero h1 { font-size: 1.5rem; }
 }
 
+/* ══════════════════════════════════════════════════════════════
+   TEASER / PAYWALL LOCK
+══════════════════════════════════════════════════════════════ */
+
+/* Block hero lock badge */
+.block-hero {
+  position: relative;
+}
+.block-hero-lock-badge {
+  position: absolute;
+  top: 1.25rem;
+  right: 1.5rem;
+  background: rgba(0,0,0,0.4);
+  border: 1px solid rgba(255,255,255,0.25);
+  color: #fff;
+  font-size: 0.8rem;
+  font-weight: 700;
+  padding: 0.3rem 0.75rem;
+  border-radius: 999px;
+  letter-spacing: 0.04em;
+}
+
+/* Theory preview — clipped with fade */
+.teaser-preview {
+  position: relative;
+  max-height: 380px;
+  overflow: hidden;
+}
+
+.teaser-fade {
+  height: 180px;
+  margin-top: -180px;
+  background: linear-gradient(to bottom, transparent, #0f0f1a);
+  position: relative;
+  z-index: 1;
+  pointer-events: none;
+}
+
+/* Lock wall below the fade */
+.teaser-lock-wall {
+  text-align: center;
+  padding: 0 1rem 2.5rem;
+  position: relative;
+  z-index: 2;
+}
+
+.teaser-lock-inner {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 20px;
+  padding: 2.5rem 2rem;
+  max-width: 500px;
+  margin: 0 auto;
+}
+
+.teaser-lock-icon {
+  font-size: 2.5rem;
+  margin-bottom: 1rem;
+}
+
+.teaser-lock-inner h3 {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: #f1f5f9;
+  margin-bottom: 0.75rem;
+}
+
+.teaser-lock-inner p {
+  color: #94a3b8;
+  margin-bottom: 1.5rem;
+  line-height: 1.65;
+  font-size: 0.95rem;
+}
+
+.teaser-upgrade-btn {
+  display: inline-block;
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  color: #fff !important;
+  text-decoration: none;
+  padding: 0.85rem 2rem;
+  border-radius: 10px;
+  font-weight: 700;
+  font-size: 1rem;
+  transition: opacity 0.2s, transform 0.15s;
+}
+.teaser-upgrade-btn:hover {
+  opacity: 0.9;
+  transform: translateY(-1px);
+}
+
+.teaser-price-hint {
+  color: #64748b !important;
+  font-size: 0.82rem !important;
+  margin-top: 0.75rem !important;
+  margin-bottom: 0 !important;
+}
+
+/* Locked tab content (video / quiz) */
+.teaser-locked-tab {
+  text-align: center;
+  padding: 5rem 2rem;
+}
+
+.teaser-locked-tab h3 {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #f1f5f9;
+  margin: 0.75rem 0 0.5rem;
+}
+
+.teaser-locked-tab p {
+  color: #64748b;
+  margin-bottom: 1.5rem;
+  font-size: 0.95rem;
+}
+

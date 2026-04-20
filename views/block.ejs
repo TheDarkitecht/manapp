@@ -22,6 +22,9 @@
       <h1><%= block.title %></h1>
       <p><%= block.subtitle %></p>
     </div>
+    <% if (isTeaser) { %>
+      <div class="block-hero-lock-badge">🔒 Premium</div>
+    <% } %>
   </div>
 
   <!-- Tabs -->
@@ -35,60 +38,103 @@
 
   <div class="tab-content-wrapper">
 
-    <!-- ── THEORY ───────────────────────────────────────────────── -->
-    <div id="tab-theory" class="tab-content active">
-      <div class="theory-body">
-        <%- block.theory %>
-      </div>
-    </div>
+    <% if (isTeaser) { %>
 
-    <!-- ── VIDEO ────────────────────────────────────────────────── -->
-    <div id="tab-video" class="tab-content">
-      <div class="video-wrapper">
-        <div class="video-label">Rekommenderad video om <strong><%= block.title %></strong></div>
-        <div class="video-embed">
-          <iframe
-            src="https://www.youtube.com/embed/<%= block.youtubeId %>?rel=0&modestbranding=1"
-            title="<%= block.title %>"
-            frameborder="0"
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-            allowfullscreen
-          ></iframe>
+      <!-- ── TEASER MODE — theory preview + paywall ──────────────────── -->
+      <div id="tab-theory" class="tab-content active">
+        <div class="theory-body teaser-preview">
+          <%- block.teaser %>
+        </div>
+        <div class="teaser-fade"></div>
+        <div class="teaser-lock-wall">
+          <div class="teaser-lock-inner">
+            <div class="teaser-lock-icon">🔒</div>
+            <h3>Lås upp hela blocket</h3>
+            <p>Det här blocket innehåller fullständig teori, videogenomgång och ett 10-frågorsprov. Uppgradera till Premium för att komma åt allt.</p>
+            <a href="/upgrade" class="auth-btn teaser-upgrade-btn">⭐ Uppgradera till Premium →</a>
+            <p class="teaser-price-hint">Från 199 kr/mån — avsluta när som helst</p>
+          </div>
         </div>
       </div>
-    </div>
 
-    <!-- ── QUIZ ──────────────────────────────────────────────────── -->
-    <div id="tab-quiz" class="tab-content">
-      <div class="quiz-wrapper" id="quizWrapper">
-        <div class="quiz-header">
-          <h2>🧠 Prov — <%= block.title %></h2>
-          <p>10 frågor. Välj ett svar per fråga och klicka sedan "Rätta provet".</p>
+      <div id="tab-video" class="tab-content">
+        <div class="teaser-locked-tab">
+          <div class="teaser-lock-icon">🎬🔒</div>
+          <h3>Video ingår i Premium</h3>
+          <p>Varje block har en kuraterad videogenomgång som fördjupar teorin.</p>
+          <a href="/upgrade" class="auth-btn teaser-upgrade-btn">⭐ Uppgradera →</a>
         </div>
+      </div>
 
-        <form id="quizForm">
-          <% block.quiz.forEach(function(q, qi) { %>
-            <div class="quiz-question" id="qq-<%= qi %>">
-              <p class="quiz-q-text"><span class="q-num"><%= qi + 1 %></span> <%= q.q %></p>
-              <div class="quiz-options">
-                <% q.options.forEach(function(opt, oi) { %>
-                  <label class="quiz-option" data-qi="<%= qi %>" data-oi="<%= oi %>">
-                    <input type="radio" name="q<%= qi %>" value="<%= oi %>" />
-                    <span class="option-letter"><%= ['A','B','C','D'][oi] %></span>
-                    <span><%= opt %></span>
-                  </label>
-                <% }); %>
+      <div id="tab-quiz" class="tab-content">
+        <div class="teaser-locked-tab">
+          <div class="teaser-lock-icon">🧠🔒</div>
+          <h3>Prov ingår i Premium</h3>
+          <p>Testa dina kunskaper med 10 frågor per block och se hur du presterar.</p>
+          <a href="/upgrade" class="auth-btn teaser-upgrade-btn">⭐ Uppgradera →</a>
+        </div>
+      </div>
+
+    <% } else { %>
+
+      <!-- ── FULL ACCESS MODE ────────────────────────────────────────── -->
+
+      <!-- THEORY -->
+      <div id="tab-theory" class="tab-content active">
+        <div class="theory-body">
+          <%- block.theory %>
+        </div>
+      </div>
+
+      <!-- VIDEO -->
+      <div id="tab-video" class="tab-content">
+        <div class="video-wrapper">
+          <div class="video-label">Rekommenderad video om <strong><%= block.title %></strong></div>
+          <div class="video-embed">
+            <iframe
+              src="https://www.youtube.com/embed/<%= block.youtubeId %>?rel=0&modestbranding=1"
+              title="<%= block.title %>"
+              frameborder="0"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowfullscreen
+            ></iframe>
+          </div>
+        </div>
+      </div>
+
+      <!-- QUIZ -->
+      <div id="tab-quiz" class="tab-content">
+        <div class="quiz-wrapper" id="quizWrapper">
+          <div class="quiz-header">
+            <h2>🧠 Prov — <%= block.title %></h2>
+            <p>10 frågor. Välj ett svar per fråga och klicka sedan "Rätta provet".</p>
+          </div>
+
+          <form id="quizForm">
+            <% block.quiz.forEach(function(q, qi) { %>
+              <div class="quiz-question" id="qq-<%= qi %>">
+                <p class="quiz-q-text"><span class="q-num"><%= qi + 1 %></span> <%= q.q %></p>
+                <div class="quiz-options">
+                  <% q.options.forEach(function(opt, oi) { %>
+                    <label class="quiz-option" data-qi="<%= qi %>" data-oi="<%= oi %>">
+                      <input type="radio" name="q<%= qi %>" value="<%= oi %>" />
+                      <span class="option-letter"><%= ['A','B','C','D'][oi] %></span>
+                      <span><%= opt %></span>
+                    </label>
+                  <% }); %>
+                </div>
               </div>
-            </div>
-          <% }); %>
+            <% }); %>
 
-          <button type="button" class="quiz-submit-btn" onclick="submitQuiz()">Rätta provet →</button>
-        </form>
+            <button type="button" class="quiz-submit-btn" onclick="submitQuiz()">Rätta provet →</button>
+          </form>
 
-        <!-- Result panel (hidden until submitted) -->
-        <div id="quizResult" class="quiz-result" style="display:none;"></div>
+          <!-- Result panel (hidden until submitted) -->
+          <div id="quizResult" class="quiz-result" style="display:none;"></div>
+        </div>
       </div>
-    </div>
+
+    <% } %>
 
   </div>
 
@@ -118,6 +164,7 @@
       btn.classList.add('active');
     }
 
+    <% if (!isTeaser) { %>
     // ── Quiz ────────────────────────────────────────────────────────────────
 
     const correctAnswers = <%- JSON.stringify(block.quiz.map(q => q.answer)) %>;
@@ -135,7 +182,6 @@
         const questionEl = document.getElementById('qq-' + qi);
         const options = questionEl.querySelectorAll('.quiz-option');
 
-        // Disable all options
         options.forEach(opt => {
           opt.style.pointerEvents = 'none';
           const oi = parseInt(opt.dataset.oi);
@@ -154,7 +200,6 @@
         return;
       }
 
-      // Show result
       const resultEl = document.getElementById('quizResult');
       const pct = Math.round((score / correctAnswers.length) * 100);
       const emoji = pct >= 80 ? '🏆' : pct >= 60 ? '👍' : '📚';
@@ -176,6 +221,7 @@
     function retryQuiz() {
       location.reload();
     }
+    <% } %>
   </script>
 
 </body>
