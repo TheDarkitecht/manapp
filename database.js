@@ -8,6 +8,12 @@ const path      = require('path');
 
 const DB_PATH = process.env.DB_PATH || path.join(__dirname, 'users.db');
 
+// Create directory if it doesn't exist (needed for /data/users.db on Railway)
+const dbDir = path.dirname(DB_PATH);
+if (!fs.existsSync(dbDir)) {
+  fs.mkdirSync(dbDir, { recursive: true });
+}
+
 let db;
 
 // ── Init & migration ──────────────────────────────────────────────────────────
