@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin — Säljakademin</title>
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body class="learn-page">
+
+  <nav class="learn-nav">
+    <a href="/dashboard" class="learn-nav-back">← Dashboard</a>
+    <span class="learn-nav-title">⚙️ Adminpanel</span>
+    <span class="learn-nav-user"><%= username %></span>
+  </nav>
+
+  <div class="admin-wrap">
+
+    <!-- Stats -->
+    <div class="admin-stats">
+      <div class="stat-card">
+        <span class="stat-num"><%= stats.total %></span>
+        <span class="stat-label">Totalt användare</span>
+      </div>
+      <div class="stat-card premium">
+        <span class="stat-num"><%= stats.premium %></span>
+        <span class="stat-label">Premium</span>
+      </div>
+      <div class="stat-card free">
+        <span class="stat-num"><%= stats.free %></span>
+        <span class="stat-label">Gratis</span>
+      </div>
+      <div class="stat-card new">
+        <span class="stat-num"><%= stats.thisWeek %></span>
+        <span class="stat-label">Nya senaste 7 dagar</span>
+      </div>
+    </div>
+
+    <!-- User table -->
+    <div class="admin-section">
+      <h2>Användare</h2>
+
+      <div class="admin-search-wrap">
+        <input type="text" id="userSearch" placeholder="Sök användare..." oninput="filterUsers()" />
+      </div>
+
+      <div class="admin-table-wrap">
+        <table class="admin-table" id="userTable">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Användare</th>
+              <th>E-post</th>
+              <th>Roll</th>
+              <th>GDPR</th>
+              <th>Registrerad</th>
+              <th>Åtgärder</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% users.forEach(function(u) { %>
+              <tr data-search="<%= (u.username + ' ' + (u.email||'')).toLowerCase() %>">
+                <td class="td-id"><%= u.id %></td>
+                <td>
+                  <div class="user-cell">
+                    <div class="user-avatar"><%= u.username[0].toUpperCase() %></div>
+                    <span><%= u.username %></span>
+                  </div>
+                </td>
+                <td class="td-email"><%= u.email || '—' %></td>
+                <td>
+                  <span class="role-badge role-<%= u.role %>"><%= u.role %></span>
+                </td>
+                <td class="td-gdpr">
+                  <% if (u.gdpr) { %>
+                    <span class="gdpr-yes" title="<%= u.gdpr_at || '' %>">✓ Ja</span>
+                  <% } else { %>
+                    <span class="gdpr-no">✗ Nej</span>
+                  <% } %>
+                </td>
+                <td class="td-date"><%= (u.created_at || '').slice(0,10) %></td>
+                <td>
+                  <div class="action-cell">
+                    <!-- Change role -->
+                    <form method="POST" action="/admin/users/<%= u.id %>/role" class="inline-form">
+                      <select name="role" onchange="this.form.submit()" class="role-select">
+                        <option value="free"    <%= u.role === 'free'    ? 'selected' : '' %>>Gratis</option>
+                        <option value="premium" <%= u.role === 'premium' ? 'selected' : '' %>>Premium</option>
+                        <option value="admin"   <%= u.role === 'admin'   ? 'selected' : '' %>>Admin</option>
+                      </select>
+                    </form>
+                    <!-- Delete -->
+                    <form method="POST" action="/admin/users/<%= u.id %>/delete" class="inline-form"
+                          onsubmit="return confirm('Radera <%= u.username %>? Det går inte att ångra.')">
+                      <button type="submit" class="btn-del">🗑</button>
+                    </form>
+                  </div>
+                </td>
+              </tr>
+            <% }); %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    function filterUsers() {
+      const q = document.getElementById('userSearch').value.toLowerCase();
+      document.querySelectorAll('#userTable tbody tr').forEach(row => {
+        row.style.display = row.dataset.search.includes(q) ? '' : 'none';
+      });
+    }
+  </script>
+
+</body>
+</html>

@@ -15,6 +15,11 @@
       <a href="/logout" class="btn-logout">Logga ut</a>
     </header>
 
+    <!-- Admin link (only visible to admins) -->
+    <% if (role === 'admin') { %>
+      <a href="/admin" class="admin-banner">⚙️ Adminpanel — hantera användare och roller</a>
+    <% } %>
+
     <!-- Quick links -->
     <div class="dash-links">
       <a href="/learn" class="dash-link">

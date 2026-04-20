@@ -1,84 +1,162 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="sv">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Login</title>
+  <title>Säljakademin — Logga in</title>
   <link rel="stylesheet" href="/style.css" />
 </head>
-<body class="login-page">
-  <div class="card">
-    <h1>Logga in</h1>
+<body class="auth-page">
 
-    <% if (error) { %>
-      <p class="error"><%= error %></p>
-    <% } %>
-
-    <% if (success) { %>
-      <p class="success"><%= success %></p>
-    <% } %>
-
-    <form method="POST" action="/">
-      <label for="username">Användarnamn</label>
-      <input type="text" id="username" name="username" placeholder="Ange användarnamn" required autofocus />
-
-      <label for="password">Lösenord</label>
-      <input type="password" id="password" name="password" placeholder="Ange lösenord" required />
-
-      <button type="submit">Logga in</button>
-    </form>
-
-    <!-- Button that opens the register modal -->
-    <button class="btn-register-open" onclick="openModal()">Skapa ny användare</button>
+  <!-- ── Left panel — branding ─────────────────────────────────────────── -->
+  <div class="auth-left">
+    <div class="auth-left-inner">
+      <div class="auth-logo">🎯 Säljakademin</div>
+      <h1 class="auth-headline">Bli säljaren<br>du alltid kunnat vara.</h1>
+      <p class="auth-sub">Strukturerad utbildning, verkliga tekniker och verktyg som faktiskt används av toppsäljare.</p>
+      <ul class="auth-features">
+        <li><span class="feat-icon">✅</span> 16 säljblock med teori, video & prov</li>
+        <li><span class="feat-icon">✅</span> 60+ termer i Säljordboken</li>
+        <li><span class="feat-icon">✅</span> AI-assistent alltid tillgänglig</li>
+        <li><span class="feat-icon">✅</span> Premium-kurser med inspelade videos</li>
+      </ul>
+    </div>
   </div>
 
-  <!-- ── Register modal ───────────────────────────────────────── -->
-  <div class="modal-backdrop" id="modalBackdrop" onclick="closeModal(event)">
-    <div class="modal">
-      <h2>Skapa ny användare</h2>
+  <!-- ── Right panel — forms ────────────────────────────────────────────── -->
+  <div class="auth-right">
+    <div class="auth-form-wrap">
 
-      <% if (registerError) { %>
-        <p class="error"><%= registerError %></p>
-      <% } %>
+      <!-- Tab switcher -->
+      <div class="auth-tabs">
+        <button class="auth-tab active" id="tabLogin" onclick="showTab('login')">Logga in</button>
+        <button class="auth-tab" id="tabRegister" onclick="showTab('register')">Skapa konto</button>
+      </div>
 
-      <form method="POST" action="/register">
-        <label for="reg-username">Användarnamn</label>
-        <input type="text" id="reg-username" name="username" placeholder="Välj ett användarnamn" required />
+      <!-- ── Login form ──────────────────────────────────────────────── -->
+      <div id="panelLogin">
 
-        <label for="reg-password">Lösenord</label>
-        <input type="password" id="reg-password" name="password" placeholder="Välj ett lösenord" required />
+        <% if (error) { %>
+          <p class="auth-error"><%= error %></p>
+        <% } %>
+        <% if (success) { %>
+          <p class="auth-success"><%= success %></p>
+        <% } %>
 
-        <label for="reg-confirm">Bekräfta lösenord</label>
-        <input type="password" id="reg-confirm" name="confirmPassword" placeholder="Upprepa lösenordet" required />
+        <form method="POST" action="/" class="auth-form">
+          <div class="field-group">
+            <label for="username">Användarnamn</label>
+            <input type="text" id="username" name="username" placeholder="ditt_användarnamn" required autocomplete="username" />
+          </div>
+          <div class="field-group">
+            <label for="password">Lösenord</label>
+            <input type="password" id="password" name="password" placeholder="••••••••" required autocomplete="current-password" />
+          </div>
+          <button type="submit" class="auth-btn">Logga in →</button>
+        </form>
 
-        <div class="form-actions">
-          <button type="submit">Skapa konto</button>
-          <button type="button" class="btn-cancel" onclick="closeModalDirect()">Avbryt</button>
-        </div>
-      </form>
+        <p class="auth-switch">Inget konto? <button onclick="showTab('register')" class="link-btn">Skapa ett gratis konto</button></p>
+      </div>
+
+      <!-- ── Register form ───────────────────────────────────────────── -->
+      <div id="panelRegister" style="display:none;">
+
+        <% if (registerError) { %>
+          <p class="auth-error"><%= registerError %></p>
+        <% } %>
+
+        <form method="POST" action="/register" class="auth-form">
+          <div class="field-group">
+            <label for="reg-username">Användarnamn</label>
+            <input type="text" id="reg-username" name="username" placeholder="välj_ett_namn" required autocomplete="username" />
+          </div>
+          <div class="field-group">
+            <label for="reg-email">E-postadress</label>
+            <input type="email" id="reg-email" name="email" placeholder="din@email.com" required autocomplete="email" />
+          </div>
+          <div class="field-group">
+            <label for="reg-password">Lösenord <span class="hint">(minst 6 tecken)</span></label>
+            <input type="password" id="reg-password" name="password" placeholder="••••••••" required autocomplete="new-password" />
+          </div>
+          <div class="field-group">
+            <label for="reg-confirm">Bekräfta lösenord</label>
+            <input type="password" id="reg-confirm" name="confirmPassword" placeholder="••••••••" required autocomplete="new-password" />
+          </div>
+
+          <!-- GDPR consent -->
+          <label class="gdpr-label">
+            <input type="checkbox" name="gdpr" value="1" required />
+            <span>
+              Jag godkänner att mina uppgifter (användarnamn, e-post och lösenord i krypterad form) lagras och behandlas i enlighet med
+              <button type="button" class="link-btn" onclick="openPrivacy()">integritetspolicyn</button>.
+            </span>
+          </label>
+
+          <button type="submit" class="auth-btn">Skapa konto →</button>
+        </form>
+
+        <p class="auth-switch">Har du ett konto? <button onclick="showTab('login')" class="link-btn">Logga in</button></p>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ── Privacy policy modal ───────────────────────────────────────────── -->
+  <div class="modal-backdrop" id="privacyBackdrop" onclick="closePrivacy(event)">
+    <div class="modal privacy-modal">
+      <div class="privacy-header">
+        <h2>Integritetspolicy</h2>
+        <button class="modal-close-btn" onclick="document.getElementById('privacyBackdrop').classList.remove('open')">✕</button>
+      </div>
+      <div class="privacy-body">
+        <p><strong>Senast uppdaterad:</strong> April 2026</p>
+
+        <h4>Vilka uppgifter samlar vi in?</h4>
+        <p>Vi samlar in ditt <strong>användarnamn</strong>, din <strong>e-postadress</strong> och ditt <strong>lösenord i krypterad form</strong> (vi lagrar aldrig ditt lösenord i klartext). Vi sparar även tidpunkten för din registrering och ditt GDPR-godkännande.</p>
+
+        <h4>Varför samlar vi in uppgifterna?</h4>
+        <p>Uppgifterna används uteslutande för att ge dig tillgång till plattformen, skicka relevant kommunikation om ditt konto och förbättra tjänsten.</p>
+
+        <h4>Hur länge sparas uppgifterna?</h4>
+        <p>Dina uppgifter sparas så länge ditt konto är aktivt. Du kan när som helst begära att ditt konto raderas.</p>
+
+        <h4>Delar vi dina uppgifter?</h4>
+        <p>Nej. Vi delar inte dina personuppgifter med tredje part i marknadsföringssyfte.</p>
+
+        <h4>Dina rättigheter (GDPR)</h4>
+        <ul>
+          <li>Rätt till tillgång — begär en kopia av dina uppgifter</li>
+          <li>Rätt till rättelse — begär att felaktiga uppgifter korrigeras</li>
+          <li>Rätt till radering — begär att ditt konto och uppgifter raderas</li>
+          <li>Rätt att återkalla samtycke — kontakta oss så raderar vi ditt konto</li>
+        </ul>
+
+        <h4>Kontakt</h4>
+        <p>Vid frågor om din data — kontakta oss via plattformens support.</p>
+      </div>
     </div>
   </div>
 
   <script>
-    // Open modal
-    function openModal() {
-      document.getElementById('modalBackdrop').classList.add('open');
+    function showTab(tab) {
+      document.getElementById('panelLogin').style.display    = tab === 'login'    ? 'block' : 'none';
+      document.getElementById('panelRegister').style.display = tab === 'register' ? 'block' : 'none';
+      document.getElementById('tabLogin').classList.toggle('active',    tab === 'login');
+      document.getElementById('tabRegister').classList.toggle('active', tab === 'register');
     }
 
-    // Close when clicking the dark backdrop outside the modal
-    function closeModal(e) {
-      if (e.target === document.getElementById('modalBackdrop')) {
-        closeModalDirect();
-      }
+    function openPrivacy() {
+      document.getElementById('privacyBackdrop').classList.add('open');
     }
 
-    function closeModalDirect() {
-      document.getElementById('modalBackdrop').classList.remove('open');
+    function closePrivacy(e) {
+      if (e.target === document.getElementById('privacyBackdrop'))
+        document.getElementById('privacyBackdrop').classList.remove('open');
     }
 
-    // If there was a register error, keep the modal open on page load
+    // If there was a register error, auto-switch to register tab
     <% if (registerError) { %>
-      openModal();
+      showTab('register');
     <% } %>
   </script>
 </body>
