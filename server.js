@@ -224,7 +224,7 @@ app.post('/forgot-password', async (req, res) => {
   try {
     if (!resend) throw new Error('RESEND_API_KEY not configured');
     await resend.emails.send({
-      from:    'Joakim Jaksen <noreply@joakimjaksen.se>',
+      from:    'Joakim Jaksen <onboarding@resend.dev>',
       to:      user.email,
       subject: 'Återställ ditt lösenord',
       html: `
