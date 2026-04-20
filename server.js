@@ -18,7 +18,7 @@ const PORT   = process.env.PORT || 3000;
 const stripe = Stripe(process.env.STRIPE_SECRET_KEY || 'sk_test_placeholder');
 
 // Blocks 1–4 are free; 5–16 require premium
-const FREE_BLOCK_IDS = ['01','02','03','04'];
+const FREE_BLOCK_IDS = ['forsta-intrycket', 'prospektering', 'behovsanalys', 'presentation'];
 
 const openai = new OpenAI({
   apiKey:  process.env.GROQ_API_KEY,
