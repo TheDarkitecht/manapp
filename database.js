@@ -41,6 +41,17 @@ async function initDatabase() {
     )
   `);
 
+  // Password reset tokens table
+  db.run(`
+    CREATE TABLE IF NOT EXISTS reset_tokens (
+      id         INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id    INTEGER NOT NULL,
+      token      TEXT    NOT NULL UNIQUE,
+      expires_at TEXT    NOT NULL,
+      FOREIGN KEY (user_id) REFERENCES users(id)
+    )
+  `);
+
   // Migration: add new columns if they don't exist yet.
   // SQLite doesn't support "ADD COLUMN IF NOT EXISTS" so we catch errors.
   const migrations = [
@@ -178,6 +189,41 @@ function deleteNote(noteId, userId) {
   saveDb();
 }
 
+// ── Password reset ────────────────────────────────────────────────────────────
+
+function createResetToken(userId) {
+  // Delete any existing tokens for this user
+  db.run('DELETE FROM reset_tokens WHERE user_id = ?', [userId]);
+  const token     = require('crypto').randomBytes(32).toString('hex');
+  const expiresAt = new Date(Date.now() + 1000 * 60 * 60).toISOString(); // 1 hour
+  db.run(
+    'INSERT INTO reset_tokens (user_id, token, expires_at) VALUES (?, ?, ?)',
+    [userId, token, expiresAt]
+  );
+  saveDb();
+  return token;
+}
+
+function findValidResetToken(token) {
+  const s = db.prepare(
+    "SELECT * FROM reset_tokens WHERE token = ? AND expires_at > datetime('now')"
+  );
+  s.bind([token]);
+  if (s.step()) { const r = s.getAsObject(); s.free(); return r; }
+  s.free(); return null;
+}
+
+function deleteResetToken(token) {
+  db.run('DELETE FROM reset_tokens WHERE token = ?', [token]);
+  saveDb();
+}
+
+function updateUserPassword(userId, newPassword) {
+  const hash = require('bcryptjs').hashSync(newPassword, 10);
+  db.run('UPDATE users SET password_hash = ? WHERE id = ?', [hash, userId]);
+  saveDb();
+}
+
 // ── Exports ───────────────────────────────────────────────────────────────────
 
 module.exports = {
@@ -185,4 +231,5 @@ module.exports = {
   findUserByUsername, findUserByEmail,
   createUser, getAllUsers, setUserRole, deleteUser, getUserStats,
   getNotesByUserId, createNote, deleteNote,
+  createResetToken, findValidResetToken, deleteResetToken, updateUserPassword,
 };

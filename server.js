@@ -5,10 +5,12 @@ const bcrypt    = require('bcryptjs');
 const OpenAI    = require('openai');
 const rateLimit = require('express-rate-limit');
 const Stripe    = require('stripe');
+const { Resend } = require('resend');
 const {
-  initDatabase, findUserByUsername, createUser,
+  initDatabase, findUserByUsername, findUserByEmail, createUser,
   getAllUsers, setUserRole, deleteUser, getUserStats,
   getNotesByUserId, createNote, deleteNote,
+  createResetToken, findValidResetToken, deleteResetToken, updateUserPassword,
 } = require('./database');
 const salesBlocks   = require('./salesContent');
 const glossaryTerms = require('./glossary');
@@ -16,6 +18,7 @@ const glossaryTerms = require('./glossary');
 const app    = express();
 const PORT   = process.env.PORT || 3000;
 const stripe = Stripe(process.env['STRIPE_SECRET_KEY'] || '');
+const resend = new Resend(process.env['RESEND_API_KEY'] || '');
 
 // Blocks 1–4 are free; 5–16 require premium
 const FREE_BLOCK_IDS = ['forsta-intrycket', 'prospektering', 'behovsanalys', 'presentation'];
@@ -116,9 +119,11 @@ function requireAdmin(req, res, next) {
 
 // ── Login / Register ──────────────────────────────────────────────────────────
 
+const TURNSTILE_SITE_KEY = process.env['TURNSTILE_SITE_KEY'] || '1x00000000000000000000AA';
+
 app.get('/', (req, res) => {
   if (req.session?.userId) return res.redirect('/dashboard');
-  res.render('login', { error: null, registerError: null, success: null });
+  res.render('login', { error: null, registerError: null, success: null, turnstileSiteKey: TURNSTILE_SITE_KEY });
 });
 
 app.post('/', loginLimiter, async (req, res) => {
@@ -128,7 +133,7 @@ app.post('/', loginLimiter, async (req, res) => {
   if (!user || !(await bcrypt.compare(password, user.password_hash))) {
     return res.render('login', {
       error: 'Fel användarnamn eller lösenord.',
-      registerError: null, success: null,
+      registerError: null, success: null, turnstileSiteKey: TURNSTILE_SITE_KEY,
     });
   }
 
@@ -138,40 +143,144 @@ app.post('/', loginLimiter, async (req, res) => {
   res.redirect('/dashboard');
 });
 
-app.post('/register', (req, res) => {
+app.post('/register', async (req, res) => {
   const { username, email, password, confirmPassword, gdpr } = req.body;
+  const turnstileToken = req.body['cf-turnstile-response'];
+
+  // Verify Turnstile CAPTCHA (skip if no secret key configured)
+  const turnstileSecret = process.env['TURNSTILE_SECRET_KEY'];
+  if (turnstileSecret) {
+    if (!turnstileToken) {
+      return res.render('login', { error: null, success: null, turnstileSiteKey: TURNSTILE_SITE_KEY,
+        registerError: 'Verifiera att du inte är en robot.' });
+    }
+    const verify = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ secret: turnstileSecret, response: turnstileToken }),
+    });
+    const result = await verify.json();
+    if (!result.success) {
+      return res.render('login', { error: null, success: null, turnstileSiteKey: TURNSTILE_SITE_KEY,
+        registerError: 'CAPTCHA-verifiering misslyckades. Försök igen.' });
+    }
+  }
 
   if (!username || !email || !password)
-    return res.render('login', { error: null, success: null,
+    return res.render('login', { error: null, success: null, turnstileSiteKey: TURNSTILE_SITE_KEY,
       registerError: 'Fyll i alla fält.' });
 
   if (!gdpr)
-    return res.render('login', { error: null, success: null,
+    return res.render('login', { error: null, success: null, turnstileSiteKey: TURNSTILE_SITE_KEY,
       registerError: 'Du måste godkänna vår integritetspolicy för att skapa ett konto.' });
 
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
-    return res.render('login', { error: null, success: null,
+    return res.render('login', { error: null, success: null, turnstileSiteKey: TURNSTILE_SITE_KEY,
       registerError: 'Ange en giltig e-postadress.' });
 
   if (password !== confirmPassword)
-    return res.render('login', { error: null, success: null,
+    return res.render('login', { error: null, success: null, turnstileSiteKey: TURNSTILE_SITE_KEY,
       registerError: 'Lösenorden matchar inte.' });
 
   if (password.length < 6)
-    return res.render('login', { error: null, success: null,
+    return res.render('login', { error: null, success: null, turnstileSiteKey: TURNSTILE_SITE_KEY,
       registerError: 'Lösenordet måste vara minst 6 tecken.' });
 
   const result = createUser(username.trim(), email.trim(), password);
   if (!result.ok)
-    return res.render('login', { error: null, success: null,
+    return res.render('login', { error: null, success: null, turnstileSiteKey: TURNSTILE_SITE_KEY,
       registerError: result.error });
 
-  res.render('login', { error: null, registerError: null,
+  res.render('login', { error: null, registerError: null, turnstileSiteKey: TURNSTILE_SITE_KEY,
     success: `Konto skapat! Logga in med ditt användarnamn.` });
 });
 
 app.get('/logout', (req, res) => {
   req.session.destroy(() => res.redirect('/'));
+});
+
+// ── Forgot password ───────────────────────────────────────────────────────────
+
+app.get('/forgot-password', (req, res) => {
+  res.render('forgot-password', { error: null, success: null });
+});
+
+app.post('/forgot-password', async (req, res) => {
+  const { email } = req.body;
+  const user = findUserByEmail(email?.trim().toLowerCase());
+
+  // Always show success to prevent email enumeration
+  if (!user) {
+    return res.render('forgot-password', {
+      error: null,
+      success: 'Om e-postadressen finns i systemet har vi skickat en länk.',
+    });
+  }
+
+  const token   = createResetToken(user.id);
+  const baseUrl = process.env['APP_URL'] || 'https://manapp-production.up.railway.app';
+  const link    = `${baseUrl}/reset-password/${token}`;
+
+  try {
+    await resend.emails.send({
+      from:    'Joakim Jaksen <noreply@joakimjaksen.se>',
+      to:      user.email,
+      subject: 'Återställ ditt lösenord',
+      html: `
+        <p>Hej ${user.username}!</p>
+        <p>Du (eller någon annan) har begärt att återställa lösenordet för ditt konto.</p>
+        <p><a href="${link}" style="background:#6366f1;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;display:inline-block;margin:16px 0;">Återställ lösenord →</a></p>
+        <p>Länken är giltig i 1 timme. Om du inte begärt detta kan du ignorera detta mail.</p>
+        <p>— Joakim Jaksen</p>
+      `,
+    });
+  } catch (err) {
+    console.error('Resend error:', err.message);
+  }
+
+  res.render('forgot-password', {
+    error: null,
+    success: 'Om e-postadressen finns i systemet har vi skickat en länk.',
+  });
+});
+
+app.get('/reset-password/:token', (req, res) => {
+  const record = findValidResetToken(req.params.token);
+  if (!record) {
+    return res.render('reset-password', {
+      token: null, error: 'Länken är ogiltig eller har gått ut.', success: null,
+    });
+  }
+  res.render('reset-password', { token: req.params.token, error: null, success: null });
+});
+
+app.post('/reset-password/:token', async (req, res) => {
+  const { password, confirmPassword } = req.body;
+  const record = findValidResetToken(req.params.token);
+
+  if (!record) {
+    return res.render('reset-password', {
+      token: null, error: 'Länken är ogiltig eller har gått ut.', success: null,
+    });
+  }
+  if (!password || password.length < 6) {
+    return res.render('reset-password', {
+      token: req.params.token, error: 'Lösenordet måste vara minst 6 tecken.', success: null,
+    });
+  }
+  if (password !== confirmPassword) {
+    return res.render('reset-password', {
+      token: req.params.token, error: 'Lösenorden matchar inte.', success: null,
+    });
+  }
+
+  updateUserPassword(record.user_id, password);
+  deleteResetToken(req.params.token);
+
+  res.render('login', {
+    error: null, registerError: null,
+    success: 'Lösenordet är återställt! Logga in med ditt nya lösenord.',
+  });
 });
 
 // ── Dashboard ─────────────────────────────────────────────────────────────────
