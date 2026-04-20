@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Säljordboken</title>
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body class="learn-page">
+
+  <nav class="learn-nav">
+    <a href="/dashboard" class="learn-nav-back">← Dashboard</a>
+    <span class="learn-nav-title">Säljordboken</span>
+    <span class="learn-nav-user"><%= username %></span>
+  </nav>
+
+  <!-- Hero -->
+  <div class="learn-hero">
+    <h1>Säljordboken</h1>
+    <p><%= terms.length %> termer · Sök, filtrera och lär dig språket</p>
+  </div>
+
+  <!-- Search + filter bar -->
+  <div class="ordbok-controls">
+    <div class="ordbok-search-wrap">
+      <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>
+      </svg>
+      <input
+        type="text"
+        id="searchInput"
+        placeholder="Sök term..."
+        oninput="filterTerms()"
+        autocomplete="off"
+      />
+    </div>
+
+    <div class="ordbok-filters" id="filterBtns">
+      <button class="filter-btn active" data-cat="Alla" onclick="setCategory('Alla', this)">Alla</button>
+      <% categories.forEach(function(cat) { %>
+        <button class="filter-btn" data-cat="<%= cat %>" onclick="setCategory('<%= cat %>', this)"><%= cat %></button>
+      <% }); %>
+    </div>
+  </div>
+
+  <!-- Count indicator -->
+  <div class="ordbok-count" id="termCount"></div>
+
+  <!-- Terms grid -->
+  <div class="ordbok-grid" id="termGrid">
+    <% terms.forEach(function(t) { %>
+      <div
+        class="term-card"
+        data-term="<%= t.term.toLowerCase() %>"
+        data-def="<%= t.definition.toLowerCase() %>"
+        data-cat="<%= t.category %>"
+      >
+        <div class="term-card-top">
+          <h3 class="term-name"><%= t.term %></h3>
+          <span class="term-cat"><%= t.category %></span>
+        </div>
+        <p class="term-def"><%= t.definition %></p>
+        <% if (t.blockId) { %>
+          <a href="/learn/<%= t.blockId %>" class="term-link">Läs block →</a>
+        <% } %>
+      </div>
+    <% }); %>
+  </div>
+
+  <!-- Empty state -->
+  <div class="ordbok-empty" id="emptyState" style="display:none;">
+    <p>Inga termer matchade din sökning.</p>
+  </div>
+
+  <script>
+    let activeCategory = 'Alla';
+
+    function setCategory(cat, btn) {
+      activeCategory = cat;
+      document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      filterTerms();
+    }
+
+    function filterTerms() {
+      const query = document.getElementById('searchInput').value.toLowerCase().trim();
+      const cards = document.querySelectorAll('.term-card');
+      let visible = 0;
+
+      cards.forEach(card => {
+        const matchCat  = activeCategory === 'Alla' || card.dataset.cat === activeCategory;
+        const matchText = !query || card.dataset.term.includes(query) || card.dataset.def.includes(query);
+        const show = matchCat && matchText;
+        card.style.display = show ? 'flex' : 'none';
+        if (show) visible++;
+      });
+
+      document.getElementById('termCount').textContent =
+        visible === cards.length ? '' : `${visible} träffar`;
+      document.getElementById('emptyState').style.display = visible === 0 ? 'block' : 'none';
+    }
+
+    // Init count
+    filterTerms();
+  </script>
+
+</body>
+</html>

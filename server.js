@@ -14,6 +14,7 @@ const {
   deleteNote,
 } = require('./database');
 const salesBlocks = require('./salesContent');
+const glossaryTerms = require('./glossary');
 
 const app    = express();
 const PORT   = process.env.PORT || 3000;
@@ -171,6 +172,11 @@ app.post('/notes/:id/delete', requireLogin, (req, res) => {
 
 app.get('/learn', requireLogin, (req, res) => {
   res.render('learn', { username: req.session.username, blocks: salesBlocks });
+});
+
+app.get('/ordbok', requireLogin, (req, res) => {
+  const categories = [...new Set(glossaryTerms.map(t => t.category))];
+  res.render('ordbok', { username: req.session.username, terms: glossaryTerms, categories });
 });
 
 app.get('/learn/:id', requireLogin, (req, res) => {
