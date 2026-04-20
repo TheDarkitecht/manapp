@@ -74,6 +74,7 @@ app.post('/webhook', express.raw({ type: 'application/json' }), async (req, res)
 
 // ── Middleware ────────────────────────────────────────────────────────────────
 
+app.set('trust proxy', 1); // Railway runs behind a reverse proxy
 app.use(express.urlencoded({ extended: false }));
 app.use(express.json());
 app.use(express.static('public'));
