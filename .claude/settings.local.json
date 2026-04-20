@@ -1,14 +1,3 @@
 {
-  "permissions": {
-    "allow": [
-      "Bash(npm install *)",
-      "Bash(cd /tmp)",
-      "Bash(pandoc \"C:\\\\Users\\\\joaki\\\\Brilliant V. Uppsala Dropbox\\\\VD\\\\Teamleader\\\\Gran Canaria\\\\Utbildning\\\\Struktur i början av samtalen ökar försäljningen.docx\" -t plain)",
-      "Bash(dir \"C:\\\\Users\\\\joaki\\\\Documents\\\\manapp\" /b *.js)",
-      "Bash(dir \"C:\\\\Users\\\\joaki\\\\Documents\\\\manapp\" /b)",
-      "Bash(git push *)",
-      "Bash(node --check server.js)",
-      "Bash(git add *)"
-    ]
-  }
+  "defaultMode": "bypassPermissions"
 }
