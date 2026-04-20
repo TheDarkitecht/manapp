@@ -109,7 +109,7 @@ const loginLimiter = rateLimit({
 
 function requireLogin(req, res, next) {
   if (req.session?.userId) return next();
-  res.redirect('/');
+  res.redirect('/login');
 }
 
 function requireAdmin(req, res, next) {
@@ -121,12 +121,21 @@ function requireAdmin(req, res, next) {
 
 const TURNSTILE_SITE_KEY = process.env['TURNSTILE_SITE_KEY'] || '1x00000000000000000000AA';
 
+// ── Landing page ──────────────────────────────────────────────────────────────
+
 app.get('/', (req, res) => {
+  if (req.session?.userId) return res.redirect('/dashboard');
+  res.render('landing', { blocks: salesBlocks });
+});
+
+// ── Login ─────────────────────────────────────────────────────────────────────
+
+app.get('/login', (req, res) => {
   if (req.session?.userId) return res.redirect('/dashboard');
   res.render('login', { error: null, registerError: null, success: null, turnstileSiteKey: TURNSTILE_SITE_KEY });
 });
 
-app.post('/', loginLimiter, async (req, res) => {
+app.post('/login', loginLimiter, async (req, res) => {
   const { username, password } = req.body;
   const user = findUserByUsername(username);
 
@@ -193,6 +202,17 @@ app.post('/register', async (req, res) => {
 
   res.render('login', { error: null, registerError: null, turnstileSiteKey: TURNSTILE_SITE_KEY,
     success: `Konto skapat! Logga in med ditt användarnamn.` });
+});
+
+// GET /register — shortcut that opens login page with register tab active
+app.get('/register', (req, res) => {
+  if (req.session?.userId) return res.redirect('/dashboard');
+  res.render('login', {
+    error: null,
+    registerError: '__open_register__', // triggers tab switch in JS without showing error text
+    success: null,
+    turnstileSiteKey: TURNSTILE_SITE_KEY,
+  });
 });
 
 app.get('/logout', (req, res) => {

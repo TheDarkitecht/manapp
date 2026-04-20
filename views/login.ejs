@@ -45,7 +45,7 @@
           <p class="auth-success"><%= success %></p>
         <% } %>
 
-        <form method="POST" action="/" class="auth-form">
+        <form method="POST" action="/login" class="auth-form">
           <div class="field-group">
             <label for="username">Användarnamn</label>
             <input type="text" id="username" name="username" placeholder="ditt_användarnamn" required autocomplete="username" />
@@ -64,7 +64,7 @@
       <!-- ── Register form ───────────────────────────────────────────── -->
       <div id="panelRegister" style="display:none;">
 
-        <% if (registerError) { %>
+        <% if (registerError && registerError !== '__open_register__') { %>
           <p class="auth-error"><%= registerError %></p>
         <% } %>
 
@@ -160,7 +160,7 @@
         document.getElementById('privacyBackdrop').classList.remove('open');
     }
 
-    // If there was a register error, auto-switch to register tab
+    // If there was a register error (or /register shortcut), auto-switch to register tab
     <% if (registerError) { %>
       showTab('register');
     <% } %>
