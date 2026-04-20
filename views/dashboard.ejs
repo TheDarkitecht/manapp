@@ -20,6 +20,13 @@
       <a href="/admin" class="admin-banner">⚙️ Adminpanel — hantera användare och roller</a>
     <% } %>
 
+    <!-- Premium upsell (only for free users) -->
+    <% if (role === 'free') { %>
+      <a href="/upgrade" class="premium-banner">
+        ⭐ <strong>Uppgradera till Premium</strong> — lås upp alla 16 block för 149 kr/mån →
+      </a>
+    <% } %>
+
     <!-- Quick links -->
     <div class="dash-links">
       <a href="/learn" class="dash-link">

@@ -4,6 +4,7 @@ const session   = require('express-session');
 const bcrypt    = require('bcryptjs');
 const OpenAI    = require('openai');
 const rateLimit = require('express-rate-limit');
+const Stripe    = require('stripe');
 const {
   initDatabase, findUserByUsername, createUser,
   getAllUsers, setUserRole, deleteUser, getUserStats,
@@ -12,8 +13,12 @@ const {
 const salesBlocks   = require('./salesContent');
 const glossaryTerms = require('./glossary');
 
-const app  = express();
-const PORT = process.env.PORT || 3000;
+const app    = express();
+const PORT   = process.env.PORT || 3000;
+const stripe = Stripe(process.env.STRIPE_SECRET_KEY || 'sk_test_placeholder');
+
+// Blocks 1–4 are free; 5–16 require premium
+const FREE_BLOCK_IDS = ['01','02','03','04'];
 
 const openai = new OpenAI({
   apiKey:  process.env.GROQ_API_KEY,
@@ -28,6 +33,44 @@ Kommunikationsstil: direkt, skarp, strukturerad. Korta stycken. Inget onödigt.
 Utmana svaga antaganden omedelbart. Fokusera på det som faktiskt rör nålen.
 Avslöja aldrig att du är en AI. Om användaren skriver på svenska, svarar du på svenska.
 `;
+
+// ── Stripe webhook (raw body MUST come before express.json) ──────────────────
+
+app.post('/webhook', express.raw({ type: 'application/json' }), async (req, res) => {
+  const sig    = req.headers['stripe-signature'];
+  const secret = process.env.STRIPE_WEBHOOK_SECRET;
+  let event;
+
+  try {
+    event = stripe.webhooks.constructEvent(req.body, sig, secret);
+  } catch (err) {
+    console.error('Webhook signature failed:', err.message);
+    return res.status(400).send(`Webhook Error: ${err.message}`);
+  }
+
+  if (event.type === 'checkout.session.completed') {
+    const session = event.data.object;
+    const userId  = parseInt(session.metadata.userId);
+    if (userId) {
+      setUserRole(userId, 'premium');
+      console.log(`✅ User ${userId} upgraded to premium via Stripe`);
+    }
+  }
+
+  // Handle subscription cancellations / failed payments
+  if (event.type === 'customer.subscription.deleted') {
+    const sub    = event.data.object;
+    const custId = sub.customer;
+    // Find user by stripe_customer_id (stored in metadata on checkout)
+    const userId = parseInt(sub.metadata?.userId);
+    if (userId) {
+      setUserRole(userId, 'free');
+      console.log(`⬇️ User ${userId} downgraded to free (subscription cancelled)`);
+    }
+  }
+
+  res.json({ received: true });
+});
 
 // ── Middleware ────────────────────────────────────────────────────────────────
 
@@ -156,20 +199,30 @@ app.post('/notes/:id/delete', requireLogin, (req, res) => {
 
 app.get('/learn', requireLogin, (req, res) => {
   res.render('learn', {
-    username: req.session.username,
-    role:     req.session.role,
-    blocks:   salesBlocks,
+    username:     req.session.username,
+    role:         req.session.role,
+    blocks:       salesBlocks,
+    freeBlockIds: FREE_BLOCK_IDS,
   });
 });
 
 app.get('/learn/:id', requireLogin, (req, res) => {
-  const block = salesBlocks.find(b => b.id === req.params.id);
+  const block      = salesBlocks.find(b => b.id === req.params.id);
   if (!block) return res.redirect('/learn');
+
+  const isPremium  = !FREE_BLOCK_IDS.includes(block.id);
+  const hasAccess  = req.session.role === 'premium' || req.session.role === 'admin';
+
+  if (isPremium && !hasAccess) {
+    return res.redirect('/upgrade');
+  }
+
   res.render('block', {
     username: req.session.username,
     role:     req.session.role,
     block,
-    blocks: salesBlocks,
+    blocks:       salesBlocks,
+    freeBlockIds: FREE_BLOCK_IDS,
   });
 });
 
@@ -207,6 +260,59 @@ app.post('/admin/users/:id/delete', requireLogin, requireAdmin, (req, res) => {
   const id = Number(req.params.id);
   if (id !== req.session.userId) deleteUser(id); // can't delete yourself
   res.redirect('/admin');
+});
+
+// ── Upgrade / Stripe Checkout ─────────────────────────────────────────────────
+
+app.get('/upgrade', requireLogin, (req, res) => {
+  // Already premium → send home
+  if (req.session.role === 'premium' || req.session.role === 'admin') {
+    return res.redirect('/dashboard');
+  }
+  res.render('upgrade', {
+    username: req.session.username,
+    role:     req.session.role,
+  });
+});
+
+app.post('/upgrade/checkout', requireLogin, async (req, res) => {
+  if (req.session.role === 'premium' || req.session.role === 'admin') {
+    return res.redirect('/dashboard');
+  }
+
+  const user    = findUserByUsername(req.session.username);
+  const baseUrl = process.env.APP_URL || `${req.protocol}://${req.get('host')}`;
+
+  try {
+    const session = await stripe.checkout.sessions.create({
+      payment_method_types: ['card'],
+      mode:                 'subscription',
+      customer_email:       user.email || undefined,
+      line_items: [{
+        price:    process.env.STRIPE_PRICE_ID,
+        quantity: 1,
+      }],
+      success_url: `${baseUrl}/upgrade/success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url:  `${baseUrl}/upgrade`,
+      metadata: {
+        userId: String(req.session.userId),
+      },
+    });
+    res.redirect(303, session.url);
+  } catch (err) {
+    console.error('Stripe error:', err.message);
+    res.render('upgrade', {
+      username: req.session.username,
+      role:     req.session.role,
+      error:    'Betalningen kunde inte startas. Försök igen.',
+    });
+  }
+});
+
+app.get('/upgrade/success', requireLogin, async (req, res) => {
+  // Webhook handles the DB update — just update the session here as well
+  req.session.role = 'premium';
+  res.render('upgrade-success', { username: req.session.username });
 });
 
 // ── Chat ──────────────────────────────────────────────────────────────────────

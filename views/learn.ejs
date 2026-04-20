@@ -16,19 +16,25 @@
 
   <div class="learn-hero">
     <h1>Bli en bättre säljare</h1>
-    <p>8 block — från första intrycket till avslut. Teori, video och prov per block.</p>
+    <p>16 block — från första intrycket till mental styrka. Teori, video och prov per block.</p>
+    <% if (role === 'free') { %>
+      <a href="/upgrade" class="learn-upgrade-cta">⭐ Lås upp alla 16 block med Premium →</a>
+    <% } %>
   </div>
 
   <div class="blocks-grid">
     <% blocks.forEach(function(block, i) { %>
-      <a href="/learn/<%= block.id %>" class="block-card" style="--card-gradient: <%= block.gradient %>;">
+      <% const isLocked = role === 'free' && !freeBlockIds.includes(block.id); %>
+      <a href="<%= isLocked ? '/upgrade' : '/learn/' + block.id %>"
+         class="block-card <%= isLocked ? 'block-locked' : '' %>"
+         style="--card-gradient: <%= block.gradient %>;">
         <div class="block-card-number"><%= i + 1 %></div>
-        <div class="block-card-icon"><%= block.icon %></div>
+        <div class="block-card-icon"><%= isLocked ? '🔒' : block.icon %></div>
         <div class="block-card-body">
           <h3><%= block.title %></h3>
           <p><%= block.subtitle %></p>
         </div>
-        <div class="block-card-arrow">→</div>
+        <div class="block-card-arrow"><%= isLocked ? '⭐' : '→' %></div>
       </a>
     <% }); %>
   </div>

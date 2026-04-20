@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Uppgradera till Premium — Säljakademin</title>
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body class="learn-page">
+
+  <nav class="learn-nav">
+    <a href="/dashboard" class="learn-nav-back">← Dashboard</a>
+    <span class="learn-nav-title">⭐ Premium</span>
+    <span class="learn-nav-user"><%= username %></span>
+  </nav>
+
+  <div class="upgrade-wrap">
+
+    <!-- Hero -->
+    <div class="upgrade-hero">
+      <h1>Lås upp hela Säljakademin</h1>
+      <p>Gratis-kontot ger dig 4 block. Premium ger dig allt.</p>
+    </div>
+
+    <!-- Comparison -->
+    <div class="upgrade-compare">
+
+      <!-- Free -->
+      <div class="plan-card plan-free">
+        <div class="plan-header">
+          <span class="plan-badge free-badge">Gratis</span>
+          <div class="plan-price">0 kr<span>/mån</span></div>
+        </div>
+        <ul class="plan-features">
+          <li class="feat-yes">✅ Block 1–4 (grunder)</li>
+          <li class="feat-yes">✅ Säljordboken (60+ termer)</li>
+          <li class="feat-yes">✅ AI-assistenten Alex</li>
+          <li class="feat-yes">✅ Personliga anteckningar</li>
+          <li class="feat-no">❌ Block 5–16 (avancerat)</li>
+          <li class="feat-no">❌ Förhandling & avslutstekniker</li>
+          <li class="feat-no">❌ LinkedIn & digital försäljning</li>
+          <li class="feat-no">❌ Mental styrka & tidshantering</li>
+          <li class="feat-no">❌ Premiuminspelningar (kommer snart)</li>
+        </ul>
+        <div class="plan-cta plan-cta-disabled">Ditt nuvarande konto</div>
+      </div>
+
+      <!-- Premium -->
+      <div class="plan-card plan-premium">
+        <div class="plan-popular">Mest populär</div>
+        <div class="plan-header">
+          <span class="plan-badge premium-badge">⭐ Premium</span>
+          <div class="plan-price">149 kr<span>/mån</span></div>
+        </div>
+        <ul class="plan-features">
+          <li class="feat-yes">✅ Block 1–4 (grunder)</li>
+          <li class="feat-yes">✅ Säljordboken (60+ termer)</li>
+          <li class="feat-yes">✅ AI-assistenten Alex</li>
+          <li class="feat-yes">✅ Personliga anteckningar</li>
+          <li class="feat-yes">✅ Block 5–16 (avancerat)</li>
+          <li class="feat-yes">✅ Förhandling & avslutstekniker</li>
+          <li class="feat-yes">✅ LinkedIn & digital försäljning</li>
+          <li class="feat-yes">✅ Mental styrka & tidshantering</li>
+          <li class="feat-yes">✅ Premiuminspelningar (kommer snart)</li>
+        </ul>
+
+        <% if (typeof error !== 'undefined' && error) { %>
+          <p class="upgrade-error"><%= error %></p>
+        <% } %>
+
+        <form method="POST" action="/upgrade/checkout">
+          <button type="submit" class="plan-cta plan-cta-premium">
+            Uppgradera nu — 149 kr/mån →
+          </button>
+        </form>
+        <p class="plan-fine">Avsluta när som helst. Säker betalning via Stripe.</p>
+      </div>
+
+    </div>
+
+    <!-- Trust bar -->
+    <div class="upgrade-trust">
+      <span>🔒 Säker betalning</span>
+      <span>↩️ Avsluta när som helst</span>
+      <span>⚡ Tillgång direkt</span>
+    </div>
+
+  </div>
+
+</body>
+</html>
