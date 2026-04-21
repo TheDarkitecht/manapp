@@ -450,7 +450,7 @@ app.post('/reset-password/:token', async (req, res) => {
   deleteResetToken(req.params.token);
 
   res.render('login', {
-    error: null, registerError: null,
+    error: null, registerError: null, turnstileSiteKey: TURNSTILE_SITE_KEY,
     success: 'Lösenordet är återställt! Logga in med ditt nya lösenord.',
   });
 });
@@ -476,13 +476,13 @@ app.get('/dashboard', requireLogin, (req, res) => {
   });
 });
 
-app.post('/notes', requireLogin, (req, res) => {
+app.post('/notes', requireLogin, verifyCsrf, (req, res) => {
   const content = (req.body.content || '').trim();
   if (content) createNote(req.session.userId, content);
   res.redirect('/dashboard');
 });
 
-app.post('/notes/:id/delete', requireLogin, (req, res) => {
+app.post('/notes/:id/delete', requireLogin, verifyCsrf, (req, res) => {
   deleteNote(Number(req.params.id), req.session.userId);
   res.redirect('/dashboard');
 });
@@ -666,7 +666,7 @@ app.post('/chat', requireLogin, chatLimiter, async (req, res) => {
 
   try {
     const completion = await openai.chat.completions.create({
-      model: 'llama-3.1-8b-instant',
+      model: 'llama-3.3-70b-versatile',
       messages: [{ role: 'system', content: JOCKE_SYSTEM_PROMPT }, ...messages],
       max_tokens: 500,
     });

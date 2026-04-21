@@ -195,6 +195,7 @@
 
         <div class="note-form-section" id="noteForm" style="display:none;">
           <form method="POST" action="/notes" class="note-form">
+            <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
             <textarea name="content" placeholder="Skriv din anteckning här..." rows="4" required autofocus></textarea>
             <div class="form-actions">
               <button type="submit">Spara</button>
@@ -213,6 +214,7 @@
               <div class="note-footer">
                 <span class="note-date"><%= (note.created_at || '').slice(0,10) %></span>
                 <form method="POST" action="/notes/<%= note.id %>/delete" class="delete-form">
+                  <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
                   <button type="submit" class="btn-delete">Ta bort</button>
                 </form>
               </div>
