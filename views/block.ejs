@@ -10,6 +10,13 @@
 </head>
 <body class="block-page">
 
+  <% if (isTeaser) { %>
+  <div class="teaser-top-bar">
+    <span>⭐ Du ser en förhandsvisning — <strong><%= block.title %></strong> kräver Premium</span>
+    <a href="/upgrade" class="teaser-top-btn">Uppgradera — 199 kr/mån →</a>
+  </div>
+  <% } %>
+
   <nav class="learn-nav">
     <a href="/learn" class="learn-nav-back">← Alla block</a>
     <span class="learn-nav-title"><%= block.title %></span>
@@ -54,30 +61,36 @@
         <div class="teaser-fade"></div>
         <div class="teaser-lock-wall">
           <div class="teaser-lock-inner">
-            <div class="teaser-lock-icon">🔒</div>
-            <h3>Lås upp hela blocket</h3>
-            <p>Det här blocket innehåller fullständig teori, videogenomgång och ett 10-frågorsprov. Uppgradera till Premium för att komma åt allt.</p>
-            <a href="/upgrade" class="auth-btn teaser-upgrade-btn">⭐ Uppgradera till Premium →</a>
-            <p class="teaser-price-hint">Från 199 kr/mån — avsluta när som helst</p>
+            <div class="teaser-lock-icon"><%= block.icon %></div>
+            <h3>Lås upp <%= block.title %></h3>
+            <p>Du ser bara förhandsgranskningen. Hela blocket — komplett teori, videogenomgång och 10-frågors-prov — ingår i Premium.</p>
+            <div class="teaser-checklist">
+              <div class="teaser-check">📖 Komplett teori</div>
+              <div class="teaser-check">🎬 Videogenomgång</div>
+              <div class="teaser-check">🧠 10-frågorsprov</div>
+              <div class="teaser-check">🤖 Jocke — din AI-säljcoach</div>
+            </div>
+            <a href="/upgrade" class="teaser-upgrade-cta">⭐ Uppgradera till Premium — 199 kr/mån →</a>
+            <p class="teaser-price-hint">Avsluta när som helst. Säker betalning via Stripe.</p>
           </div>
         </div>
       </div>
 
       <div id="tab-video" class="tab-content">
         <div class="teaser-locked-tab">
-          <div class="teaser-lock-icon">🎬🔒</div>
-          <h3>Video ingår i Premium</h3>
-          <p>Varje block har en kuraterad videogenomgång som fördjupar teorin.</p>
-          <a href="/upgrade" class="auth-btn teaser-upgrade-btn">⭐ Uppgradera →</a>
+          <div class="teaser-lock-icon">🎬</div>
+          <h3>Videogenomgång: <%= block.title %></h3>
+          <p>En kuraterad videogenomgång som visualiserar och fördjupar teorin. Ingår i Premium.</p>
+          <a href="/upgrade" class="teaser-upgrade-cta">⭐ Uppgradera →</a>
         </div>
       </div>
 
       <div id="tab-quiz" class="tab-content">
         <div class="teaser-locked-tab">
-          <div class="teaser-lock-icon">🧠🔒</div>
-          <h3>Prov ingår i Premium</h3>
-          <p>Testa dina kunskaper med 10 frågor per block och se hur du presterar.</p>
-          <a href="/upgrade" class="auth-btn teaser-upgrade-btn">⭐ Uppgradera →</a>
+          <div class="teaser-lock-icon">🧠</div>
+          <h3>Prov: <%= block.title %></h3>
+          <p>10 frågor som bekräftar att du verkligen förstått blocket. Din progress sparas. Ingår i Premium.</p>
+          <a href="/upgrade" class="teaser-upgrade-cta">⭐ Uppgradera →</a>
         </div>
       </div>
 
