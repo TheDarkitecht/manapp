@@ -11,19 +11,22 @@
 </head>
 <body class="upgrade-page">
 
+  <a href="#main-content" class="skip-to-main">Hoppa till innehåll</a>
+
   <nav class="learn-nav">
     <a href="/dashboard" class="learn-nav-back">← Dashboard</a>
     <span class="learn-nav-title">⭐ Uppgradera till Premium</span>
     <span class="learn-nav-user"><%= username %></span>
   </nav>
 
+  <main id="main-content">
   <div class="upgrade-v2-wrap">
 
     <!-- ── Hero ──────────────────────────────────────────────────────────────── -->
     <div class="up-hero">
       <div class="up-hero-tag">⭐ Premium</div>
       <h1>Lås upp hela säljutbildningen</h1>
-      <p>15 avancerade block, AI-coachen Jocke och verktyg som faktiskt gör dig till en bättre säljare.</p>
+      <p>Alla 16 block, AI-coachen Jocke och verktyg som faktiskt gör dig till en bättre säljare.</p>
     </div>
 
     <!-- ── Main pricing section ───────────────────────────────────────────────── -->
@@ -114,7 +117,7 @@
             <p class="upgrade-error"><%= error %></p>
           <% } %>
 
-          <form method="POST" action="/upgrade/checkout">
+          <form method="POST" action="/upgrade/checkout" onsubmit="checkoutLoading(this)">
             <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
             <button type="submit" class="up-checkout-btn">
               Kom igång nu →
@@ -132,27 +135,27 @@
         </div>
 
         <!-- Free vs Premium mini-compare -->
-        <div class="up-compare-mini">
-          <div class="up-compare-row header">
-            <span>Funktion</span><span>Gratis</span><span>Premium</span>
+        <div class="up-compare-mini" role="table" aria-label="Jämförelse Gratis vs Premium">
+          <div class="up-compare-row header" role="row">
+            <span role="columnheader">Funktion</span><span role="columnheader">Gratis</span><span role="columnheader">Premium</span>
           </div>
-          <div class="up-compare-row">
-            <span>Block 1</span><span class="yes">✓</span><span class="yes">✓</span>
+          <div class="up-compare-row" role="row">
+            <span role="cell">Block 1</span><span role="cell" class="yes">✓</span><span role="cell" class="yes">✓</span>
           </div>
-          <div class="up-compare-row">
-            <span>Block 2–16</span><span class="no">✗</span><span class="yes">✓</span>
+          <div class="up-compare-row" role="row">
+            <span role="cell">Block 2–16</span><span role="cell" class="no">✗</span><span role="cell" class="yes">✓</span>
           </div>
-          <div class="up-compare-row">
-            <span>AI-assistent Jocke</span><span class="no">✗</span><span class="yes">✓</span>
+          <div class="up-compare-row" role="row">
+            <span role="cell">AI-assistent Jocke</span><span role="cell" class="no">✗</span><span role="cell" class="yes">✓</span>
           </div>
-          <div class="up-compare-row">
-            <span>Video per block</span><span class="no">✗</span><span class="yes">✓</span>
+          <div class="up-compare-row" role="row">
+            <span role="cell">Video per block</span><span role="cell" class="no">✗</span><span role="cell" class="yes">✓</span>
           </div>
-          <div class="up-compare-row">
-            <span>Säljordboken</span><span class="yes">✓</span><span class="yes">✓</span>
+          <div class="up-compare-row" role="row">
+            <span role="cell">Säljordboken</span><span role="cell" class="yes">✓</span><span role="cell" class="yes">✓</span>
           </div>
-          <div class="up-compare-row">
-            <span>Progressspårning</span><span class="partial">Delvis</span><span class="yes">✓</span>
+          <div class="up-compare-row" role="row">
+            <span role="cell">Progressspårning</span><span role="cell" class="partial">Delvis</span><span role="cell" class="yes">✓</span>
           </div>
         </div>
 
@@ -165,55 +168,55 @@
       <div class="faq-grid">
 
         <div class="faq-item">
-          <button class="faq-q" onclick="toggleFaq(this)">
-            Kan jag avsluta när som helst? <span class="faq-arrow">▾</span>
+          <button class="faq-q" onclick="toggleFaq(this)" aria-expanded="false" aria-controls="faq-a-1">
+            Kan jag avsluta när som helst? <span class="faq-arrow" aria-hidden="true">▾</span>
           </button>
-          <div class="faq-a">
+          <div class="faq-a" id="faq-a-1">
             <p>Ja, absolut. Du kan avsluta din prenumeration när som helst via din Stripe-kundportal. Du behåller Premium-tillgången fram till slutet av den betalda perioden. Inga bindningstider, inga dolda avgifter.</p>
           </div>
         </div>
 
         <div class="faq-item">
-          <button class="faq-q" onclick="toggleFaq(this)">
-            Vad är AI-assistenten Jocke? <span class="faq-arrow">▾</span>
+          <button class="faq-q" onclick="toggleFaq(this)" aria-expanded="false" aria-controls="faq-a-2">
+            Vad är AI-assistenten Jocke? <span class="faq-arrow" aria-hidden="true">▾</span>
           </button>
-          <div class="faq-a">
+          <div class="faq-a" id="faq-a-2">
             <p>Jocke är en AI-tränad säljcoach med Joakims stil och tankesätt. Du kan öva invändningshantering i rollspel, få feedback på din pitch, ställa frågor om specifika säljsituationer — och få svar direkt, dygnet runt. Jocke är block-medveten och anpassar sig efter var du är i utbildningen.</p>
           </div>
         </div>
 
         <div class="faq-item">
-          <button class="faq-q" onclick="toggleFaq(this)">
-            Passar utbildningen om jag säljer B2C och inte B2B? <span class="faq-arrow">▾</span>
+          <button class="faq-q" onclick="toggleFaq(this)" aria-expanded="false" aria-controls="faq-a-3">
+            Passar utbildningen om jag säljer B2C och inte B2B? <span class="faq-arrow" aria-hidden="true">▾</span>
           </button>
-          <div class="faq-a">
+          <div class="faq-a" id="faq-a-3">
             <p>Ja. Grunderna i sälj — första intrycket, behovsanalys, invändningshantering, avslutstekniker, mindset — gäller oberoende av om du säljer till konsumenter eller företag. Vissa exempel är B2B-fokuserade men principerna är universella.</p>
           </div>
         </div>
 
         <div class="faq-item">
-          <button class="faq-q" onclick="toggleFaq(this)">
-            Hur snabbt får jag tillgång efter betalning? <span class="faq-arrow">▾</span>
+          <button class="faq-q" onclick="toggleFaq(this)" aria-expanded="false" aria-controls="faq-a-4">
+            Hur snabbt får jag tillgång efter betalning? <span class="faq-arrow" aria-hidden="true">▾</span>
           </button>
-          <div class="faq-a">
+          <div class="faq-a" id="faq-a-4">
             <p>Direkt. Så fort betalningen bekräftas av Stripe uppgraderas ditt konto automatiskt och du har tillgång till alla 16 block och Jocke.</p>
           </div>
         </div>
 
         <div class="faq-item">
-          <button class="faq-q" onclick="toggleFaq(this)">
-            Jag är redan ganska erfaren säljare — finns det värde för mig? <span class="faq-arrow">▾</span>
+          <button class="faq-q" onclick="toggleFaq(this)" aria-expanded="false" aria-controls="faq-a-5">
+            Jag är redan ganska erfaren säljare — finns det värde för mig? <span class="faq-arrow" aria-hidden="true">▾</span>
           </button>
-          <div class="faq-a">
+          <div class="faq-a" id="faq-a-5">
             <p>Ja. De avancerade blocken — förhandling, LinkedIn, videosamtal, mental styrka, personligt varumärke — är specifikt designade för säljare som vill ta sin prestation från bra till exceptionell. Och Jocke är ett utmärkt verktyg för att träna specifika situationer som du faktiskt möter.</p>
           </div>
         </div>
 
         <div class="faq-item">
-          <button class="faq-q" onclick="toggleFaq(this)">
-            Vad händer med mina uppgifter och mina anteckningar? <span class="faq-arrow">▾</span>
+          <button class="faq-q" onclick="toggleFaq(this)" aria-expanded="false" aria-controls="faq-a-6">
+            Vad händer med mina uppgifter och mina anteckningar? <span class="faq-arrow" aria-hidden="true">▾</span>
           </button>
-          <div class="faq-a">
+          <div class="faq-a" id="faq-a-6">
             <p>Dina anteckningar och din progress sparas i ditt konto och är synliga bara för dig. Vi delar aldrig dina uppgifter med tredje part. Du kan läsa mer i vår <a href="/integritetspolicy">integritetspolicy</a>.</p>
           </div>
         </div>
@@ -225,22 +228,81 @@
     <div class="up-final-cta">
       <h2>Redo att ta nästa steg?</h2>
       <p>199 kr/mån. Avsluta när som helst. Tillgång direkt.</p>
-      <form method="POST" action="/upgrade/checkout">
+      <form method="POST" action="/upgrade/checkout" onsubmit="checkoutLoading(this)">
         <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
         <button type="submit" class="up-checkout-btn">Uppgradera till Premium nu →</button>
       </form>
     </div>
 
   </div>
+  </main>
+
+  <!-- ── Mobile bottom navigation ──────────────────────────────────────────── -->
+  <nav class="app-bottom-nav">
+    <a href="/dashboard" class="app-bottom-nav-item">
+      <span class="abn-icon">🏠</span>
+      <span class="abn-label">Hem</span>
+    </a>
+    <a href="/learn" class="app-bottom-nav-item">
+      <span class="abn-icon">📚</span>
+      <span class="abn-label">Utbildning</span>
+    </a>
+    <a href="/ordbok" class="app-bottom-nav-item">
+      <span class="abn-icon">📖</span>
+      <span class="abn-label">Ordbok</span>
+    </a>
+    <a href="/upgrade" class="app-bottom-nav-item abn-upgrade active">
+      <span class="abn-icon">⭐</span>
+      <span class="abn-label">Premium</span>
+    </a>
+  </nav>
 
   <script>
+    function checkoutLoading(form) {
+      const btn = form.querySelector('button[type="submit"]');
+      btn.disabled = true;
+      btn.textContent = '⏳ Omdirigerar till Stripe…';
+      btn.style.opacity = '0.8';
+    }
+
+    // Re-enable checkout buttons on back/forward cache restore (bfcache).
+    // Without this, users who click Back from Stripe land on a page with
+    // permanently disabled buttons and no way to retry.
+    window.addEventListener('pageshow', function(e) {
+      if (e.persisted) {
+        document.querySelectorAll('.up-checkout-btn').forEach(function(btn) {
+          btn.disabled = false;
+          btn.textContent = btn.dataset.originalText || btn.textContent.replace(/^⏳.*/, 'Kom igång nu →');
+          btn.style.opacity = '';
+        });
+      }
+    });
+
+    // Store original button text before loading state (for accurate restore)
+    document.querySelectorAll('.up-checkout-btn').forEach(function(btn) {
+      btn.dataset.originalText = btn.textContent.trim();
+    });
+
     function toggleFaq(btn) {
       const item = btn.closest('.faq-item');
       const answer = item.querySelector('.faq-a');
       const arrow = btn.querySelector('.faq-arrow');
-      const isOpen = answer.style.display === 'block';
-      answer.style.display = isOpen ? 'none' : 'block';
-      arrow.textContent = isOpen ? '▾' : '▴';
+      const isOpen = item.classList.contains('faq-open');
+
+      // Close all open items first
+      document.querySelectorAll('.faq-item.faq-open').forEach(el => {
+        el.classList.remove('faq-open');
+        el.querySelector('.faq-a').style.maxHeight = null;
+        el.querySelector('.faq-arrow').textContent = '▾';
+        el.querySelector('.faq-q').setAttribute('aria-expanded', 'false');
+      });
+
+      if (!isOpen) {
+        item.classList.add('faq-open');
+        answer.style.maxHeight = answer.scrollHeight + 'px';
+        arrow.textContent = '▴';
+        btn.setAttribute('aria-expanded', 'true');
+      }
     }
   </script>
 

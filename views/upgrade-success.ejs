@@ -10,6 +10,11 @@
 </head>
 <body class="learn-page">
 
+  <a href="#main-content" class="skip-to-main">Hoppa till innehåll</a>
+
+  <canvas id="confettiCanvas" style="position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:999;"></canvas>
+
+  <main id="main-content">
   <div class="success-wrap">
     <div class="upgrade-success-card">
 
@@ -18,7 +23,7 @@
 
       <div class="us-icon">🎉</div>
       <div class="us-badge">⭐ Premium aktiverat</div>
-      <h1>Du är inne.</h1>
+      <h1><%= username %>, du är inne.</h1>
       <p class="us-sub">Ditt konto är nu Premium. Du har tillgång till alla 16 block, AI-assistenten Jocke och allt som hjälper dig bli en bättre säljare — från och med nu.</p>
 
       <!-- Next steps -->
@@ -55,6 +60,70 @@
 
     </div>
   </div>
+  </main>
+
+  <script>
+    // Lightweight confetti burst (respects prefers-reduced-motion)
+    (function() {
+      if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        document.getElementById('confettiCanvas').style.display = 'none';
+        return;
+      }
+      const canvas = document.getElementById('confettiCanvas');
+      const ctx = canvas.getContext('2d');
+      function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+      resize();
+      window.addEventListener('resize', resize, { passive: true });
+
+      const colors = ['#6366f1','#8b5cf6','#a78bfa','#f59e0b','#10b981','#818cf8','#fbbf24','#34d399'];
+      const pieces = Array.from({ length: 120 }, () => ({
+        x: Math.random() * canvas.width,
+        y: Math.random() * -canvas.height,
+        w: Math.random() * 8 + 4,
+        h: Math.random() * 14 + 6,
+        color: colors[Math.floor(Math.random() * colors.length)],
+        vx: (Math.random() - 0.5) * 3,
+        vy: Math.random() * 4 + 2,
+        rot: Math.random() * 360,
+        vrot: (Math.random() - 0.5) * 8,
+        opacity: 1,
+      }));
+
+      let startTime = null;
+      const duration = 4000; // 4 seconds
+
+      function draw(ts) {
+        if (!startTime) startTime = ts;
+        const elapsed = ts - startTime;
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        let alive = false;
+        pieces.forEach(p => {
+          if (p.y < canvas.height + 20) {
+            alive = true;
+            p.x  += p.vx;
+            p.y  += p.vy;
+            p.rot += p.vrot;
+            p.vy += 0.05; // gravity
+            if (elapsed > duration * 0.6) p.opacity = Math.max(0, p.opacity - 0.015);
+
+            ctx.save();
+            ctx.globalAlpha = p.opacity;
+            ctx.translate(p.x, p.y);
+            ctx.rotate(p.rot * Math.PI / 180);
+            ctx.fillStyle = p.color;
+            ctx.fillRect(-p.w/2, -p.h/2, p.w, p.h);
+            ctx.restore();
+          }
+        });
+
+        if (alive) requestAnimationFrame(draw);
+        else canvas.style.display = 'none';
+      }
+
+      requestAnimationFrame(draw);
+    })();
+  </script>
 
 </body>
 </html>

@@ -8,7 +8,7 @@ const Stripe    = require('stripe');
 const { Resend } = require('resend');
 const helmet    = require('helmet');
 const {
-  initDatabase, cleanupExpiredTokens, findUserByUsername, findUserByEmail, createUser,
+  initDatabase, cleanupExpiredTokens, findUserByUsername, findUserByEmail, findUserById, createUser,
   getAllUsers, setUserRole, deleteUser, deleteUserAccount, getUserStats,
   setStripeCustomerId, findUserByStripeCustomerId,
   updateLastLogin,
@@ -68,7 +68,7 @@ BLOCKEN DU KÄNNER TILL (Joakim Jaksens Säljutbildning):
 16. Säljledarskap & Teamutveckling — Coacha säljare, KPI:er, teamkultur.
 
 REGLER:
-- Avslöja aldrig att du är en AI eller ett LLM.
+- Du är en AI-assistent. Om någon direkt frågar om du är en AI, robot eller språkmodell — bekräfta ärligt att du är det. Behåll ändå personan "Jocke" och din coachingstil. Du behöver inte frivilligt ta upp det, men ljug aldrig om det om du tillfrågas. (Krav enligt EU AI Act Art. 52.)
 - Håll svaren kortfattade om inte användaren specifikt ber om djupare genomgång.
 - Om du inte vet något specifikt — säg det och erbjud ett alternativt perspektiv.
 `;
@@ -157,7 +157,9 @@ app.set('trust proxy', 1); // Railway runs behind a reverse proxy
 app.use(helmet({
   contentSecurityPolicy: false, // disabled — inline scripts throughout EJS (TODO: add nonces)
   crossOriginEmbedderPolicy: false, // needed for YouTube iframes
+  referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
 }));
+app.disable('x-powered-by'); // already removed by helmet but belt-and-suspenders
 
 app.use(express.urlencoded({ extended: false }));
 app.use(express.json());
@@ -167,6 +169,7 @@ app.set('view engine', 'ejs');
 const isProd = process.env.NODE_ENV === 'production' || !!process.env.RAILWAY_ENVIRONMENT;
 
 app.use(session({
+  name:   'sid',  // don't leak 'connect.sid' as the session cookie name
   secret: process.env.SESSION_SECRET || 'change-in-production',
   resave: false,
   saveUninitialized: false,
@@ -240,8 +243,36 @@ const resetLimiter = rateLimit({
     res.render('forgot-password', {
       error: 'För många försök. Försök igen om en timme.',
       success: null,
+      csrfToken: generateCsrfToken(req),
     });
   },
+});
+
+// ── Rate limiter — max 30 note creates per 10 min per user ───────────────────
+
+const noteLimiter = rateLimit({
+  windowMs: 10 * 60 * 1000,
+  max: 30,
+  keyGenerator: (req) => `note_${req.session?.userId || req.ip}`,
+  handler: (req, res) => res.redirect('/dashboard'),
+});
+
+// ── Rate limiter — max 20 note deletes per 10 min per user ───────────────────
+
+const noteDeleteLimiter = rateLimit({
+  windowMs: 10 * 60 * 1000,
+  max: 20,
+  keyGenerator: (req) => `notedel_${req.session?.userId || req.ip}`,
+  handler: (req, res) => res.redirect('/dashboard'),
+});
+
+// ── Rate limiter — max 3 account delete attempts per 15 min per user ─────────
+
+const deleteLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 3,
+  keyGenerator: (req) => `del_${req.session?.userId || req.ip}`,
+  handler: (req, res) => res.redirect('/dashboard?deleteError=1'),
 });
 
 // ── CSRF token helper ─────────────────────────────────────────────────────────
@@ -258,6 +289,11 @@ function generateCsrfToken(req) {
 function verifyCsrf(req, res, next) {
   const token = req.body?._csrf || req.headers['x-csrf-token'];
   if (!token || token !== req.session.csrfToken) {
+    // Return JSON for AJAX/fetch requests; plain text for form POSTs
+    const isAjax = !!req.headers['x-csrf-token'] || (req.headers['accept'] || '').includes('application/json');
+    if (isAjax) {
+      return res.status(403).json({ error: 'Sessionen har gått ut — ladda om sidan och försök igen.' });
+    }
     return res.status(403).send('Ogiltig begäran. Ladda om sidan och försök igen.');
   }
   next();
@@ -355,8 +391,23 @@ function buildPasswordResetEmail(username, link) {
 // ── Auth helpers ──────────────────────────────────────────────────────────────
 
 function requireLogin(req, res, next) {
-  if (req.session?.userId) return next();
-  res.redirect('/login');
+  if (!req.session?.userId) return res.redirect('/login');
+
+  // One DB lookup per request — gives us three things for free:
+  //  1. Confirm the user still exists (not deleted mid-session)
+  //  2. Invalidate sessions whose password has changed since login (stolen-session mitigation)
+  //  3. Keep session role in sync with DB (instant effect when admin demotes a user)
+  const user = findUserById(req.session.userId);
+  if (!user) {
+    return req.session.destroy(() => res.redirect('/login'));
+  }
+  const dbVersion = user.pw_version || 0;
+  if ((req.session.pwVersion || 0) !== dbVersion) {
+    return req.session.destroy(() => res.redirect('/login?expired=1'));
+  }
+  // Keep session role fresh (so admin demotions take effect without re-login)
+  req.session.role = user.role;
+  next();
 }
 
 function requireAdmin(req, res, next) {
@@ -379,7 +430,15 @@ app.get('/', (req, res) => {
 
 app.get('/login', (req, res) => {
   if (req.session?.userId) return res.redirect('/dashboard');
-  res.render('login', { error: null, registerError: null, success: null, turnstileSiteKey: TURNSTILE_SITE_KEY });
+  const expiredMsg = req.query.expired === '1'
+    ? 'Din session har gått ut — logga in igen med ditt nya lösenord.'
+    : null;
+  res.render('login', {
+    error:            expiredMsg,
+    registerError:    null,
+    success:          null,
+    turnstileSiteKey: TURNSTILE_SITE_KEY,
+  });
 });
 
 app.post('/login', loginLimiter, async (req, res) => {
@@ -396,9 +455,10 @@ app.post('/login', loginLimiter, async (req, res) => {
   // Regenerate session ID to prevent session fixation attacks
   req.session.regenerate((err) => {
     if (err) return res.redirect('/login');
-    req.session.userId   = user.id;
-    req.session.username = user.username;
-    req.session.role     = user.role;
+    req.session.userId    = user.id;
+    req.session.username  = user.username;
+    req.session.role      = user.role;
+    req.session.pwVersion = user.pw_version || 0; // stored for session-invalidation after pw reset
     updateLastLogin(user.id);
     res.redirect('/dashboard');
   });
@@ -448,9 +508,13 @@ app.post('/register', registerLimiter, async (req, res) => {
     return res.render('login', { error: null, success: null, turnstileSiteKey: TURNSTILE_SITE_KEY,
       registerError: 'Lösenorden matchar inte.' });
 
-  if (password.length < 6)
+  if (password.length < 8)
     return res.render('login', { error: null, success: null, turnstileSiteKey: TURNSTILE_SITE_KEY,
-      registerError: 'Lösenordet måste vara minst 6 tecken.' });
+      registerError: 'Lösenordet måste vara minst 8 tecken.' });
+
+  if (password.length > 128)
+    return res.render('login', { error: null, success: null, turnstileSiteKey: TURNSTILE_SITE_KEY,
+      registerError: 'Lösenordet får inte vara längre än 128 tecken.' });
 
   const result = createUser(username.trim(), email.trim(), password);
   if (!result.ok)
@@ -494,10 +558,10 @@ app.get('/logout', (req, res) => {
 // ── Forgot password ───────────────────────────────────────────────────────────
 
 app.get('/forgot-password', (req, res) => {
-  res.render('forgot-password', { error: null, success: null });
+  res.render('forgot-password', { error: null, success: null, csrfToken: generateCsrfToken(req) });
 });
 
-app.post('/forgot-password', resetLimiter, async (req, res) => {
+app.post('/forgot-password', resetLimiter, verifyCsrf, async (req, res) => {
   const { email } = req.body;
   const user = findUserByEmail(email?.trim().toLowerCase());
 
@@ -506,6 +570,7 @@ app.post('/forgot-password', resetLimiter, async (req, res) => {
     return res.render('forgot-password', {
       error: null,
       success: 'Om e-postadressen finns i systemet har vi skickat en länk.',
+      csrfToken: generateCsrfToken(req),
     });
   }
 
@@ -528,6 +593,7 @@ app.post('/forgot-password', resetLimiter, async (req, res) => {
   res.render('forgot-password', {
     error: null,
     success: 'Om e-postadressen finns i systemet har vi skickat en länk.',
+    csrfToken: generateCsrfToken(req),
   });
 });
 
@@ -535,29 +601,34 @@ app.get('/reset-password/:token', (req, res) => {
   const record = findValidResetToken(req.params.token);
   if (!record) {
     return res.render('reset-password', {
-      token: null, error: 'Länken är ogiltig eller har gått ut.', success: null,
+      token: null, error: 'Länken är ogiltig eller har gått ut.', success: null, csrfToken: null,
     });
   }
-  res.render('reset-password', { token: req.params.token, error: null, success: null });
+  res.render('reset-password', { token: req.params.token, error: null, success: null, csrfToken: generateCsrfToken(req) });
 });
 
-app.post('/reset-password/:token', async (req, res) => {
+app.post('/reset-password/:token', verifyCsrf, async (req, res) => {
   const { password, confirmPassword } = req.body;
   const record = findValidResetToken(req.params.token);
 
   if (!record) {
     return res.render('reset-password', {
-      token: null, error: 'Länken är ogiltig eller har gått ut.', success: null,
+      token: null, error: 'Länken är ogiltig eller har gått ut.', success: null, csrfToken: null,
     });
   }
-  if (!password || password.length < 6) {
+  if (!password || password.length < 8) {
     return res.render('reset-password', {
-      token: req.params.token, error: 'Lösenordet måste vara minst 6 tecken.', success: null,
+      token: req.params.token, error: 'Lösenordet måste vara minst 8 tecken.', success: null, csrfToken: generateCsrfToken(req),
+    });
+  }
+  if (password.length > 128) {
+    return res.render('reset-password', {
+      token: req.params.token, error: 'Lösenordet får inte vara längre än 128 tecken.', success: null, csrfToken: generateCsrfToken(req),
     });
   }
   if (password !== confirmPassword) {
     return res.render('reset-password', {
-      token: req.params.token, error: 'Lösenorden matchar inte.', success: null,
+      token: req.params.token, error: 'Lösenorden matchar inte.', success: null, csrfToken: generateCsrfToken(req),
     });
   }
 
@@ -591,15 +662,18 @@ app.get('/dashboard', requireLogin, (req, res) => {
   });
 });
 
-app.post('/notes', requireLogin, verifyCsrf, (req, res) => {
+app.post('/notes', requireLogin, noteLimiter, verifyCsrf, (req, res) => {
   const content = (req.body.content || '').trim().slice(0, 2000); // max 2000 chars
-  if (content) createNote(req.session.userId, content);
-  res.redirect('/dashboard');
+  if (content) {
+    const saved = createNote(req.session.userId, content);
+    if (saved === false) return res.redirect('/dashboard?note_limit=1');
+  }
+  res.redirect('/dashboard?note_saved=1');
 });
 
-app.post('/notes/:id/delete', requireLogin, verifyCsrf, (req, res) => {
+app.post('/notes/:id/delete', requireLogin, noteDeleteLimiter, verifyCsrf, (req, res) => {
   deleteNote(Number(req.params.id), req.session.userId);
-  res.redirect('/dashboard');
+  res.redirect('/dashboard?note_deleted=1');
 });
 
 // ── Learn ─────────────────────────────────────────────────────────────────────
@@ -639,25 +713,33 @@ app.get('/learn/:id', requireLogin, (req, res) => {
     isTeaser,
     blockProg,
     readTime,
+    csrfToken:    generateCsrfToken(req),
   });
 });
 
 // ── Quiz result — save score to DB ───────────────────────────────────────────
 
-app.post('/quiz-result', requireLogin, quizLimiter, (req, res) => {
+app.post('/quiz-result', requireLogin, quizLimiter, verifyCsrf, (req, res) => {
   const { blockId, score, total } = req.body;
-  if (!blockId || score === undefined || !total) return res.json({ ok: false });
+  if (!blockId || score === undefined || total === undefined) return res.json({ ok: false });
+  const scoreNum = parseInt(score);
+  const totalNum = parseInt(total);
+  // Sanity-check: score 0–totalNum, total must be positive and reasonable
+  if (isNaN(scoreNum) || isNaN(totalNum) || totalNum <= 0 || totalNum > 50 || scoreNum < 0 || scoreNum > totalNum) {
+    return res.json({ ok: false });
+  }
   const block = salesBlocks.find(b => b.id === blockId);
   if (!block) return res.json({ ok: false });
-  const isPremium = FREE_BLOCK_IDS.includes(block.id) || req.session.role === 'premium' || req.session.role === 'admin';
-  if (!isPremium) return res.json({ ok: false });
-  saveQuizResult(req.session.userId, blockId, parseInt(score), parseInt(total));
+  // Allow: free blocks (accessible to all) OR premium/admin users
+  const hasAccess = FREE_BLOCK_IDS.includes(block.id) || req.session.role === 'premium' || req.session.role === 'admin';
+  if (!hasAccess) return res.json({ ok: false });
+  saveQuizResult(req.session.userId, blockId, scoreNum, totalNum);
   res.json({ ok: true });
 });
 
 // ── Account deletion (GDPR right to erasure) ─────────────────────────────────
 
-app.post('/account/delete', requireLogin, verifyCsrf, async (req, res) => {
+app.post('/account/delete', requireLogin, deleteLimiter, verifyCsrf, async (req, res) => {
   const { confirmDelete } = req.body;
   if (confirmDelete !== 'RADERA') {
     return res.redirect('/dashboard?deleteError=1');
@@ -691,11 +773,15 @@ app.get('/integritetspolicy', (req, res) => {
 
 app.get('/ordbok', requireLogin, (req, res) => {
   const categories = [...new Set(glossaryTerms.map(t => t.category))];
+  // Build a blockId→title map for term link tooltips
+  const blockTitles = {};
+  salesBlocks.forEach((b, i) => { blockTitles[b.id] = `Block ${i + 1}: ${b.title}`; });
   res.render('ordbok', {
     username:   req.session.username,
     role:       req.session.role,
     terms:      glossaryTerms,
     categories,
+    blockTitles,
   });
 });
 
@@ -711,9 +797,12 @@ app.get('/admin', requireLogin, requireAdmin, (req, res) => {
 });
 
 app.post('/admin/users/:id/role', requireLogin, requireAdmin, verifyCsrf, (req, res) => {
+  const targetId = Number(req.params.id);
+  // Prevent admins from demoting themselves (would lose admin access mid-session)
+  if (targetId === req.session.userId) return res.redirect('/admin');
   const { role } = req.body;
   if (['free', 'premium', 'admin'].includes(role)) {
-    setUserRole(Number(req.params.id), role);
+    setUserRole(targetId, role);
   }
   res.redirect('/admin');
 });
@@ -727,7 +816,7 @@ app.post('/admin/users/:id/delete', requireLogin, requireAdmin, verifyCsrf, (req
 // ── Admin: manually send welcome email ───────────────────────────────────────
 
 app.post('/admin/users/:id/email', requireLogin, requireAdmin, verifyCsrf, async (req, res) => {
-  const user    = getAllUsers().find(u => u.id === Number(req.params.id));
+  const user    = findUserById(Number(req.params.id));
   const baseUrl = process.env.APP_URL || `${req.protocol}://${req.get('host')}`;
 
   if (!user?.email) return res.redirect('/admin');
@@ -751,16 +840,17 @@ app.post('/admin/users/:id/email', requireLogin, requireAdmin, verifyCsrf, async
 
 app.get('/admin/export/users.csv', requireLogin, requireAdmin, (req, res) => {
   const users = getAllUsers();
-  const header = ['id', 'username', 'email', 'role', 'gdpr', 'created_at', 'last_login'].join(',');
+  const header = ['id', 'username', 'email', 'role', 'gdpr', 'created_at', 'last_login', 'stripe_customer_id'].join(',');
   const rows   = users.map(u =>
     [
       u.id,
-      `"${(u.username || '').replace(/"/g, '""')}"`,
-      `"${(u.email    || '').replace(/"/g, '""')}"`,
+      `"${(u.username          || '').replace(/"/g, '""')}"`,
+      `"${(u.email             || '').replace(/"/g, '""')}"`,
       u.role,
       u.gdpr ? '1' : '0',
-      (u.created_at  || '').slice(0, 10),
-      (u.last_login  || '').slice(0, 10),
+      (u.created_at            || '').slice(0, 10),
+      (u.last_login            || '').slice(0, 10),
+      `"${(u.stripe_customer_id || '').replace(/"/g, '""')}"`,
     ].join(',')
   );
   const csv = [header, ...rows].join('\n');
@@ -818,26 +908,44 @@ app.post('/upgrade/checkout', requireLogin, verifyCsrf, async (req, res) => {
   }
 });
 
-app.get('/upgrade/success', requireLogin, async (req, res) => {
-  // Webhook handles the DB update — just update the session here as well
-  req.session.role = 'premium';
+app.get('/upgrade/success', requireLogin, (req, res) => {
+  // Sync session role from DB — the Stripe webhook may already have upgraded the user.
+  // IMPORTANT: never hardcode 'premium' here — any free user could navigate directly
+  // to this URL and get an unearned premium session for 8 hours.
+  const freshUser = findUserById(req.session.userId);
+  if (freshUser) req.session.role = freshUser.role;
   res.render('upgrade-success', { username: req.session.username });
 });
 
 // ── Chat ──────────────────────────────────────────────────────────────────────
 
-app.post('/chat', requireLogin, chatLimiter, async (req, res) => {
+app.post('/chat', requireLogin, chatLimiter, verifyCsrf, async (req, res) => {
+  // Jocke is a premium feature — block API access for free users
+  if (req.session.role !== 'premium' && req.session.role !== 'admin') {
+    return res.status(403).json({ error: 'Jocke är tillgänglig för Premium-användare.' });
+  }
   const { messages } = req.body;
-  if (!Array.isArray(messages))
+  if (!Array.isArray(messages) || messages.length === 0)
+    return res.status(400).json({ error: 'Invalid format.' });
+
+  // Validate and sanitize messages — cap at 20, check structure
+  const validRoles = new Set(['user', 'assistant']);
+  const sanitized = messages
+    .slice(-20) // keep last 20 messages to limit context size
+    .filter(m => m && typeof m === 'object' && validRoles.has(m.role) && typeof m.content === 'string')
+    .map(m => ({ role: m.role, content: m.content.slice(0, 2000) })); // cap each message at 2000 chars
+
+  if (sanitized.length === 0)
     return res.status(400).json({ error: 'Invalid format.' });
 
   try {
     const completion = await openai.chat.completions.create({
       model: 'llama-3.3-70b-versatile',
-      messages: [{ role: 'system', content: JOCKE_SYSTEM_PROMPT }, ...messages],
+      messages: [{ role: 'system', content: JOCKE_SYSTEM_PROMPT }, ...sanitized],
       max_tokens: 500,
     });
-    res.json({ reply: completion.choices[0].message.content });
+    const reply = completion.choices?.[0]?.message?.content || 'Inget svar mottogs.';
+    res.json({ reply });
   } catch (err) {
     console.error('Groq error:', err.message);
     res.status(500).json({ error: 'Kunde inte nå assistenten just nu.' });
@@ -870,7 +978,24 @@ app.post('/billing/portal', requireLogin, verifyCsrf, async (req, res) => {
 // ── Health check ─────────────────────────────────────────────────────────────
 
 app.get('/health', (req, res) => {
-  res.json({ status: 'ok', ts: new Date().toISOString() });
+  // Return minimal info for Railway health checks.
+  // Service config details only shown to authenticated admins.
+  const isAdmin = req.session?.role === 'admin';
+  const base = {
+    status: 'ok',
+    ts:     new Date().toISOString(),
+    uptime: Math.round(process.uptime()),
+  };
+  if (isAdmin) {
+    const stats = getUserStats();
+    base.db       = { users: stats.total, premium: stats.premium };
+    base.services = {
+      email:  !!process.env.RESEND_API_KEY,
+      chat:   !!process.env.GROQ_API_KEY,
+      stripe: !!process.env.STRIPE_SECRET_KEY,
+    };
+  }
+  res.json(base);
 });
 
 // ── 404 handler ──────────────────────────────────────────────────────────────
@@ -933,8 +1058,18 @@ async function startServer() {
       warnings.push('SESSION_SECRET is not set — sessions are insecure!');
     if (!process.env.STRIPE_SECRET_KEY)
       warnings.push('STRIPE_SECRET_KEY is not set — payments will not work.');
+    if (!process.env.STRIPE_PRICE_ID)
+      warnings.push('STRIPE_PRICE_ID is not set — checkout will not work.');
     if (!process.env.GROQ_API_KEY)
       warnings.push('GROQ_API_KEY is not set — AI chat will not work.');
+    if (!process.env.TURNSTILE_SECRET_KEY)
+      warnings.push('TURNSTILE_SECRET_KEY is not set — registration CAPTCHA is disabled.');
+    if (!process.env.RESEND_API_KEY)
+      warnings.push('RESEND_API_KEY is not set — transactional email is disabled.');
+    if (!process.env.STRIPE_WEBHOOK_SECRET)
+      warnings.push('STRIPE_WEBHOOK_SECRET is not set — Stripe webhooks will be rejected (users cannot upgrade).');
+    if (!process.env.APP_URL)
+      warnings.push('APP_URL is not set — password reset links and checkout redirects use request host (may be unreliable).');
     if (warnings.length > 0) {
       console.warn('\n⚠️  Production security warnings:');
       warnings.forEach(w => console.warn(`   • ${w}`));

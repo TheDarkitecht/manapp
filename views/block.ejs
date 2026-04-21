@@ -5,10 +5,16 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title><%= block.title %> — Joakim Jaksen Säljutbildning</title>
   <meta name="description" content="<%= block.subtitle %> — Joakim Jaksens säljutbildning med teori, video och prov." />
+  <meta name="robots" content="noindex" />
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎯</text></svg>" />
   <link rel="stylesheet" href="/style.css" />
 </head>
 <body class="block-page">
+
+  <a href="#main-content" class="skip-to-main">Hoppa till innehåll</a>
+
+  <!-- Reading progress bar (decorative — hidden from screen readers) -->
+  <div id="readProgress" aria-hidden="true" style="position:fixed;top:0;left:0;height:3px;width:0;background:linear-gradient(90deg,#6366f1,#8b5cf6);z-index:1000;pointer-events:none;"></div>
 
   <% if (isTeaser) { %>
   <div class="teaser-top-bar">
@@ -41,11 +47,12 @@
   </div>
 
   <!-- Tabs -->
+  <main id="main-content">
   <div class="tabs-wrapper">
-    <div class="tabs">
-      <button class="tab active" onclick="showTab('theory', this)">📖 Teori</button>
-      <button class="tab" onclick="showTab('video', this)">🎬 Video</button>
-      <button class="tab" onclick="showTab('quiz', this)">🧠 Prov</button>
+    <div class="tabs" role="tablist" aria-label="Block <%= block.title %>">
+      <button class="tab active" id="tab-btn-theory" data-tab="theory" onclick="showTab('theory', this)" role="tab" aria-selected="true" aria-controls="tab-theory" tabindex="0">📖 Teori</button>
+      <button class="tab" id="tab-btn-video" data-tab="video" onclick="showTab('video', this)" role="tab" aria-selected="false" aria-controls="tab-video" tabindex="-1">🎬 Video</button>
+      <button class="tab" id="tab-btn-quiz" data-tab="quiz" onclick="showTab('quiz', this)" role="tab" aria-selected="false" aria-controls="tab-quiz" tabindex="-1">🧠 Prov</button>
     </div>
   </div>
 
@@ -54,7 +61,7 @@
     <% if (isTeaser) { %>
 
       <!-- ── TEASER MODE — theory preview + paywall ──────────────────── -->
-      <div id="tab-theory" class="tab-content active">
+      <div id="tab-theory" class="tab-content active" role="tabpanel" aria-labelledby="tab-btn-theory">
         <div class="theory-body teaser-preview">
           <%- block.teaser %>
         </div>
@@ -76,7 +83,7 @@
         </div>
       </div>
 
-      <div id="tab-video" class="tab-content">
+      <div id="tab-video" class="tab-content" role="tabpanel" aria-labelledby="tab-btn-video">
         <div class="teaser-locked-tab">
           <div class="teaser-lock-icon">🎬</div>
           <h3>Videogenomgång: <%= block.title %></h3>
@@ -85,7 +92,7 @@
         </div>
       </div>
 
-      <div id="tab-quiz" class="tab-content">
+      <div id="tab-quiz" class="tab-content" role="tabpanel" aria-labelledby="tab-btn-quiz">
         <div class="teaser-locked-tab">
           <div class="teaser-lock-icon">🧠</div>
           <h3>Prov: <%= block.title %></h3>
@@ -99,14 +106,20 @@
       <!-- ── FULL ACCESS MODE ────────────────────────────────────────── -->
 
       <!-- THEORY -->
-      <div id="tab-theory" class="tab-content active">
+      <div id="tab-theory" class="tab-content active" role="tabpanel" aria-labelledby="tab-btn-theory">
         <div class="theory-body">
           <%- block.theory %>
+        </div>
+        <!-- Bottom nudge toward quiz (shown after reading) -->
+        <div class="theory-cta-row">
+          <button class="theory-quiz-nudge" onclick="showTab('quiz', document.querySelector('[data-tab=quiz]'))">
+            🧠 Redo för provet? Testa dina kunskaper →
+          </button>
         </div>
       </div>
 
       <!-- VIDEO -->
-      <div id="tab-video" class="tab-content">
+      <div id="tab-video" class="tab-content" role="tabpanel" aria-labelledby="tab-btn-video">
         <div class="video-wrapper">
           <div class="video-label">Rekommenderad video om <strong><%= block.title %></strong></div>
           <div class="video-embed">
@@ -114,6 +127,7 @@
               src="https://www.youtube.com/embed/<%= block.youtubeId %>?rel=0&modestbranding=1"
               title="<%= block.title %>"
               frameborder="0"
+              loading="lazy"
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
               allowfullscreen
             ></iframe>
@@ -122,7 +136,7 @@
       </div>
 
       <!-- QUIZ -->
-      <div id="tab-quiz" class="tab-content">
+      <div id="tab-quiz" class="tab-content" role="tabpanel" aria-labelledby="tab-btn-quiz">
         <div class="quiz-wrapper" id="quizWrapper">
           <div class="quiz-header">
             <h2>🧠 Prov — <%= block.title %></h2>
@@ -131,18 +145,18 @@
 
           <form id="quizForm">
             <% block.quiz.forEach(function(q, qi) { %>
-              <div class="quiz-question" id="qq-<%= qi %>">
-                <p class="quiz-q-text"><span class="q-num"><%= qi + 1 %></span> <%= q.q %></p>
+              <fieldset class="quiz-question" id="qq-<%= qi %>">
+                <legend class="quiz-q-text"><span class="q-num" aria-hidden="true"><%= qi + 1 %></span> <%= q.q %></legend>
                 <div class="quiz-options">
                   <% q.options.forEach(function(opt, oi) { %>
                     <label class="quiz-option" data-qi="<%= qi %>" data-oi="<%= oi %>">
                       <input type="radio" name="q<%= qi %>" value="<%= oi %>" />
-                      <span class="option-letter"><%= ['A','B','C','D'][oi] %></span>
+                      <span class="option-letter" aria-hidden="true"><%= ['A','B','C','D'][oi] %></span>
                       <span><%= opt %></span>
                     </label>
                   <% }); %>
                 </div>
-              </div>
+              </fieldset>
             <% }); %>
 
             <button type="button" class="quiz-submit-btn" onclick="submitQuiz()">Rätta provet →</button>
@@ -158,16 +172,17 @@
   </div>
 
   <!-- Block navigation -->
+  </main>
   <div class="block-nav-footer">
     <% const idx = blocks.findIndex(b => b.id === block.id); %>
     <% if (idx > 0) { %>
-      <a href="/learn/<%= blocks[idx-1].id %>" class="block-nav-btn">← <%= blocks[idx-1].title %></a>
+      <a href="/learn/<%= blocks[idx-1].id %>" class="block-nav-btn" title="Föregående block (←)">← <%= blocks[idx-1].title %></a>
     <% } else { %>
       <span></span>
     <% } %>
     <a href="/learn" class="block-nav-btn outline">Alla block</a>
     <% if (idx < blocks.length - 1) { %>
-      <a href="/learn/<%= blocks[idx+1].id %>" class="block-nav-btn"><%= blocks[idx+1].title %> →</a>
+      <a href="/learn/<%= blocks[idx+1].id %>" class="block-nav-btn" title="Nästa block (→)"><%= blocks[idx+1].title %> →</a>
     <% } else { %>
       <span></span>
     <% } %>
@@ -175,13 +190,13 @@
 
   <% if (!isTeaser) { %>
   <!-- ── Jocke chat bubble (premium users only) ──────────────────────────── -->
-  <button class="chat-bubble" id="chatBubble" onclick="toggleChat()" title="Fråga Jocke om <%= block.title %>">
-    <svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" fill="white" viewBox="0 0 24 24">
+  <button class="chat-bubble" id="chatBubble" onclick="toggleChat()" title="Fråga Jocke om <%= block.title %>" aria-label="Öppna chatt med Jocke" aria-expanded="false">
+    <svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" fill="white" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
       <path d="M20 2H4a2 2 0 0 0-2 2v18l4-4h14a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2z"/>
     </svg>
   </button>
 
-  <div class="chat-window" id="chatWindow">
+  <div class="chat-window" id="chatWindow" role="dialog" aria-label="Chatt med Jocke" aria-modal="true" aria-hidden="true">
     <div class="chat-header">
       <div class="chat-header-info">
         <div class="chat-avatar">J</div>
@@ -190,7 +205,7 @@
           <span class="chat-status">● Online</span>
         </div>
       </div>
-      <button class="chat-close" onclick="toggleChat()">✕</button>
+      <button class="chat-close" onclick="toggleChat()" aria-label="Stäng chatt">✕</button>
     </div>
     <div class="chat-messages" id="chatMessages">
       <div class="chat-msg assistant">
@@ -198,9 +213,9 @@
       </div>
     </div>
     <div class="chat-input-area">
-      <textarea id="chatInput" placeholder="Skriv ett meddelande..." rows="1" onkeydown="handleKey(event)"></textarea>
-      <button onclick="sendMessage()">
-        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="white" viewBox="0 0 24 24">
+      <textarea id="chatInput" placeholder="Skriv ett meddelande..." rows="1" onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
+      <button onclick="sendMessage()" aria-label="Skicka meddelande">
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="white" viewBox="0 0 24 24" aria-hidden="true">
           <path d="M2 21l21-9L2 3v7l15 2-15 2z"/>
         </svg>
       </button>
@@ -209,19 +224,95 @@
   <% } %>
 
   <script>
+    // ── Motion preference helper ────────────────────────────────────────────────
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    // Smooth-scroll wrapper that respects prefers-reduced-motion
+    function safeScrollIntoView(el, opts) {
+      el.scrollIntoView({ ...opts, behavior: prefersReducedMotion ? 'auto' : (opts.behavior || 'smooth') });
+    }
+
+    // ── Reading progress bar ────────────────────────────────────────────────────
+
+    (function() {
+      const bar = document.getElementById('readProgress');
+      // Only apply transition when user accepts motion
+      if (!prefersReducedMotion) {
+        bar.style.transition = 'width 0.1s linear';
+      }
+      window.addEventListener('scroll', function() {
+        const scrolled = window.scrollY;
+        const total = document.documentElement.scrollHeight - window.innerHeight;
+        bar.style.width = (total > 0 ? (scrolled / total) * 100 : 0) + '%';
+      }, { passive: true });
+    })();
+
+    // ── Keyboard navigation ─────────────────────────────────────────────────────
+    // Left/Right arrow → prev/next block (when not in an input/textarea/tab)
+    document.addEventListener('keydown', function(e) {
+      const tag = document.activeElement.tagName;
+      const inInput = tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT';
+      if (inInput) return;
+      // Don't navigate blocks when arrow keys are used inside the tablist
+      const inTab = document.activeElement.getAttribute('role') === 'tab';
+      if (inTab) return;
+
+      <% const kbIdx = blocks.findIndex(b => b.id === block.id); %>
+      if (e.key === 'ArrowLeft') {
+        <% if (kbIdx > 0) { %>
+          window.location.href = '/learn/<%= blocks[kbIdx - 1].id %>';
+        <% } %>
+      } else if (e.key === 'ArrowRight') {
+        <% if (kbIdx < blocks.length - 1) { %>
+          window.location.href = '/learn/<%= blocks[kbIdx + 1].id %>';
+        <% } %>
+      } else if (e.key === 'Escape') {
+        // Close chat if open
+        const chatWindow = document.getElementById('chatWindow');
+        if (chatWindow && chatWindow.classList.contains('open')) {
+          toggleChat();
+        }
+      }
+    });
+
     // ── Tabs ────────────────────────────────────────────────────────────────
 
     function showTab(name, btn) {
       document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
-      document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.tab').forEach(el => {
+        el.classList.remove('active');
+        el.setAttribute('aria-selected', 'false');
+        el.setAttribute('tabindex', '-1');
+      });
       document.getElementById('tab-' + name).classList.add('active');
       btn.classList.add('active');
+      btn.setAttribute('aria-selected', 'true');
+      btn.setAttribute('tabindex', '0');
     }
+
+    // Arrow-key navigation within the tablist (ARIA pattern)
+    (function() {
+      const tabBtns = Array.from(document.querySelectorAll('.tabs [role="tab"]'));
+      tabBtns.forEach((btn, i) => {
+        btn.addEventListener('keydown', function(e) {
+          let next = -1;
+          if (e.key === 'ArrowRight') next = (i + 1) % tabBtns.length;
+          else if (e.key === 'ArrowLeft') next = (i - 1 + tabBtns.length) % tabBtns.length;
+          else if (e.key === 'Home') next = 0;
+          else if (e.key === 'End') next = tabBtns.length - 1;
+          if (next !== -1) {
+            e.preventDefault();
+            showTab(tabBtns[next].dataset.tab, tabBtns[next]);
+            tabBtns[next].focus();
+          }
+        });
+      });
+    })();
 
     <% if (!isTeaser) { %>
     // ── Quiz ────────────────────────────────────────────────────────────────
 
-    const correctAnswers = <%- JSON.stringify(block.quiz.map(q => q.answer)) %>;
+    const correctAnswers = <%- JSON.stringify(block.quiz.map(q => q.answer)).replace(/<\/script>/gi, '<\\/script>') %>;
 
     function submitQuiz() {
       const form = document.getElementById('quizForm');
@@ -250,9 +341,33 @@
       });
 
       if (!allAnswered) {
-        alert('Svara på alla frågor innan du rättar!');
+        // Find first unanswered question and scroll to it with inline error
+        let errorEl = document.getElementById('quiz-inline-error');
+        if (!errorEl) {
+          errorEl = document.createElement('p');
+          errorEl.id = 'quiz-inline-error';
+          errorEl.setAttribute('role', 'alert');
+          errorEl.style.cssText = 'color:#f87171;font-size:.875rem;margin:.75rem 0 0;font-weight:600;';
+          document.querySelector('.quiz-submit-btn').insertAdjacentElement('beforebegin', errorEl);
+        }
+        errorEl.textContent = '⚠️ Svara på alla frågor innan du rättar provet.';
+
+        // Scroll to and highlight first unanswered question
+        for (let i = 0; i < correctAnswers.length; i++) {
+          if (!form.querySelector(`input[name="q${i}"]:checked`)) {
+            const unansweredEl = document.getElementById('qq-' + i);
+            safeScrollIntoView(unansweredEl, { block: 'center' });
+            unansweredEl.classList.add('unanswered-highlight');
+            setTimeout(() => unansweredEl.classList.remove('unanswered-highlight'), 2000);
+            break;
+          }
+        }
         return;
       }
+
+      // Clear inline error if all answered
+      const errEl = document.getElementById('quiz-inline-error');
+      if (errEl) errEl.remove();
 
       const resultEl = document.getElementById('quizResult');
       const pct = Math.round((score / correctAnswers.length) * 100);
@@ -264,7 +379,6 @@
 
       <% const blockIdx = blocks.findIndex(b => b.id === block.id); %>
       <% const nextBlock = blocks[blockIdx + 1]; %>
-      <% const role = typeof role !== 'undefined' ? role : 'free'; %>
 
       let nextBtnHtml = '';
       if (passed) {
@@ -288,31 +402,69 @@
         </div>
       `;
       resultEl.style.display = 'block';
-      resultEl.scrollIntoView({ behavior: 'smooth' });
+      resultEl.setAttribute('tabindex', '-1');
+      safeScrollIntoView(resultEl, {});
+      setTimeout(() => resultEl.focus({ preventScroll: true }), prefersReducedMotion ? 0 : 400); // focus after scroll completes
       document.querySelector('.quiz-submit-btn').style.display = 'none';
 
       // Save result to server
       fetch('/quiz-result', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'x-csrf-token': '<%= csrfToken %>',
+        },
         body: JSON.stringify({ blockId: '<%= block.id %>', score, total: correctAnswers.length }),
       }).catch(() => {});
     }
 
     function retryQuiz() {
-      location.reload();
+      // Clear inline error if present
+      const prevErr = document.getElementById('quiz-inline-error');
+      if (prevErr) prevErr.remove();
+
+      // Reset all radio buttons
+      const form = document.getElementById('quizForm');
+      form.querySelectorAll('input[type="radio"]').forEach(r => r.checked = false);
+
+      // Remove correct/wrong styling and re-enable clicks
+      form.querySelectorAll('.quiz-option').forEach(opt => {
+        opt.classList.remove('correct', 'wrong');
+        opt.style.pointerEvents = '';
+      });
+
+      // Hide result panel, show submit button
+      document.getElementById('quizResult').style.display = 'none';
+      document.querySelector('.quiz-submit-btn').style.display = '';
+
+      // Scroll to top of quiz
+      safeScrollIntoView(document.getElementById('quizWrapper'), {});
     }
     <% } %>
 
     // ── Jocke chat (premium users only) ─────────────────────────────────────
     <% if (!isTeaser) { %>
     let chatOpen = false;
-    let messages = [];
+    // Seed context so Jocke knows which block the user is on
+    let messages = [
+      { role: 'user', content: 'Jag läser just nu Block <%= blocks.findIndex(b => b.id === block.id) + 1 %>: <%= block.title %>.' },
+      { role: 'assistant', content: 'Förstår! Du jobbar med <%= block.title %>. Ställ dina frågor eller berätta vilken situation du vill träna.' },
+    ];
 
     function toggleChat() {
       chatOpen = !chatOpen;
-      document.getElementById('chatWindow').classList.toggle('open', chatOpen);
-      if (chatOpen) document.getElementById('chatInput').focus();
+      const win = document.getElementById('chatWindow');
+      win.classList.toggle('open', chatOpen);
+      // aria-hidden="true" when closed prevents browsers from treating this
+      // as an open modal dialog and making the rest of the page inert.
+      win.setAttribute('aria-hidden', chatOpen ? 'false' : 'true');
+      document.getElementById('chatBubble').setAttribute('aria-expanded', chatOpen ? 'true' : 'false');
+      if (chatOpen) {
+        document.getElementById('chatInput').focus();
+      } else {
+        // Return focus to the bubble when chat is closed
+        document.getElementById('chatBubble').focus();
+      }
     }
 
     function handleKey(e) {
@@ -328,17 +480,26 @@
       if (!text) return;
       appendMessage('user', text);
       input.value = '';
+      input.style.height = 'auto'; // reset height after clearing
       messages.push({ role: 'user', content: text });
       const typingId = showTyping();
       try {
         const res = await fetch('/chat', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            'x-csrf-token': '<%= csrfToken %>',
+          },
           body: JSON.stringify({ messages }),
         });
         const data = await res.json();
         removeTyping(typingId);
-        const reply = data.reply || data.error || 'Något gick fel.';
+        if (!res.ok || data.error) {
+          // Show error in UI but don't push it into message history
+          appendMessage('assistant', data.error || 'Något gick fel. Försök igen.');
+          return;
+        }
+        const reply = data.reply || 'Inget svar mottogs.';
         appendMessage('assistant', reply);
         messages.push({ role: 'assistant', content: reply });
       } catch (err) {
@@ -351,7 +512,7 @@
       const box = document.getElementById('chatMessages');
       const div = document.createElement('div');
       div.className = `chat-msg ${role}`;
-      div.innerHTML = `<p>${escapeHtml(text)}</p>`;
+      div.innerHTML = `<p>${renderMarkdown(text)}</p>`;
       box.appendChild(div);
       box.scrollTop = box.scrollHeight;
     }
@@ -376,8 +537,22 @@
       return text
         .replace(/&/g, '&amp;')
         .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/\n/g, '<br>');
+        .replace(/>/g, '&gt;');
+    }
+    function renderMarkdown(raw) {
+      let s = escapeHtml(raw);
+      s = s.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+      s = s.replace(/(?<!\*)\*([^*\n]+?)\*(?!\*)/g, '<em>$1</em>');
+      s = s.replace(/^[•\-] (.+)/gm, '<li>$1</li>');
+      s = s.replace(/(<li>.*<\/li>)/gs, '<ul>$1</ul>');
+      s = s.replace(/\n(?!<\/?(?:ul|li))/g, '<br>');
+      s = s.replace(/<br>\s*(<ul>)/g, '$1');
+      return s;
+    }
+
+    function autoResize(ta) {
+      ta.style.height = 'auto';
+      ta.style.height = Math.min(ta.scrollHeight, 120) + 'px';
     }
     <% } %>
   </script>

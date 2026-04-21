@@ -5,10 +5,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Säljutbildning — Joakim Jaksen</title>
   <meta name="description" content="16 block som täcker hela säljprocessen — teori, video och prov. Byggt av Joakim Jaksen." />
+  <meta name="robots" content="noindex" />
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎯</text></svg>" />
   <link rel="stylesheet" href="/style.css" />
 </head>
 <body class="learn-page">
+
+  <a href="#main-content" class="skip-to-main">Hoppa till innehåll</a>
 
   <nav class="learn-nav">
     <a href="/dashboard" class="learn-nav-back">← Dashboard</a>
@@ -32,10 +35,15 @@
       <p><%= completedCount %> av <%= total %> block avklarade</p>
       <% if (completedCount < total) { %>
         <div class="learn-progress-bar-wrap">
-          <div class="learn-progress-bar">
+          <div class="learn-progress-bar"
+               role="progressbar"
+               aria-valuenow="<%= pct %>"
+               aria-valuemin="0"
+               aria-valuemax="100"
+               aria-label="<%= completedCount %> av <%= total %> block avklarade">
             <div class="learn-progress-fill" style="width:<%= pct %>%;"></div>
           </div>
-          <span class="learn-pct-label"><%= pct %>%</span>
+          <span class="learn-pct-label" aria-hidden="true"><%= pct %>%</span>
         </div>
         <% if (nextUnfinished) { %>
           <a href="/learn/<%= nextUnfinished.id %>" class="learn-continue-btn">Fortsätt: <%= nextUnfinished.title %> →</a>
@@ -46,6 +54,7 @@
     <% } %>
   </div>
 
+  <main id="main-content">
   <div class="blocks-grid">
     <% blocks.forEach(function(block, i) { %>
       <% const isLocked = role === 'free' && !freeBlockIds.includes(block.id); %>
@@ -68,12 +77,31 @@
           <% if (isNext) { %>
             <span class="block-next-badge">Fortsätt här →</span>
           <% } %>
+          <% if (isLocked) { %>
+            <span class="block-preview-hint">Förhandsgranskning →</span>
+          <% } %>
         </div>
         <div class="block-card-arrow"><%= isLocked ? '👁' : (isDone ? '↺' : '→') %></div>
       </a>
     <% }); %>
   </div>
 
+
+  <script>
+    // Animate progress bar on load (respects prefers-reduced-motion)
+    (function() {
+      const fill = document.querySelector('.learn-progress-fill');
+      if (!fill) return;
+      if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+      const target = fill.style.width;
+      fill.style.width = '0';
+      requestAnimationFrame(() => requestAnimationFrame(() => {
+        fill.style.width = target;
+      }));
+    })();
+  </script>
+
+  </main>
 
   <!-- ── Mobile bottom navigation ──────────────────────────────────────────── -->
   <nav class="app-bottom-nav">

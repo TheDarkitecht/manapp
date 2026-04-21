@@ -603,7 +603,7 @@ const blocks = [
     icon: '🚀',
     gradient: 'linear-gradient(135deg, #f97316, #ea580c)',
     color: '#f97316',
-    youtubeId: 'V1bFr2SWP1I',
+    youtubeId: 'V1bFr2SWP1I', // TODO: DUPLICATE — same as block 14 (traning-halsa). Replace with correct video ID for this block.
     teaser: `
       <h3>Motivation vs. System</h3>
       <p>Motivation är en känsla. System är en struktur. Framgångsrika säljare förlitar sig inte på att de "känner för att" ringa samtal — de har ett system som levererar oavsett dagsform.</p>
@@ -981,7 +981,7 @@ const blocks = [
     icon: '💪',
     gradient: 'linear-gradient(135deg, #16a34a, #15803d)',
     color: '#16a34a',
-    youtubeId: 'V1bFr2SWP1I',
+    youtubeId: 'V1bFr2SWP1I', // TODO: DUPLICATE — same as block 8 (mal-motivation). Replace with correct video ID for this block.
     teaser: `
       <h3>Prestation börjar med kroppen</h3>
       <p>En säljare är en kognitiv atlet. Du fattar beslut, hanterar stress, läser av folk och håller energin uppe — hela dagen, varje dag. Din fysiska kondition avgör din mentala skärpa och emotionella reglering.</p>

@@ -4,10 +4,13 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Admin — Joakim Jaksen</title>
+  <meta name="robots" content="noindex, nofollow" />
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎯</text></svg>" />
   <link rel="stylesheet" href="/style.css" />
 </head>
 <body class="learn-page">
+
+  <a href="#main-content" class="skip-to-main">Hoppa till innehåll</a>
 
   <nav class="learn-nav">
     <a href="/dashboard" class="learn-nav-back">← Dashboard</a>
@@ -15,6 +18,7 @@
     <span class="learn-nav-user"><%= username %></span>
   </nav>
 
+  <main id="main-content">
   <div class="admin-wrap">
 
     <!-- Stats -->
@@ -47,6 +51,10 @@
         <span class="stat-num"><%= stats.mrr.toLocaleString('sv-SE') %> kr</span>
         <span class="stat-label">MRR (est.)</span>
       </div>
+      <div class="stat-card">
+        <span class="stat-num"><%= stats.totalNotes %></span>
+        <span class="stat-label">Anteckningar</span>
+      </div>
     </div>
 
     <!-- User table -->
@@ -57,21 +65,23 @@
       </div>
 
       <div class="admin-search-wrap">
-        <input type="text" id="userSearch" placeholder="Sök användare..." oninput="filterUsers()" autocomplete="off" spellcheck="false" />
+        <label for="userSearch" class="visually-hidden">Sök användare</label>
+        <input type="text" id="userSearch" placeholder="Sök användare… (tryck / för att söka)" oninput="filterUsers()" autocomplete="off" spellcheck="false" />
+        <span class="admin-result-count" id="adminResultCount" aria-live="polite" aria-atomic="true"></span>
       </div>
 
       <div class="admin-table-wrap">
         <table class="admin-table" id="userTable">
           <thead>
             <tr>
-              <th>ID</th>
-              <th>Användare</th>
-              <th>E-post</th>
-              <th>Roll</th>
-              <th>GDPR</th>
-              <th>Registrerad</th>
-              <th>Senast inloggad</th>
-              <th>Åtgärder</th>
+              <th onclick="sortTable(0)" class="sortable" title="Sortera efter ID" aria-sort="none" scope="col">ID <span class="sort-arrow" aria-hidden="true">↕</span></th>
+              <th onclick="sortTable(1)" class="sortable" title="Sortera efter användare" aria-sort="none" scope="col">Användare <span class="sort-arrow" aria-hidden="true">↕</span></th>
+              <th scope="col">E-post</th>
+              <th onclick="sortTable(3)" class="sortable" title="Sortera efter roll" aria-sort="none" scope="col">Roll <span class="sort-arrow" aria-hidden="true">↕</span></th>
+              <th scope="col">GDPR</th>
+              <th onclick="sortTable(5)" class="sortable" title="Sortera efter registreringsdatum" aria-sort="none" scope="col">Registrerad <span class="sort-arrow" aria-hidden="true">↕</span></th>
+              <th onclick="sortTable(6)" class="sortable" title="Sortera efter senast inloggad" aria-sort="none" scope="col">Senast inloggad <span class="sort-arrow" aria-hidden="true">↕</span></th>
+              <th scope="col">Åtgärder</th>
             </tr>
           </thead>
           <tbody>
@@ -102,7 +112,7 @@
                     <!-- Change role -->
                     <form method="POST" action="/admin/users/<%= u.id %>/role" class="inline-form">
                       <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
-                      <select name="role" onchange="this.form.submit()" class="role-select">
+                      <select name="role" onchange="confirmRoleChange(this, '<%= u.username %>')" class="role-select" aria-label="Roll för <%= u.username %>">
                         <option value="free"    <%= u.role === 'free'    ? 'selected' : '' %>>Gratis</option>
                         <option value="premium" <%= u.role === 'premium' ? 'selected' : '' %>>Premium</option>
                         <option value="admin"   <%= u.role === 'admin'   ? 'selected' : '' %>>Admin</option>
@@ -113,14 +123,14 @@
                     <form method="POST" action="/admin/users/<%= u.id %>/email" class="inline-form"
                           onsubmit="return confirm('Skicka välkomstmail till <%= u.username %>?')">
                       <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
-                      <button type="submit" class="btn-email" title="Skicka välkomstmail">📧</button>
+                      <button type="submit" class="btn-email" title="Skicka välkomstmail" aria-label="Skicka välkomstmail till <%= u.username %>">📧</button>
                     </form>
                     <% } %>
                     <!-- Delete -->
                     <form method="POST" action="/admin/users/<%= u.id %>/delete" class="inline-form"
                           onsubmit="return confirm('Radera <%= u.username %>? Det går inte att ångra.')">
                       <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
-                      <button type="submit" class="btn-del">🗑</button>
+                      <button type="submit" class="btn-del" aria-label="Radera <%= u.username %>">🗑</button>
                     </form>
                   </div>
                 </td>
@@ -132,13 +142,81 @@
     </div>
 
   </div>
+  </main>
 
   <script>
+    const totalUsers = document.querySelectorAll('#userTable tbody tr').length;
+
     function filterUsers() {
       const q = document.getElementById('userSearch').value.toLowerCase();
+      let shown = 0;
       document.querySelectorAll('#userTable tbody tr').forEach(row => {
-        row.style.display = row.dataset.search.includes(q) ? '' : 'none';
+        const visible = row.dataset.search.includes(q);
+        row.style.display = visible ? '' : 'none';
+        if (visible) shown++;
       });
+      const countEl = document.getElementById('adminResultCount');
+      if (countEl) {
+        countEl.textContent = q ? `${shown} av ${totalUsers}` : `${totalUsers} användare`;
+      }
+    }
+
+    // Keyboard shortcut: "/" to focus search, Escape to clear
+    document.addEventListener('keydown', function(e) {
+      const search = document.getElementById('userSearch');
+      if (e.key === '/' && document.activeElement !== search) {
+        e.preventDefault();
+        search.focus();
+        search.select();
+      } else if (e.key === 'Escape' && document.activeElement === search) {
+        search.value = '';
+        search.blur();
+        filterUsers();
+      }
+    });
+
+    function confirmRoleChange(select, username) {
+      const newRole = select.value;
+      if (newRole === 'admin') {
+        if (!confirm(`Ge ${username} admin-behörighet? Det ger full tillgång till adminpanelen.`)) {
+          // Revert to previous value
+          select.value = select.querySelector('option[selected]')?.value || 'free';
+          return;
+        }
+      }
+      select.form.submit();
+    }
+
+    // Initialize count on load
+    filterUsers();
+
+    // ── Column sort ─────────────────────────────────────────────────────────────
+    let sortCol = -1, sortDir = 1;
+
+    function sortTable(col) {
+      const tbody = document.querySelector('#userTable tbody');
+      const rows = Array.from(tbody.querySelectorAll('tr'));
+      if (sortCol === col) sortDir = -sortDir; else { sortCol = col; sortDir = 1; }
+
+      rows.sort((a, b) => {
+        const aText = (a.cells[col]?.textContent || '').trim().toLowerCase();
+        const bText = (b.cells[col]?.textContent || '').trim().toLowerCase();
+        const aNum = parseFloat(aText), bNum = parseFloat(bText);
+        if (!isNaN(aNum) && !isNaN(bNum)) return (aNum - bNum) * sortDir;
+        return aText.localeCompare(bText, 'sv') * sortDir;
+      });
+      rows.forEach(r => tbody.appendChild(r));
+
+      // Update sort arrows + aria-sort
+      document.querySelectorAll('#userTable thead th').forEach(el => {
+        el.querySelector('.sort-arrow').textContent = '↕';
+        el.removeAttribute('aria-sort');
+      });
+      const th = document.querySelectorAll('#userTable thead th')[col];
+      if (th) {
+        th.querySelector('.sort-arrow').textContent = sortDir === 1 ? '↑' : '↓';
+        th.setAttribute('aria-sort', sortDir === 1 ? 'ascending' : 'descending');
+      }
     }
   </script>
 

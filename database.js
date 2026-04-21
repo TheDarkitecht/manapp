@@ -83,6 +83,17 @@ async function initDatabase() {
     "ALTER TABLE users ADD COLUMN created_at         TEXT    DEFAULT (datetime('now'))",
     "ALTER TABLE users ADD COLUMN stripe_customer_id TEXT",
     "ALTER TABLE users ADD COLUMN last_login         TEXT",
+    // pw_version increments on every password change; sessions store a copy and are
+    // invalidated if the version doesn't match — this ensures password-reset kills stolen sessions.
+    "ALTER TABLE users ADD COLUMN pw_version         INTEGER NOT NULL DEFAULT 0",
+    // Performance indexes (CREATE INDEX IF NOT EXISTS is idempotent)
+    "CREATE INDEX IF NOT EXISTS idx_users_email             ON users(email)",
+    // Enforce email uniqueness at DB level (partial — allows NULL for users without email)
+    "CREATE UNIQUE INDEX IF NOT EXISTS idx_users_email_unique ON users(email) WHERE email IS NOT NULL",
+    "CREATE INDEX IF NOT EXISTS idx_users_stripe_customer   ON users(stripe_customer_id)",
+    "CREATE INDEX IF NOT EXISTS idx_notes_user_id           ON notes(user_id)",
+    "CREATE INDEX IF NOT EXISTS idx_block_progress_user_id  ON block_progress(user_id)",
+    "CREATE INDEX IF NOT EXISTS idx_reset_tokens_user_id    ON reset_tokens(user_id)",
   ];
   migrations.forEach(sql => { try { db.run(sql); } catch (_) {} });
 
@@ -111,7 +122,8 @@ async function initDatabase() {
   const resetPw = process.env.ADMIN_RESET_PASSWORD;
   if (resetPw) {
     const newHash = bcrypt.hashSync(resetPw, 10);
-    db.run(`UPDATE users SET password_hash = ? WHERE username = 'admin'`, [newHash]);
+    // Also increment pw_version so any existing admin sessions are invalidated
+    db.run(`UPDATE users SET password_hash = ?, pw_version = pw_version + 1 WHERE username = 'admin'`, [newHash]);
     console.log('✅ Admin password has been reset via ADMIN_RESET_PASSWORD env var. Remove it now!');
   }
 
@@ -119,8 +131,13 @@ async function initDatabase() {
 }
 
 function saveDb() {
-  const data = db.export();
-  fs.writeFileSync(DB_PATH, Buffer.from(data));
+  try {
+    const data = db.export();
+    fs.writeFileSync(DB_PATH, Buffer.from(data));
+  } catch (err) {
+    console.error('CRITICAL: Failed to persist database to disk:', err.message);
+    // Don't re-throw — let the request complete; data change is in-memory
+  }
 }
 
 function cleanupExpiredTokens() {
@@ -146,6 +163,13 @@ function findUserByEmail(email) {
   s.free(); return null;
 }
 
+function findUserById(id) {
+  const s = db.prepare('SELECT * FROM users WHERE id = ?');
+  s.bind([id]);
+  if (s.step()) { const u = s.getAsObject(); s.free(); return u; }
+  s.free(); return null;
+}
+
 // Register a new user. Returns { ok, error? }
 function createUser(username, email, password) {
   if (findUserByUsername(username))
@@ -167,7 +191,7 @@ function createUser(username, email, password) {
 
 function getAllUsers() {
   const s = db.prepare(
-    'SELECT id, username, email, role, gdpr, gdpr_at, created_at FROM users ORDER BY id DESC'
+    'SELECT id, username, email, role, gdpr, gdpr_at, created_at, last_login, stripe_customer_id FROM users ORDER BY id DESC'
   );
   const users = [];
   while (s.step()) users.push(s.getAsObject());
@@ -192,21 +216,24 @@ function findUserByStripeCustomerId(customerId) {
   s.free(); return null;
 }
 
-function deleteUserAccount(userId) {
-  db.run('DELETE FROM block_progress WHERE user_id = ?', [userId]);
-  db.run('DELETE FROM notes WHERE user_id = ?', [userId]);
-  db.run('DELETE FROM reset_tokens WHERE user_id = ?', [userId]);
-  db.run('DELETE FROM users WHERE id = ?', [userId]);
+function _deleteUserRows(userId) {
+  // Run all deletions in a single transaction
+  db.run('BEGIN TRANSACTION');
+  try {
+    db.run('DELETE FROM block_progress WHERE user_id = ?', [userId]);
+    db.run('DELETE FROM notes WHERE user_id = ?', [userId]);
+    db.run('DELETE FROM reset_tokens WHERE user_id = ?', [userId]);
+    db.run('DELETE FROM users WHERE id = ?', [userId]);
+    db.run('COMMIT');
+  } catch (err) {
+    db.run('ROLLBACK');
+    throw err;
+  }
   saveDb();
 }
 
-function deleteUser(userId) {
-  db.run('DELETE FROM block_progress WHERE user_id = ?', [userId]);
-  db.run('DELETE FROM notes WHERE user_id = ?', [userId]);
-  db.run('DELETE FROM reset_tokens WHERE user_id = ?', [userId]);
-  db.run('DELETE FROM users WHERE id = ?', [userId]);
-  saveDb();
-}
+function deleteUserAccount(userId) { _deleteUserRows(userId); }
+function deleteUser(userId)        { _deleteUserRows(userId); }
 
 function updateLastLogin(userId) {
   db.run("UPDATE users SET last_login = datetime('now') WHERE id = ?", [userId]);
@@ -225,10 +252,11 @@ function getUserStats() {
     total,
     premium,
     free,
-    thisWeek:   run("SELECT COUNT(*) AS n FROM users WHERE created_at >= datetime('now', '-7 days')").n,
+    thisWeek:    run("SELECT COUNT(*) AS n FROM users WHERE created_at >= datetime('now', '-7 days')").n,
     activeToday: run("SELECT COUNT(*) AS n FROM users WHERE last_login >= datetime('now', '-1 day')").n,
-    conversion: total > 0 ? Math.round((premium / total) * 100) : 0,
-    mrr:        premium * 199,
+    totalNotes:  run('SELECT COUNT(*) AS n FROM notes').n,
+    conversion:  total > 0 ? Math.round((premium / total) * 100) : 0,
+    mrr:         premium * 199,
   };
 }
 
@@ -248,9 +276,10 @@ function createNote(userId, content) {
   const s = db.prepare('SELECT COUNT(*) AS n FROM notes WHERE user_id = ?');
   s.bind([userId]); s.step();
   const { n } = s.getAsObject(); s.free();
-  if (n >= 50) return; // silently ignore if limit reached
+  if (n >= 50) return false; // limit reached — caller can inform the user
   db.run('INSERT INTO notes (user_id, content) VALUES (?, ?)', [userId, content]);
   saveDb();
+  return true;
 }
 
 function deleteNote(noteId, userId) {
@@ -274,15 +303,17 @@ function getBlockProgress(userId) {
 
 function saveQuizResult(userId, blockId, score, total) {
   const completed = score >= Math.ceil(total * 0.6) ? 1 : 0; // 60% to pass
+  // completed_at: set to now if passing, NULL if failing (consistent with completed flag)
+  const completedAt = completed ? new Date().toISOString() : null;
   db.run(`
     INSERT INTO block_progress (user_id, block_id, completed, quiz_score, quiz_total, completed_at)
-    VALUES (?, ?, ?, ?, ?, datetime('now'))
+    VALUES (?, ?, ?, ?, ?, ?)
     ON CONFLICT(user_id, block_id) DO UPDATE SET
       quiz_score   = excluded.quiz_score,
       quiz_total   = excluded.quiz_total,
       completed    = excluded.completed,
-      completed_at = CASE WHEN excluded.completed = 1 THEN excluded.completed_at ELSE completed_at END
-  `, [userId, blockId, completed, score, total]);
+      completed_at = excluded.completed_at
+  `, [userId, blockId, completed, score, total, completedAt]);
   saveDb();
 }
 
@@ -326,7 +357,8 @@ function deleteResetToken(token) {
 
 function updateUserPassword(userId, newPassword) {
   const hash = require('bcryptjs').hashSync(newPassword, 10);
-  db.run('UPDATE users SET password_hash = ? WHERE id = ?', [hash, userId]);
+  // Increment pw_version so that any sessions storing the old version become invalid.
+  db.run('UPDATE users SET password_hash = ?, pw_version = pw_version + 1 WHERE id = ?', [hash, userId]);
   saveDb();
 }
 
@@ -334,7 +366,7 @@ function updateUserPassword(userId, newPassword) {
 
 module.exports = {
   initDatabase, saveDb, cleanupExpiredTokens,
-  findUserByUsername, findUserByEmail,
+  findUserByUsername, findUserByEmail, findUserById,
   createUser, getAllUsers, setUserRole, deleteUser, deleteUserAccount, getUserStats,
   setStripeCustomerId, findUserByStripeCustomerId,
   updateLastLogin,

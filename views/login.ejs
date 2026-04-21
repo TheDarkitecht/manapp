@@ -4,11 +4,14 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Joakim Jaksen — Logga in</title>
+  <meta name="robots" content="noindex" />
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎯</text></svg>" />
   <link rel="stylesheet" href="/style.css" />
   <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
 </head>
 <body class="auth-page">
+
+  <a href="#main-content" class="skip-to-main">Hoppa till innehåll</a>
 
   <!-- ── Left panel — branding ─────────────────────────────────────────── -->
   <div class="auth-left">
@@ -26,17 +29,17 @@
   </div>
 
   <!-- ── Right panel — forms ────────────────────────────────────────────── -->
-  <div class="auth-right">
+  <main id="main-content" class="auth-right">
     <div class="auth-form-wrap">
 
       <!-- Tab switcher -->
-      <div class="auth-tabs">
-        <button class="auth-tab active" id="tabLogin" onclick="showTab('login')">Logga in</button>
-        <button class="auth-tab" id="tabRegister" onclick="showTab('register')">Skapa konto</button>
+      <div class="auth-tabs" role="tablist" aria-label="Autentiseringsformulär">
+        <button class="auth-tab active" id="tabLogin" onclick="showTab('login')" role="tab" aria-selected="true" aria-controls="panelLogin" tabindex="0">Logga in</button>
+        <button class="auth-tab" id="tabRegister" onclick="showTab('register')" role="tab" aria-selected="false" aria-controls="panelRegister" tabindex="-1">Skapa konto</button>
       </div>
 
       <!-- ── Login form ──────────────────────────────────────────────── -->
-      <div id="panelLogin">
+      <div id="panelLogin" role="tabpanel" aria-labelledby="tabLogin">
 
         <% if (error) { %>
           <p class="auth-error"><%= error %></p>
@@ -45,7 +48,7 @@
           <p class="auth-success"><%= success %></p>
         <% } %>
 
-        <form method="POST" action="/login" class="auth-form">
+        <form method="POST" action="/login" class="auth-form" onsubmit="authLoading(this)">
           <div class="field-group">
             <label for="username">Användarnamn</label>
             <input type="text" id="username" name="username" placeholder="ditt_användarnamn" required autocomplete="username" />
@@ -62,7 +65,7 @@
       </div>
 
       <!-- ── Register form ───────────────────────────────────────────── -->
-      <div id="panelRegister" style="display:none;">
+      <div id="panelRegister" role="tabpanel" aria-labelledby="tabRegister" style="display:none;">
 
         <% if (registerError && registerError !== '__open_register__') { %>
           <p class="auth-error"><%= registerError %></p>
@@ -78,12 +81,17 @@
             <input type="email" id="reg-email" name="email" placeholder="din@email.com" required autocomplete="email" />
           </div>
           <div class="field-group">
-            <label for="reg-password">Lösenord <span class="hint">(minst 6 tecken)</span></label>
-            <input type="password" id="reg-password" name="password" placeholder="••••••••" required autocomplete="new-password" />
+            <label for="reg-password">Lösenord <span class="hint">(minst 8 tecken)</span></label>
+            <input type="password" id="reg-password" name="password" placeholder="••••••••" required minlength="8" maxlength="128" autocomplete="new-password" oninput="checkPasswordMatch()" />
+            <div class="password-strength" id="pwStrength" style="display:none;">
+              <div class="pw-bar"><div class="pw-fill" id="pwFill" aria-hidden="true"></div></div>
+              <span class="pw-label" id="pwLabel" aria-live="polite" aria-atomic="true"></span>
+            </div>
           </div>
           <div class="field-group">
             <label for="reg-confirm">Bekräfta lösenord</label>
-            <input type="password" id="reg-confirm" name="confirmPassword" placeholder="••••••••" required autocomplete="new-password" />
+            <input type="password" id="reg-confirm" name="confirmPassword" placeholder="••••••••" required autocomplete="new-password" oninput="checkPasswordMatch()" />
+            <p class="pw-match-error" id="pwMatchError" role="alert" style="display:none;color:#f87171;font-size:.78rem;margin:.3rem 0 0;">⚠️ Lösenorden matchar inte.</p>
           </div>
 
           <!-- GDPR consent -->
@@ -98,21 +106,21 @@
           <!-- Cloudflare Turnstile CAPTCHA -->
           <div class="cf-turnstile" data-sitekey="<%= turnstileSiteKey %>" data-theme="dark" style="margin-bottom:1rem;"></div>
 
-          <button type="submit" class="auth-btn">Skapa konto →</button>
+          <button type="submit" class="auth-btn" id="registerBtn">Skapa konto →</button>
         </form>
 
         <p class="auth-switch">Har du ett konto? <button onclick="showTab('login')" class="link-btn">Logga in</button></p>
       </div>
 
     </div>
-  </div>
+  </main>
 
   <!-- ── Privacy policy modal ───────────────────────────────────────────── -->
-  <div class="modal-backdrop" id="privacyBackdrop" onclick="closePrivacy(event)">
+  <div class="modal-backdrop" id="privacyBackdrop" onclick="closePrivacy(event)" role="dialog" aria-modal="true" aria-labelledby="privacyModalTitle">
     <div class="modal privacy-modal">
       <div class="privacy-header">
-        <h2>Integritetspolicy</h2>
-        <button class="modal-close-btn" onclick="document.getElementById('privacyBackdrop').classList.remove('open')">✕</button>
+        <h2 id="privacyModalTitle">Integritetspolicy</h2>
+        <button class="modal-close-btn" aria-label="Stäng integritetspolicy">✕</button>
       </div>
       <div class="privacy-body">
         <p><strong>Senast uppdaterad:</strong> April 2026</p>
@@ -144,21 +152,134 @@
   </div>
 
   <script>
-    function showTab(tab) {
-      document.getElementById('panelLogin').style.display    = tab === 'login'    ? 'block' : 'none';
-      document.getElementById('panelRegister').style.display = tab === 'register' ? 'block' : 'none';
-      document.getElementById('tabLogin').classList.toggle('active',    tab === 'login');
-      document.getElementById('tabRegister').classList.toggle('active', tab === 'register');
+    function authLoading(form) {
+      const btn = form.querySelector('button[type="submit"]');
+      if (btn) {
+        btn.disabled = true;
+        btn.textContent = '⏳ Väntar…';
+      }
     }
 
+    function showTab(tab) {
+      const isLogin = tab === 'login';
+      document.getElementById('panelLogin').style.display    = isLogin ? 'block' : 'none';
+      document.getElementById('panelRegister').style.display = isLogin ? 'none' : 'block';
+
+      const loginBtn    = document.getElementById('tabLogin');
+      const registerBtn = document.getElementById('tabRegister');
+
+      loginBtn.classList.toggle('active', isLogin);
+      loginBtn.setAttribute('aria-selected', isLogin ? 'true' : 'false');
+      loginBtn.setAttribute('tabindex', isLogin ? '0' : '-1');
+
+      registerBtn.classList.toggle('active', !isLogin);
+      registerBtn.setAttribute('aria-selected', isLogin ? 'false' : 'true');
+      registerBtn.setAttribute('tabindex', isLogin ? '-1' : '0');
+    }
+
+    // Arrow-key navigation for auth tablist
+    (function() {
+      const authTabs = [
+        document.getElementById('tabLogin'),
+        document.getElementById('tabRegister'),
+      ];
+      authTabs.forEach((btn, i) => {
+        btn.addEventListener('keydown', function(e) {
+          let next = -1;
+          if (e.key === 'ArrowRight' || e.key === 'ArrowDown') next = (i + 1) % authTabs.length;
+          else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') next = (i - 1 + authTabs.length) % authTabs.length;
+          if (next !== -1) {
+            e.preventDefault();
+            showTab(next === 0 ? 'login' : 'register');
+            authTabs[next].focus();
+          }
+        });
+      });
+    })();
+
+    let _privacyOpener = null; // track opener for focus return
+
     function openPrivacy() {
+      _privacyOpener = document.activeElement;
       document.getElementById('privacyBackdrop').classList.add('open');
+      // Focus the close button for keyboard users
+      setTimeout(() => document.querySelector('#privacyBackdrop .modal-close-btn')?.focus(), 50);
     }
 
     function closePrivacy(e) {
-      if (e.target === document.getElementById('privacyBackdrop'))
-        document.getElementById('privacyBackdrop').classList.remove('open');
+      const backdrop = document.getElementById('privacyBackdrop');
+      if (!e || e.target === backdrop) {
+        backdrop.classList.remove('open');
+        if (_privacyOpener) { _privacyOpener.focus(); _privacyOpener = null; }
+      }
     }
+
+    // Wire the close button and Escape key
+    document.querySelector('#privacyBackdrop .modal-close-btn')?.addEventListener('click', function() {
+      closePrivacy(null);
+    });
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape' && document.getElementById('privacyBackdrop').classList.contains('open')) {
+        closePrivacy(null);
+      }
+    });
+
+    // Password strength + match
+    function checkPasswordMatch() {
+      const pw  = document.getElementById('reg-password').value;
+      const cfm = document.getElementById('reg-confirm').value;
+      const strengthEl = document.getElementById('pwStrength');
+      const fillEl = document.getElementById('pwFill');
+      const labelEl = document.getElementById('pwLabel');
+      const matchErr = document.getElementById('pwMatchError');
+
+      // Strength meter
+      if (pw.length > 0) {
+        strengthEl.style.display = 'flex';
+        let score = 0;
+        if (pw.length >= 8)  score++;
+        if (pw.length >= 12) score++;
+        if (/[A-Z]/.test(pw)) score++;
+        if (/[0-9]/.test(pw)) score++;
+        if (/[^a-zA-Z0-9]/.test(pw)) score++;
+        const levels = [
+          { pct: '20%', color: '#ef4444', label: 'Mycket svagt' },
+          { pct: '40%', color: '#f97316', label: 'Svagt' },
+          { pct: '60%', color: '#eab308', label: 'Okej' },
+          { pct: '80%', color: '#22c55e', label: 'Bra' },
+          { pct: '100%', color: '#10b981', label: 'Starkt' },
+        ];
+        const lvl = levels[Math.min(score, levels.length) - 1] || levels[0];
+        fillEl.style.width = lvl.pct;
+        fillEl.style.background = lvl.color;
+        labelEl.textContent = lvl.label;
+        labelEl.style.color = lvl.color;
+      } else {
+        strengthEl.style.display = 'none';
+      }
+
+      // Match check
+      if (cfm.length > 0) {
+        matchErr.style.display = pw !== cfm ? 'block' : 'none';
+      } else {
+        matchErr.style.display = 'none';
+      }
+    }
+
+    // Block submit if passwords don't match; add loading state on pass
+    document.querySelector('#panelRegister form').addEventListener('submit', function(e) {
+      const pw  = document.getElementById('reg-password').value;
+      const cfm = document.getElementById('reg-confirm').value;
+      if (pw !== cfm) {
+        e.preventDefault();
+        document.getElementById('pwMatchError').style.display = 'block';
+        document.getElementById('reg-confirm').focus();
+        return;
+      }
+      // Passwords match — apply loading state
+      const btn = document.getElementById('registerBtn');
+      if (btn) { btn.disabled = true; btn.textContent = '⏳ Skapar konto…'; }
+    });
 
     // If there was a register error (or /register shortcut), auto-switch to register tab
     <% if (registerError) { %>

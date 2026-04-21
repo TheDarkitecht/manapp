@@ -79,10 +79,12 @@
 </head>
 <body class="landing-page">
 
+  <a href="#main-content" class="skip-to-main">Hoppa till innehåll</a>
+
   <!-- ══ Account deleted toast ══════════════════════════════════════════ -->
   <div class="deleted-toast" id="deletedToast" style="display:none;">
     Ditt konto har raderats. Hoppas vi ses igen!
-    <button onclick="document.getElementById('deletedToast').style.display='none'">✕</button>
+    <button onclick="document.getElementById('deletedToast').style.display='none'" aria-label="Stäng">✕</button>
   </div>
 
   <!-- ══ NAV ══════════════════════════════════════════════════════════════ -->
@@ -97,7 +99,7 @@
         <a href="/login" class="lp-nav-login">Logga in</a>
         <a href="/register" class="lp-nav-cta">Börja gratis →</a>
       </div>
-      <button class="lp-hamburger" id="lpHamburger" onclick="toggleMenu()">☰</button>
+      <button class="lp-hamburger" id="lpHamburger" onclick="toggleMenu()" aria-label="Öppna meny" aria-expanded="false" aria-controls="lpMobileMenu">☰</button>
     </div>
     <div class="lp-mobile-menu" id="lpMobileMenu">
       <a href="#om" onclick="toggleMenu()">Om</a>
@@ -110,6 +112,7 @@
   </nav>
 
   <!-- ══ HERO ══════════════════════════════════════════════════════════════ -->
+  <main id="main-content">
   <section class="lp-hero">
     <div class="lp-hero-glow lp-hero-glow-1"></div>
     <div class="lp-hero-glow lp-hero-glow-2"></div>
@@ -332,55 +335,55 @@
       <div class="lp-faq-grid">
 
         <div class="lp-faq-item">
-          <button class="lp-faq-q" onclick="toggleLpFaq(this)">
-            Är Block 1 verkligen gratis? <span class="lp-faq-arrow">▾</span>
+          <button class="lp-faq-q" onclick="toggleLpFaq(this)" aria-expanded="false" aria-controls="lp-faq-a-1">
+            Är Block 1 verkligen gratis? <span class="lp-faq-arrow" aria-hidden="true">▾</span>
           </button>
-          <div class="lp-faq-a">
+          <div class="lp-faq-a" id="lp-faq-a-1">
             <p>Ja, helt gratis. Inga betalkort, inga dolda avgifter. Du skapar ett konto och börjar direkt med Block 1 — Inledning & Första Intrycket. Uppgradera till Premium när du är redo för resten.</p>
           </div>
         </div>
 
         <div class="lp-faq-item">
-          <button class="lp-faq-q" onclick="toggleLpFaq(this)">
-            Vad ingår i Premium? <span class="lp-faq-arrow">▾</span>
+          <button class="lp-faq-q" onclick="toggleLpFaq(this)" aria-expanded="false" aria-controls="lp-faq-a-2">
+            Vad ingår i Premium? <span class="lp-faq-arrow" aria-hidden="true">▾</span>
           </button>
-          <div class="lp-faq-a">
+          <div class="lp-faq-a" id="lp-faq-a-2">
             <p>Premium ger dig: alla 16 block upplåsta, teori + video + prov per block, AI-assistenten Jocke, Säljordboken med 60+ termer, progressspårning och alla framtida block utan extra kostnad. Allt för 199 kr/mån.</p>
           </div>
         </div>
 
         <div class="lp-faq-item">
-          <button class="lp-faq-q" onclick="toggleLpFaq(this)">
-            Vad är AI-assistenten Jocke? <span class="lp-faq-arrow">▾</span>
+          <button class="lp-faq-q" onclick="toggleLpFaq(this)" aria-expanded="false" aria-controls="lp-faq-a-3">
+            Vad är AI-assistenten Jocke? <span class="lp-faq-arrow" aria-hidden="true">▾</span>
           </button>
-          <div class="lp-faq-a">
+          <div class="lp-faq-a" id="lp-faq-a-3">
             <p>Jocke är en AI-tränad säljcoach med Joakims stil och erfarenhet. Du kan öva invändningar i rollspel, få feedback på din pitch, ställa frågor om specifika säljsituationer — och få svar direkt, dygnet runt. Jocke vet var du är i utbildningen och anpassar sig.</p>
           </div>
         </div>
 
         <div class="lp-faq-item">
-          <button class="lp-faq-q" onclick="toggleLpFaq(this)">
-            Passar det om jag säljer B2C och inte B2B? <span class="lp-faq-arrow">▾</span>
+          <button class="lp-faq-q" onclick="toggleLpFaq(this)" aria-expanded="false" aria-controls="lp-faq-a-4">
+            Passar det om jag säljer B2C och inte B2B? <span class="lp-faq-arrow" aria-hidden="true">▾</span>
           </button>
-          <div class="lp-faq-a">
+          <div class="lp-faq-a" id="lp-faq-a-4">
             <p>Ja. Grunderna — första intrycket, behovsanalys, invändningshantering, avslutstekniker, mindset — gäller oavsett om du säljer till konsumenter eller företag. Principerna är universella även om vissa exempel är B2B-fokuserade.</p>
           </div>
         </div>
 
         <div class="lp-faq-item">
-          <button class="lp-faq-q" onclick="toggleLpFaq(this)">
-            Kan jag avsluta när som helst? <span class="lp-faq-arrow">▾</span>
+          <button class="lp-faq-q" onclick="toggleLpFaq(this)" aria-expanded="false" aria-controls="lp-faq-a-5">
+            Kan jag avsluta när som helst? <span class="lp-faq-arrow" aria-hidden="true">▾</span>
           </button>
-          <div class="lp-faq-a">
+          <div class="lp-faq-a" id="lp-faq-a-5">
             <p>Absolut. Du avbokar direkt via din Stripe-kundportal. Du behåller Premium-tillgången till slutet av perioden du betalt. Inga bindningstider, inga påminnelser, inga krångel.</p>
           </div>
         </div>
 
         <div class="lp-faq-item">
-          <button class="lp-faq-q" onclick="toggleLpFaq(this)">
-            Jag är redan erfaren säljare — finns det värde för mig? <span class="lp-faq-arrow">▾</span>
+          <button class="lp-faq-q" onclick="toggleLpFaq(this)" aria-expanded="false" aria-controls="lp-faq-a-6">
+            Jag är redan erfaren säljare — finns det värde för mig? <span class="lp-faq-arrow" aria-hidden="true">▾</span>
           </button>
-          <div class="lp-faq-a">
+          <div class="lp-faq-a" id="lp-faq-a-6">
             <p>Definitivt. De avancerade blocken — förhandling, LinkedIn, videosamtal, mental styrka, personligt varumärke — är specifikt designade för säljare som vill ta sig från bra till exceptionell. Och Jocke är ovärderlig för att träna specifika situationer du verkligen möter.</p>
           </div>
         </div>
@@ -420,6 +423,8 @@
       <button class="cookie-btn-accept" onclick="dismissCookies(true)">Okej →</button>
     </div>
   </div>
+
+  </main>
 
   <!-- ══ FOOTER ══════════════════════════════════════════════════════════════ -->
   <footer class="lp-footer">
@@ -463,17 +468,25 @@
 
     // Mobile menu
     function toggleMenu() {
-      document.getElementById('lpMobileMenu').classList.toggle('open');
+      const menu = document.getElementById('lpMobileMenu');
+      const btn  = document.getElementById('lpHamburger');
+      const isOpen = menu.classList.toggle('open');
+      btn.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+      btn.textContent = isOpen ? '✕' : '☰';
+      btn.setAttribute('aria-label', isOpen ? 'Stäng meny' : 'Öppna meny');
     }
 
-    // Smooth scroll for anchor links
-    document.querySelectorAll('a[href^="#"]').forEach(a => {
-      a.addEventListener('click', e => {
-        e.preventDefault();
-        const target = document.querySelector(a.getAttribute('href'));
-        if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    // Smooth scroll for anchor links (respects prefers-reduced-motion)
+    (function() {
+      const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      document.querySelectorAll('a[href^="#"]').forEach(a => {
+        a.addEventListener('click', e => {
+          e.preventDefault();
+          const target = document.querySelector(a.getAttribute('href'));
+          if (target) target.scrollIntoView({ behavior: reducedMotion ? 'auto' : 'smooth', block: 'start' });
+        });
       });
-    });
+    })();
 
     // Cookie consent banner
     (function() {
@@ -529,16 +542,18 @@
       const answer = item.querySelector('.lp-faq-a');
       const arrow = btn.querySelector('.lp-faq-arrow');
       const isOpen = item.classList.contains('open');
-      // Close all
+      // Close all open items
       document.querySelectorAll('.lp-faq-item.open').forEach(el => {
         el.classList.remove('open');
         el.querySelector('.lp-faq-a').style.maxHeight = null;
         el.querySelector('.lp-faq-arrow').textContent = '▾';
+        el.querySelector('.lp-faq-q').setAttribute('aria-expanded', 'false');
       });
       if (!isOpen) {
         item.classList.add('open');
         answer.style.maxHeight = answer.scrollHeight + 'px';
         arrow.textContent = '▴';
+        btn.setAttribute('aria-expanded', 'true');
       }
     }
   </script>
