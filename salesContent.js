@@ -373,87 +373,156 @@ const blocks = [
       <p>Det här blocket täcker hela invändningsspektrumet — från de reflexmässiga "inte intresserad"-svaren i samtalets första sekunder, till de tuffa avslutsavvisningarna som kräver precision och lugn. Du får konkreta scripts och tekniker för varje scenario.</p>
     `,
     theory: `
+      <h3>Inställningen är grundpelaren</h3>
+      <p>Alla som lärt sig om inställningens kraft har gjort det genom erfarenheter — ingen föds med det. Att vara engagerad och entusiastisk, och våga visa det, är en av grundpelarna i framgångsrik försäljning. Det smittar av sig — även över en telefonlinje.</p>
+      <p>Det kräver fyra saker: tro på dig själv, tro på produkten, tro på företaget — och att ha roligt på jobbet. Utan dessa kan du inte hålla entusiasmen uppe på lång sikt. Ett gott självförtroende ökar din förtroendeindgivelse, och förtroendeindgivelse driver försäljning. Framgång föder framgång.</p>
+      <p>Sedan har de flesta av oss en mental spärr — vi intalar oss att något är omöjligt. Om du intalar dig att du inte klarar av något, så blir det sant. Skapa istället en bild av dig själv som en lyckad säljare. Mata hjärnan med positiva ord. Inte förräns du intalat dig att något är möjligt, är det möjligt.</p>
+      <p>Självdisciplin är lika viktigt: du får inte låta omgivningen påverka ditt inre. En obehaglig kund ska inte förstöra nästa samtal. <strong>Kontrollera dina känslor — annars kontrollerar de dig.</strong></p>
+
       <h3>Vad en invändning verkligen är</h3>
-      <p>Många säljare fruktar invändningar. Det är fel reaktion. En invändning visar att kunden är engagerad — de är fortfarande i samtalet, de vill förstå mer, de behöver mer övertygelse. En tyst kund som inte invänder är farligare.</p>
-      <p><strong>En invändning är en fråga i förklädnad.</strong> "Det är för dyrt" betyder egentligen "Jag förstår inte värdet ännu." "Jag måste tänka på det" betyder "Du har inte gett mig tillräcklig anledning att agera nu."</p>
+      <p>Invändningar är något de flesta säljare avskyrar — delvis för att man inte förstår varför de dyker upp, och framför allt för att man inte vet hur man ska hantera dem. Men invändningar förekommer naturligt i alla samtal.</p>
+      <p><strong>En invändning säger inte att kunden ALDRIG vill köpa</strong> — den säger att kunden inte vill köpa just nu, baserat på det underlag de har. "Måste jag ta ett beslut just nu baserat på det här, så blir det ett nej tack." Det är en enorm skillnad mot ett definitivt nej.</p>
+      <p>Se det så här: invändningen är egentligen ett <em>"nej tack, men om du berättar mer kan jag faktiskt tänka på att ändra mig."</em></p>
+      <p>Två viktiga siffror att hålla i minnet:</p>
+      <ul>
+        <li><strong>7 av 10 kunder</strong> förstår inte fullt ut varför de ska köpa här och nu — det är ditt jobb att få dem att inse det.</li>
+        <li><strong>80% av affärerna</strong> görs på det femte avslutet eller senare.</li>
+      </ul>
+      <p>Det ger dig all rätt att hålla i samtalet — och all anledning att vara förberedd.</p>
+
+      <h3>De fem typerna av invändningar</h3>
+      <p>Det är avgörande att förstå <em>vilken typ</em> av invändning du möter — för svaret ser helt olika ut beroende på det.</p>
+      <p><strong>A. Reflexmässig invändning</strong><br>
+      Kommer tidigt i samtalet, innan kunden ens vet vad det handlar om. "Nej, jag ska inte ha något." Det är inte ett genomtänkt svar — det är en reflex. Behandla inte detta som en riktig invändning. Om du börjar argumentera mot den förstoras problemet och samtalet stannar upp. Se ett tidigt "nej" nästan som ett "hej" och fortsätt framåt med lugn och entusiasm.</p>
+      <p><strong>B. Påhittad invändning</strong><br>
+      "Jag tror inte det där kommer funka för oss." <em>Tror?</em> De vet inte riktigt. Undermedvetet går kunden emot för att de är rädda att fatta ett dåligt beslut. Ta inte det första nejet. Ifrågasätt med nyfikenhet: <em>"Vad är det du tror skulle krångla?"</em></p>
+      <p><strong>C. Inbillad invändning</strong><br>
+      Kunden tror att något hindrar dem — ett hinder som egentligen inte finns. De är osäkra och behöver mer information. Lösning: berätta om hela tjänsten igen. Om du redan gjort det, berätta igen — repetition skapar trygghet. Ifrågasätt vänligt och ta inte det första nejet.</p>
+      <p><strong>D. Välgrundad invändning</strong><br>
+      Den verkliga orsaken. Det finns tre varianter:</p>
+      <ol>
+        <li><strong>Känner inget behov</strong> — Ta reda på kundens situation och skapa behovet genom frågeställning. Övertyga om att din lösning passar bättre.</li>
+        <li><strong>Sviktande förtroende</strong> — Kunden litar inte på dig, företaget eller produkten. Fråga vilken del de invänder mot och rikta svaret dit. Tryck aldrig hårdare — bygg förtroende istället.</li>
+        <li><strong>Otrygghet vid beslutet</strong> — Du pratade för snabbt, oklart, eller gjorde det för komplicerat. Fråga vad som är oklart och förklara igen, tydligare och lugnare.</li>
+      </ol>
+      <p><strong>E. Köpsignal — ingen invändning!</strong><br>
+      Kunden ställer kontrollfrågor om produkten: "Måste jag binda mig?", "Vad kostar det?", "Finns det garanti?" Det är <em>inte</em> invändningar — det är tecken på intresse. En helt ointresserad kund frågar ingenting. Svara rakt och gå sedan på avslutet.</p>
+
+      <h3>Fråga aldrig "varför?"</h3>
+      <p>Om du frågar kunden varför de inte ska köpa, tvingar du dem att leta efter fler anledningar att tacka nej. Istället vill du få kunden att berätta vad de behöver för att bli kund.</p>
+      <p>Byt ut "varför?" mot frågor som dessa:</p>
+      <ul>
+        <li><em>"Får jag fråga vad det faller på?"</em></li>
+        <li><em>"Hur resonerar du, om jag får fråga?"</em></li>
+        <li><em>"Vart klämmer skon?"</em></li>
+        <li><em>"Vad är viktigt för dig vid byte av leverantör?"</em></li>
+      </ul>
+      <p>Den sista frågan är särskilt effektiv — istället för att kunden motiverar sitt nej, börjar de leta fel hos sin nuvarande leverantör. Det är ett helt annat samtal.</p>
+      <p>Tala heller aldrig om för kunden att de inte förstår — ingen människa vill känna sig dum. Du kanske har rätt hela vägen, men det handlar inte om vem som har rätt. Det handlar om att sälja. Målet är att bevisa att kunden har fel, men på ett sätt som gör att de <em>behåller sitt goda humör</em>.</p>
+
+      <h3>Var tyst, lyssna — och bygg bryggan</h3>
+      <p>En av de viktigaste delarna av invändningshantering är att vara tyst och lyssna. Gör du inte det upplevs du som nonchalant — och folk köper inte av nonchalanta säljare. Signalen du sänder när du avbryter en kund är: <em>"Jag är viktigare än dig."</em> Det fungerar inte om du sedan vill ha deras pengar.</p>
+      <p>Var tyst och lyssna klart. Ta ett litet andetag. Leverera sedan ditt svar — som du redan har övat in och vet fungerar.</p>
+      <p><strong>Bryggan</strong> är gången från kundens invändning till ditt svar. Struktur:</p>
+      <ol>
+        <li><strong>Bekräfta och normalisera</strong>: <em>"Absolut, nästan alla säger precis som du gör, att [kundens invändning]..."</em></li>
+        <li><strong>Vänd</strong>: <em>"...och det man inte tänker på då är [din förklaring]."</em></li>
+        <li><strong>Ny kundnytta</strong>: Lägg till en fördel du inte nämnt tidigare — ett "äss i ärmen".</li>
+        <li><strong>Nytt avslut</strong>: Fråga om ordern igen.</li>
+      </ol>
+      <p>Det du signalerar med normaliseringen är: <em>"Nästan alla säger som du — och ändå köper de."</em> Det är lättare för kunden att ändra sig när alla andra också hade fel från början.</p>
+      <p>En variant är att skjuta invändningen åt sidan tillfälligt: <em>"Absolut, men om vi glömmer det för 2 sekunder — vad tyckte du var bra med produkten?"</em></p>
 
       <h3>LAER-modellen</h3>
-      <p>LAER är ett strukturerat sätt att hantera invändningar utan att bli defensiv:</p>
+      <p>LAER är ett strukturerat ramverk för att hantera invändningar utan att bli defensiv:</p>
       <ul>
-        <li><strong>L — Listen (Lyssna)</strong>: Låt kunden tala klart. Avbryt aldrig en invändning.</li>
-        <li><strong>A — Acknowledge (Bekräfta)</strong>: Visa att du hörde och förstod. "Jag förstår vad du menar." Aldrig "Men..."</li>
-        <li><strong>E — Explore (Utforska)</strong>: Ställ följdfrågor för att förstå den verkliga invändningen. "Berätta mer om det — vad menar du med för dyrt?"</li>
-        <li><strong>R — Respond (Svara)</strong>: Adressera den faktiska invändningen med ett faktabaserat svar.</li>
+        <li><strong>L — Listen (Lyssna)</strong>: Låt kunden tala klart. Avbryt aldrig.</li>
+        <li><strong>A — Acknowledge (Bekräfta)</strong>: Visa att du hört och förstått. Börja aldrig med "Men..."</li>
+        <li><strong>E — Explore (Utforska)</strong>: Ställ följdfrågor för att förstå den verkliga invändningen. <em>"Berätta mer — vad menar du med för dyrt?"</em></li>
+        <li><strong>R — Respond (Svara)</strong>: Adressera den faktiska invändningen med ett genomtänkt svar.</li>
       </ul>
 
-      <h3>De fem vanligaste invändningarna</h3>
+      <h3>100-meters racet — hantera minst fem invändningar</h3>
+      <p>Tänk på samtalet som ett 100-meters lopp. Du måste springa hela vägen för att komma i mål. På samma sätt måste du vara beredd att hantera minst fem invändningar i varje samtal — det är norm, inte undantag.</p>
+      <p>Slingan ser ut så här:</p>
+      <ol>
+        <li>Du går på avslut</li>
+        <li>Kunden invänder</li>
+        <li>Du bygger bryggan</li>
+        <li>Du svarar på invändningen</li>
+        <li>Du lägger till en ny kundnytta</li>
+        <li>Du går på nytt avslut — och upprepar</li>
+      </ol>
+      <p>Den här slingan fungerar bara när kunden känner sig hörd. En dålig våglängd uppstår när kunden vill bli av med dig för att du är för påträngande eller inte lyssnar. Du som säljare styr alltid samtalet — om inte du gör det, gör kunden det, och kunden styr sällan mot en order.</p>
+      <p>Ha alltid ett "nästa steg" i ditt svar. Ett skickligt invändningssvar utan ett nästa steg är värdelöst.</p>
+
+      <h3>Konkreta exempel</h3>
+      <p><strong>Exempel 1 — "Du är den sjätte personen som ringer den här veckan!"</strong></p>
+      <ol>
+        <li>Visa förståelse och relatera: <em>"Jag kan förstå din frustration. Jag kan slå vad om att alla påstod att de hade det bästa priset — och på ett sätt ljug de kanske inte, men de ringde om rörliga eller fasta priser, medan vi har något helt annat..."</em></li>
+        <li>Väck intresse med något konkret: <em>"Vi har en ny avtalsform och har hjälpt tusentals kunder med bättre villkor."</em></li>
+        <li>Ta tillbaka styrningen: <em>"Har du hört talas om det? Och får jag fråga — vad har du idag?"</em></li>
+      </ol>
+      <p><strong>Exempel 2 — "Det är för dyrt."</strong></p>
+      <ol>
+        <li>Bekräfta och normalisera: <em>"Du har helt rätt — det är många som säger likadant. Den här kostar faktiskt mer än konkurrenten, jag hade en kund som sa precis detsamma förra veckan."</em></li>
+        <li>Vänd och tillför nytta: <em>"Och det som fick honom att inse varför den är prisvärd är att [förklara vad som är bättre + ny kundnytta som inte nämnts]."</em></li>
+        <li>Delaccept och avslut: <em>"Så visst håller du med om att den passar dina behov bättre? Vill du ha den till adress 1 eller 2?"</em></li>
+      </ol>
+
+      <h3>Tonalitet — lika barn leker bäst</h3>
+      <p>Vi kommunicerar bättre med personer som liknar oss. Anpassa dig efter kunden:</p>
       <ul>
-        <li><strong>"Det är för dyrt"</strong> → Flytta fokus från kostnad till ROI. "Vad kostar det er att <em>inte</em> lösa det här idag?"</li>
-        <li><strong>"Jag måste tänka på det"</strong> → Identifiera vad de egentligen tänker på. "Absolut. Vad är det specifika du vill fundera på?"</li>
-        <li><strong>"Vi är nöjda med vår nuvarande leverantör"</strong> → Utmana status quo. "Bra att höra. Vad skulle göra att ni är intresserade av att ens jämföra?"</li>
-        <li><strong>"Nu är inte rätt tid"</strong> → Skapa urgency. "Vad gör att det inte är rätt tid just nu? Och vad händer om ingenting förändras?"</li>
-        <li><strong>"Jag behöver prata med min chef"</strong> → Erbjud dig att delta. "Självklart. Vill du att vi sätter ihop ett möte tillsammans så att jag kan besvara eventuella frågor?"</li>
+        <li><strong>Energi</strong>: Är kunden energisk — matcha det. Är kunden lugn eller nyvaken — ta det lugnare.</li>
+        <li><strong>Tempo</strong>: Prata i samma tempo som kunden. För sakta blir tråkigt, för snabbt låter det rabbel. Använd konstpauser och tempoväxlingar — det gör det intressantare att lyssna.</li>
+        <li><strong>Volym</strong>: Prata högt och tydligt. Lite högre än kunden — hög volym signalerar säkerhet, låg volym antyder motsatsen.</li>
+        <li><strong>Entusiasm</strong>: Inget smittar till handling så effektivt som entusiasm. Le i telefonen — det hörs. Det är svårare att säga nej till ett flinande fån. Hur ska kunden kunna gilla produkten om inte du gör det?</li>
+        <li><strong>Inlevelse</strong>: Ju mer känsla som ligger bakom dina ord, desto lättare fångar du kundens uppmärksamhet. Betona minst ett ord i varje mening. Tänk på HUR du säger det, inte bara VAD du säger.</li>
+        <li><strong>Delaccepter</strong>: Stäm av med kunden längs vägen. Ju fler gånger kunden accepterar dina argument under samtalets gång, desto lättare är det att tacka ja i slutet — och du märker tidigt om något inte stämmer.</li>
       </ul>
-
-      <h3>Pris vs. Värde</h3>
-      <p>Prisinvändningar uppstår alltid när värdet inte är tydligt nog. Om kunden säger "det är för dyrt" har du ett presentationsproblem, inte ett prisproblem.</p>
-      <p>Svara aldrig med rabatt direkt. Flytta samtalet till värde: "Låt mig visa hur den investeringen ser ut jämfört med vad ni tjänar på det."</p>
-
-      <h3>Emotionella vs. rationella invändningar</h3>
-      <p>Rationella invändningar (pris, timing, features) är lättare att hantera — de har faktasvar. Emotionella invändningar (rädsla för förändring, förtroendebrist) kräver mer lyssning och empati. Identifiera vilken typ du möter.</p>
-
-      <h3>Inställningen är allt — mantrat som förändrar spelet</h3>
-      <p>Toppsäljare och mediokra säljare möter samma invändningar. Skillnaden är inte tekniken — det är inställningen. Mediokra säljare hör ett nej och tror det är slutet. Toppsäljare hör ett nej och tänker: <em>"Okej, vilken fråga gömmer sig bakom det här?"</em></p>
-      <p><strong>Mantrat:</strong> Varje invändning är en fråga i förklädnad. Din uppgift är att förstå frågan, inte slå tillbaka mot den.</p>
-      <p>Gör det till en vana att efter varje invändning fråga dig: <em>Vad är det kunden egentligen vill veta?</em> Det svaret berättar vad du behöver göra härnäst.</p>
 
       <h3>Tidiga invändningar — de reflexmässiga nejen</h3>
-      <p>De tidiga invändningarna kommer innan kunden vet vad du erbjuder. De är inte genomtänkta — de är reflexer. Det betyder: ta inte dem bokstavligt, och argumentera aldrig direkt mot dem.</p>
+      <p>De tidiga invändningarna kommer innan kunden vet vad du erbjuder. De är inte genomtänkta — de är reflexer. Argumentera aldrig direkt mot dem.</p>
       <ul>
         <li><strong>"Inte intresserad"</strong> — Kunden vet inte vad de tackar nej till än. Svara med nyfikenhet: <em>"Det förstår jag — de flesta jag pratar med säger det i första sekunden. Anledningen att jag ringer är [intresseväckare]. Passar det att prata 2 minuter?"</em></li>
         <li><strong>"Har inte tid just nu"</strong> — Bekräfta och ankra: <em>"Absolut, det förstår jag. Det tar bara ett par minuter — och om det inte är relevant för dig lovar jag att inte ta mer av din tid. Passar det nu?"</em></li>
         <li><strong>"Nöjd med det jag har"</strong> — Bygg en bro, utmana inte: <em>"Kul att höra! Det bästa läget att lyssna är faktiskt när man är nöjd — då har man inget att förlora på att ta reda på om det finns ett bättre alternativ. Får jag berätta kort?"</em></li>
-        <li><strong>"Skicka information"</strong> — Mjuk avvisning. Svara: <em>"Självklart. Men för att skicka rätt information behöver jag förstå er situation lite — okej om jag ställer en fråga eller två?"</em></li>
+        <li><strong>"Skicka information"</strong> — Mjuk avvisning. Svara: <em>"Självklart. Men för att skicka rätt information behöver jag förstå er situation lite — okäj om jag ställer en fråga eller två?"</em></li>
       </ul>
 
-      <h3>Bryggan — tekniken för att komma förbi ett nej</h3>
-      <p>Bryggan är ett av de mest kraftfulla verktygen i telefonsälj. Den används när kunden sagt nej och du vill komma vidare utan att kännas påträngande.</p>
-      <p>Struktur:</p>
-      <ol>
-        <li><strong>Bekräfta</strong>: <em>"Jag förstår det."</em></li>
-        <li><strong>Normalisera</strong>: <em>"Det är många som säger det i första sekunden."</em></li>
-        <li><strong>Bro</strong>: <em>"Men det som är annorlunda med det vi gör är [en konkret, specifik sak]..."</em></li>
-        <li><strong>Ny fråga</strong>: <em>"Vad har du idag för [relevant aspekt]?"</em></li>
-      </ol>
-      <p>Bryggan är inte argumentation — det är en redirection. Du tar emot nejet, erkänner det, och leder samtalet åt ett nytt håll. Kunden känner sig hörd snarare än pressad.</p>
-
       <h3>Invändningar vid avslut — de tuffaste</h3>
-      <p>Sena invändningar — de som kommer precis när du försöker avsluta — är de svåraste. Kunden har lyssnat, kanske visat intresse, och säger ändå nej. Det är här de flesta säljare ger upp — och det är precis där toppsäljare vinner affärer.</p>
+      <p>Sena invändningar — precis när du försöker avsluta — är de svåraste. Det är här de flesta säljare ger upp. Det är precis där toppsäljare vinner affärer.</p>
       <ul>
         <li><strong>"Jag vill tänka på det"</strong> — Fråga vad de behöver tänka på: <em>"Absolut. Är det priset, om det passar er situation, eller är det något annat?"</em> Isolera invändningen — annars tänker de på allt och inget.</li>
-        <li><strong>"Jag vill läsa mer / få det skriftligt"</strong> — Fråga vad de vill läsa om: <em>"Självklart. Vad är det du vill veta mer om? Kan jag besvara det nu istället, så sparar du tid?"</em> Ofta har du svaret — de söker bekräftelse, inte papper.</li>
+        <li><strong>"Jag vill läsa mer / få det skriftligt"</strong> — Fråga vad de vill läsa om: <em>"Självklart. Vad är det du vill veta mer om? Kan jag besvara det nu istället, så sparar du tid?"</em> Ofta söker de bekräftelse, inte papper.</li>
         <li><strong>"Jag måste prata med min partner / chef"</strong> — Engagera dem i processen: <em>"Det är klokt. Vad tror du de kommer att fråga? Jag kan ge dig svaren nu så att du har dem."</em></li>
         <li><strong>"Det känns inte rätt just nu"</strong> — Fråga vad rätt tid innebär: <em>"Det förstår jag. Vad behöver förändras för att tajmingen ska kännas bättre?"</em> Det avslöjar den verkliga invändningen.</li>
       </ul>
 
+      <h3>Pris vs. Värde</h3>
+      <p>Prisinvändningar uppstår alltid när värdet inte är tydligt nog. Om kunden säger "det är för dyrt" har du ett presentationsproblem, inte ett prisproblem.</p>
+      <p>Svara aldrig med rabatt direkt. Flytta samtalet till värde: <em>"Låt mig visa hur den investeringen ser ut jämfört med vad ni tjänar på det."</em> Och fråga: <em>"Vad kostar det er att inte lösa det här idag?"</em></p>
+
+      <h3>Emotionella vs. rationella invändningar</h3>
+      <p>Rationella invändningar (pris, timing, features) är lättare att hantera — de har faktasvar. Emotionella invändningar (rädsla för förändring, förtroendenebrist) kräver mer lyssning och empati. Identifiera vilken typ du möter — svaret ser helt olika ut.</p>
+
       <h3>Behåll kunden — när nejet verkar definitivt</h3>
-      <p>Ibland säger kunden ett tydligt nej vid avslut. Det är inte slutet — det är ett tillfälle att resonera och skapa ett bättre utgångsläge för nästa kontakt.</p>
+      <p>Ibland säger kunden ett tydligt nej vid avslut. Det är inte slutet.</p>
       <ol>
         <li><strong>Acceptera utan att kapitulera</strong>: <em>"Jag respekterar det. Låt mig bara förstå lite bättre..."</em></li>
-        <li><strong>Ställ en öppen fråga om nuläget</strong>: <em>"Vad har du idag för [produkt/tjänst]?"</em> Få dem att prata om sin situation — då hittar du öppningar.</li>
-        <li><strong>Hitta något att resonera kring</strong>: Finns det något i deras nuläge som inte är optimalt? Lyft det sakligt och nyfiket.</li>
-        <li><strong>Plantera ett frö</strong>: Lämna dem med något de tar med sig: <em>"Det jag kan säga är att [unik styrka hos din lösning]. Tänk på det. Får jag höra av mig om ett par veckor?"</em></li>
+        <li><strong>Ställ en öppen fråga om nuläget</strong>: Få dem att prata om sin situation — då hittar du öppningar.</li>
+        <li><strong>Plantera ett frö</strong>: <em>"Det jag kan säga är att [unik styrka]. Tänk på det. Får jag höra av mig om ett par veckor?"</em></li>
       </ol>
-      <p>En kund som lämnar samtalet med ett positivt intryck av dig — trots att de inte köpte — är en potentiell kund nästa månad. En kund som lämnar frustrerad stänger dörren permanent.</p>
+      <p>En kund som lämnar samtalet med ett positivt intryck — trots att de inte köpte — är en potentiell kund nästa månad. En kund som lämnar frustrerad stänger dörren permanent.</p>
 
       <h3>Zig Ziglar: De fem skälen till att kunder inte köper</h3>
-      <p>Säljlegenden Zig Ziglar identifierade fem grundläggande skäl till att en kund inte köper. Alla invändningar du möter kan reduceras till ett av dem:</p>
+      <p>Säljlegenden Zig Ziglar identifierade fem grundläggande skäl. Alla invändningar kan reduceras till ett av dem:</p>
       <ul>
-        <li><strong>1. Inget behov</strong> — Kunden ser inte att de har ett problem att lösa. <em>Lösning: Hjälp dem se behovet de inte uppmärksammat. Ställ problemfrågor. "Vad händer om [situation] fortsätter ett år till?"</em></li>
-        <li><strong>2. Inga pengar</strong> — Kunden tror att de inte har råd. <em>Lösning: Koppla till ROI. "Vad kostar det er att INTE lösa det här?" Flytta fokus från kostnad till investering.</em></li>
-        <li><strong>3. Ingen brådska</strong> — Kunden ser inget skäl att agera nu. <em>Lösning: Visa konsekvensen av att vänta. Finns det ett genuint tidsbegränsat skäl att agera?</em></li>
-        <li><strong>4. Inget begär</strong> — Kunden vill inte ha det du säljer. <em>Lösning: Gå tillbaka till behovsanalysen. Koppla erbjudandet tydligare till det de faktiskt bryr sig om.</em></li>
-        <li><strong>5. Inget förtroende</strong> — Kunden litar inte på dig, din produkt eller ditt företag. <em>Lösning: Socialbevis, garantier, transparens. Bygg relationen — press gör det värre.</em></li>
+        <li><strong>1. Inget behov</strong> — Kunden ser inte att de har ett problem. <em>Lösning: Hjälp dem se behovet. "Vad händer om [situation] fortsätter ett år till?"</em></li>
+        <li><strong>2. Inga pengar</strong> — Kunden tror att de inte har råd. <em>Lösning: Koppla till ROI. "Vad kostar det er att INTE lösa det här?"</em></li>
+        <li><strong>3. Ingen brådska</strong> — Kunden ser inget skäl att agera nu. <em>Lösning: Visa konsekvensen av att vänta.</em></li>
+        <li><strong>4. Inget begär</strong> — Kunden vill inte ha det du säljer. <em>Lösning: Gå tillbaka till behovsanalysen och koppla tydligare till vad de bryr sig om.</em></li>
+        <li><strong>5. Inget förtroende</strong> — Kunden litar inte på dig, produkten eller företaget. <em>Lösning: Socialbevis, garantier, transparens. Press gör det bara värre.</em></li>
       </ul>
       <p>Nästa gång du möter en invändning: identifiera vilket av de fem det är. Svaret berättar exakt vad du behöver adressera.</p>
     `,
