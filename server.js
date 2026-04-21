@@ -263,6 +263,95 @@ function verifyCsrf(req, res, next) {
   next();
 }
 
+// ── Email template builders ───────────────────────────────────────────────────
+
+function emailShell(content) {
+  return `<!DOCTYPE html><html lang="sv"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
+<body style="margin:0;padding:0;background:#07070f;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#07070f;padding:40px 20px;">
+  <tr><td align="center">
+    <table width="560" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%;">
+      <!-- Header -->
+      <tr><td style="background:#111126;border-radius:16px 16px 0 0;padding:28px 32px;border-bottom:1px solid rgba(255,255,255,0.07);">
+        <span style="font-size:22px;font-weight:900;color:#f1f5f9;">🎯 Joakim Jaksen</span>
+      </td></tr>
+      <!-- Body -->
+      <tr><td style="background:#111126;padding:32px;color:#e2e8f0;">
+        ${content}
+      </td></tr>
+      <!-- Footer -->
+      <tr><td style="background:#0a0a14;border-radius:0 0 16px 16px;padding:20px 32px;border-top:1px solid rgba(255,255,255,0.05);">
+        <p style="margin:0;font-size:12px;color:#334155;">© 2026 Joakim Jaksen / Brilliant Values Global AB · <a href="https://app.joakimjaksen.se/integritetspolicy" style="color:#475569;">Integritetspolicy</a></p>
+      </td></tr>
+    </table>
+  </td></tr>
+</table>
+</body></html>`;
+}
+
+function buildWelcomeEmail(username, baseUrl) {
+  return emailShell(`
+    <h1 style="margin:0 0 6px;font-size:26px;font-weight:900;color:#f1f5f9;">Välkommen, ${username}! 🎯</h1>
+    <p style="margin:0 0 24px;color:#64748b;font-size:14px;">Ditt konto är nu aktivt.</p>
+
+    <p style="color:#94a3b8;line-height:1.7;margin:0 0 16px;">
+      Du har tillgång till <strong style="color:#e2e8f0;">Block 1 — Inledning &amp; Första Intrycket</strong> helt gratis.
+      Teorin, videon och provet — allt är redan redo för dig.
+    </p>
+
+    <div style="background:rgba(99,102,241,0.08);border:1px solid rgba(99,102,241,0.2);border-radius:12px;padding:20px;margin:0 0 24px;">
+      <p style="margin:0 0 12px;font-size:13px;font-weight:700;color:#a5b4fc;text-transform:uppercase;letter-spacing:0.05em;">Kom igång på 3 steg</p>
+      <div style="display:flex;flex-direction:column;gap:8px;">
+        <p style="margin:0;color:#94a3b8;font-size:14px;">1️⃣ &nbsp;Logga in på <a href="${baseUrl}" style="color:#818cf8;">app.joakimjaksen.se</a></p>
+        <p style="margin:0;color:#94a3b8;font-size:14px;">2️⃣ &nbsp;Läs teorin i Block 1</p>
+        <p style="margin:0;color:#94a3b8;font-size:14px;">3️⃣ &nbsp;Gör provet och se hur du presterar</p>
+      </div>
+    </div>
+
+    <table cellpadding="0" cellspacing="0" style="margin:0 0 24px;">
+      <tr><td style="border-radius:10px;background:linear-gradient(135deg,#6366f1,#8b5cf6);">
+        <a href="${baseUrl}/learn/forsta-intrycket" style="display:inline-block;padding:14px 28px;color:#fff;text-decoration:none;font-weight:700;font-size:15px;">
+          Gå till Block 1 →
+        </a>
+      </td></tr>
+    </table>
+
+    <p style="color:#475569;font-size:13px;line-height:1.6;margin:0 0 8px;">
+      När du är redo för mer — uppgradera till Premium och lås upp alla 16 block, AI-coachen Jocke och videogenomgångarna.
+    </p>
+
+    <p style="margin:24px 0 0;color:#475569;font-size:13px;">Med sälj,<br><strong style="color:#64748b;">Joakim Jaksen</strong></p>
+  `);
+}
+
+function buildPasswordResetEmail(username, link) {
+  return emailShell(`
+    <h1 style="margin:0 0 6px;font-size:24px;font-weight:900;color:#f1f5f9;">Återställ ditt lösenord</h1>
+    <p style="margin:0 0 24px;color:#64748b;font-size:14px;">En förfrågan skickades för ditt konto.</p>
+
+    <p style="color:#94a3b8;line-height:1.7;margin:0 0 24px;">
+      Hej ${username}! Du (eller någon annan) har begärt att återställa lösenordet för ditt konto på Joakim Jaksens Säljutbildning.
+    </p>
+
+    <table cellpadding="0" cellspacing="0" style="margin:0 0 24px;">
+      <tr><td style="border-radius:10px;background:linear-gradient(135deg,#6366f1,#8b5cf6);">
+        <a href="${link}" style="display:inline-block;padding:14px 28px;color:#fff;text-decoration:none;font-weight:700;font-size:15px;">
+          Återställ lösenord →
+        </a>
+      </td></tr>
+    </table>
+
+    <p style="color:#475569;font-size:13px;line-height:1.6;margin:0 0 8px;">
+      Länken är giltig i <strong style="color:#64748b;">1 timme</strong>.
+    </p>
+    <p style="color:#334155;font-size:12px;margin:0;">
+      Om du inte begärt detta — ignorera det här mailet. Ditt lösenord är oförändrat.
+    </p>
+
+    <p style="margin:24px 0 0;color:#475569;font-size:13px;">— Joakim Jaksen</p>
+  `);
+}
+
 // ── Auth helpers ──────────────────────────────────────────────────────────────
 
 function requireLogin(req, res, next) {
@@ -375,20 +464,8 @@ app.post('/register', registerLimiter, async (req, res) => {
       await resend.emails.send({
         from:    RESEND_FROM,
         to:      email.trim(),
-        subject: 'Välkommen till Joakim Jaksens Säljutbildning! 🎯',
-        html: `
-          <div style="font-family:sans-serif;max-width:560px;margin:0 auto;background:#0f0f0f;color:#e5e7eb;padding:40px 32px;border-radius:12px;">
-            <h1 style="font-size:24px;margin-bottom:8px;">Välkommen, ${username.trim()}! 🎯</h1>
-            <p style="color:#9ca3af;margin-top:0;">Ditt konto är nu aktivt.</p>
-            <p>Du har nu tillgång till <strong>Block 1 — Inledning & Första Intrycket</strong> helt gratis. Börja med teorin, se videon och klara provet.</p>
-            <p>När du är redo att gå vidare kan du uppgradera till Premium och låsa upp alla 16 block, AI-assistenten Jocke och allt annat.</p>
-            <a href="${baseUrl}/login"
-               style="display:inline-block;margin:24px 0;padding:14px 28px;background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;text-decoration:none;border-radius:8px;font-weight:600;">
-              Logga in och börja →
-            </a>
-            <p style="font-size:13px;color:#6b7280;">— Joakim Jaksen</p>
-          </div>
-        `,
+        subject: `Välkommen, ${username.trim()}! Ditt konto är aktivt 🎯`,
+        html: buildWelcomeEmail(username.trim(), baseUrl),
       });
     }
   } catch (emailErr) {
@@ -441,14 +518,8 @@ app.post('/forgot-password', resetLimiter, async (req, res) => {
     await resend.emails.send({
       from:    RESEND_FROM,
       to:      user.email,
-      subject: 'Återställ ditt lösenord',
-      html: `
-        <p>Hej ${user.username}!</p>
-        <p>Du (eller någon annan) har begärt att återställa lösenordet för ditt konto.</p>
-        <p><a href="${link}" style="background:#6366f1;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;display:inline-block;margin:16px 0;">Återställ lösenord →</a></p>
-        <p>Länken är giltig i 1 timme. Om du inte begärt detta kan du ignorera detta mail.</p>
-        <p>— Joakim Jaksen</p>
-      `,
+      subject: 'Återställ ditt lösenord — Joakim Jaksen',
+      html: buildPasswordResetEmail(user.username, link),
     });
   } catch (err) {
     console.error('Resend error:', err.message);
