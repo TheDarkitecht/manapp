@@ -123,6 +123,13 @@ function saveDb() {
   fs.writeFileSync(DB_PATH, Buffer.from(data));
 }
 
+function cleanupExpiredTokens() {
+  try {
+    db.run("DELETE FROM reset_tokens WHERE expires_at <= datetime('now')");
+    saveDb();
+  } catch (_) {}
+}
+
 // ── User queries ──────────────────────────────────────────────────────────────
 
 function findUserByUsername(username) {
@@ -326,7 +333,7 @@ function updateUserPassword(userId, newPassword) {
 // ── Exports ───────────────────────────────────────────────────────────────────
 
 module.exports = {
-  initDatabase, saveDb,
+  initDatabase, saveDb, cleanupExpiredTokens,
   findUserByUsername, findUserByEmail,
   createUser, getAllUsers, setUserRole, deleteUser, deleteUserAccount, getUserStats,
   setStripeCustomerId, findUserByStripeCustomerId,

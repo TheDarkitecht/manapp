@@ -8,7 +8,7 @@ const Stripe    = require('stripe');
 const { Resend } = require('resend');
 const helmet    = require('helmet');
 const {
-  initDatabase, findUserByUsername, findUserByEmail, createUser,
+  initDatabase, cleanupExpiredTokens, findUserByUsername, findUserByEmail, createUser,
   getAllUsers, setUserRole, deleteUser, deleteUserAccount, getUserStats,
   setStripeCustomerId, findUserByStripeCustomerId,
   updateLastLogin,
@@ -724,6 +724,29 @@ app.post('/admin/users/:id/delete', requireLogin, requireAdmin, verifyCsrf, (req
   res.redirect('/admin');
 });
 
+// ── Admin: manually send welcome email ───────────────────────────────────────
+
+app.post('/admin/users/:id/email', requireLogin, requireAdmin, verifyCsrf, async (req, res) => {
+  const user    = getAllUsers().find(u => u.id === Number(req.params.id));
+  const baseUrl = process.env.APP_URL || `${req.protocol}://${req.get('host')}`;
+
+  if (!user?.email) return res.redirect('/admin');
+
+  try {
+    if (resend) {
+      await resend.emails.send({
+        from:    RESEND_FROM,
+        to:      user.email,
+        subject: `Välkommen, ${user.username}! Ditt konto är aktivt 🎯`,
+        html:    buildWelcomeEmail(user.username, baseUrl),
+      });
+    }
+  } catch (err) {
+    console.error('Admin email error:', err.message);
+  }
+  res.redirect('/admin');
+});
+
 // ── Admin CSV export ──────────────────────────────────────────────────────────
 
 app.get('/admin/export/users.csv', requireLogin, requireAdmin, (req, res) => {
@@ -916,6 +939,10 @@ async function startServer() {
       console.warn('');
     }
   }
+
+  // Clean up expired reset tokens on startup and every hour
+  cleanupExpiredTokens();
+  setInterval(cleanupExpiredTokens, 60 * 60 * 1000);
 
   app.listen(PORT, () => console.log(`✅ Server running at http://localhost:${PORT}`));
 }

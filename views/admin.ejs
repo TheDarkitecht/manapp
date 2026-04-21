@@ -108,6 +108,14 @@
                         <option value="admin"   <%= u.role === 'admin'   ? 'selected' : '' %>>Admin</option>
                       </select>
                     </form>
+                    <!-- Send welcome email -->
+                    <% if (u.email) { %>
+                    <form method="POST" action="/admin/users/<%= u.id %>/email" class="inline-form"
+                          onsubmit="return confirm('Skicka välkomstmail till <%= u.username %>?')">
+                      <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+                      <button type="submit" class="btn-email" title="Skicka välkomstmail">📧</button>
+                    </form>
+                    <% } %>
                     <!-- Delete -->
                     <form method="POST" action="/admin/users/<%= u.id %>/delete" class="inline-form"
                           onsubmit="return confirm('Radera <%= u.username %>? Det går inte att ångra.')">
