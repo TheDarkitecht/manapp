@@ -1,0 +1,14 @@
+User-agent: *
+Allow: /
+Disallow: /dashboard
+Disallow: /admin
+Disallow: /learn
+Disallow: /ordbok
+Disallow: /upgrade
+Disallow: /account
+Disallow: /chat
+Disallow: /notes
+Disallow: /logout
+Disallow: /reset-password
+
+Sitemap: https://www.joakimjaksen.se/sitemap.xml

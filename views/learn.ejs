@@ -27,16 +27,23 @@
   <div class="blocks-grid">
     <% blocks.forEach(function(block, i) { %>
       <% const isLocked = role === 'free' && !freeBlockIds.includes(block.id); %>
+      <% const prog = (progress && progress[block.id]) || {}; %>
+      <% const isDone = prog.completed; %>
       <a href="/learn/<%= block.id %>"
-         class="block-card <%= isLocked ? 'block-locked' : '' %>"
+         class="block-card <%= isLocked ? 'block-locked' : '' %> <%= isDone ? 'block-completed' : '' %>"
          style="--card-gradient: <%= block.gradient %>;">
-        <div class="block-card-number"><%= i + 1 %></div>
+        <div class="block-card-number">
+          <% if (isDone) { %>✓<% } else { %><%= i + 1 %><% } %>
+        </div>
         <div class="block-card-icon"><%= isLocked ? '🔒' : block.icon %></div>
         <div class="block-card-body">
           <h3><%= block.title %></h3>
           <p><%= block.subtitle %></p>
+          <% if (prog.quiz_score !== undefined && prog.quiz_score !== null) { %>
+            <span class="block-score-badge"><%= prog.quiz_score %>/<%= prog.quiz_total %> rätt</span>
+          <% } %>
         </div>
-        <div class="block-card-arrow"><%= isLocked ? '👁' : '→' %></div>
+        <div class="block-card-arrow"><%= isLocked ? '👁' : (isDone ? '↺' : '→') %></div>
       </a>
     <% }); %>
   </div>

@@ -58,14 +58,30 @@ async function initDatabase() {
     )
   `);
 
+  // Block progress table
+  db.run(`
+    CREATE TABLE IF NOT EXISTS block_progress (
+      id         INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id    INTEGER NOT NULL,
+      block_id   TEXT    NOT NULL,
+      completed  INTEGER NOT NULL DEFAULT 0,
+      quiz_score INTEGER,
+      quiz_total INTEGER,
+      completed_at TEXT,
+      UNIQUE(user_id, block_id),
+      FOREIGN KEY (user_id) REFERENCES users(id)
+    )
+  `);
+
   // Migration: add new columns if they don't exist yet.
   // SQLite doesn't support "ADD COLUMN IF NOT EXISTS" so we catch errors.
   const migrations = [
-    "ALTER TABLE users ADD COLUMN email       TEXT",
-    "ALTER TABLE users ADD COLUMN role        TEXT    NOT NULL DEFAULT 'free'",
-    "ALTER TABLE users ADD COLUMN gdpr        INTEGER NOT NULL DEFAULT 0",
-    "ALTER TABLE users ADD COLUMN gdpr_at     TEXT",
-    "ALTER TABLE users ADD COLUMN created_at  TEXT    DEFAULT (datetime('now'))",
+    "ALTER TABLE users ADD COLUMN email              TEXT",
+    "ALTER TABLE users ADD COLUMN role               TEXT    NOT NULL DEFAULT 'free'",
+    "ALTER TABLE users ADD COLUMN gdpr               INTEGER NOT NULL DEFAULT 0",
+    "ALTER TABLE users ADD COLUMN gdpr_at            TEXT",
+    "ALTER TABLE users ADD COLUMN created_at         TEXT    DEFAULT (datetime('now'))",
+    "ALTER TABLE users ADD COLUMN stripe_customer_id TEXT",
   ];
   migrations.forEach(sql => { try { db.run(sql); } catch (_) {} });
 
@@ -155,6 +171,26 @@ function setUserRole(userId, role) {
   saveDb();
 }
 
+function setStripeCustomerId(userId, stripeCustomerId) {
+  db.run('UPDATE users SET stripe_customer_id = ? WHERE id = ?', [stripeCustomerId, userId]);
+  saveDb();
+}
+
+function findUserByStripeCustomerId(customerId) {
+  const s = db.prepare('SELECT * FROM users WHERE stripe_customer_id = ?');
+  s.bind([customerId]);
+  if (s.step()) { const u = s.getAsObject(); s.free(); return u; }
+  s.free(); return null;
+}
+
+function deleteUserAccount(userId) {
+  db.run('DELETE FROM block_progress WHERE user_id = ?', [userId]);
+  db.run('DELETE FROM notes WHERE user_id = ?', [userId]);
+  db.run('DELETE FROM reset_tokens WHERE user_id = ?', [userId]);
+  db.run('DELETE FROM users WHERE id = ?', [userId]);
+  saveDb();
+}
+
 function deleteUser(userId) {
   db.run('DELETE FROM notes WHERE user_id = ?', [userId]);
   db.run('DELETE FROM users WHERE id = ?', [userId]);
@@ -193,6 +229,43 @@ function createNote(userId, content) {
 function deleteNote(noteId, userId) {
   db.run('DELETE FROM notes WHERE id = ? AND user_id = ?', [noteId, userId]);
   saveDb();
+}
+
+// ── Block progress ────────────────────────────────────────────────────────────
+
+function getBlockProgress(userId) {
+  const s = db.prepare('SELECT * FROM block_progress WHERE user_id = ?');
+  s.bind([userId]);
+  const rows = [];
+  while (s.step()) rows.push(s.getAsObject());
+  s.free();
+  // Return as map: blockId → { completed, quiz_score, quiz_total }
+  const map = {};
+  rows.forEach(r => { map[r.block_id] = r; });
+  return map;
+}
+
+function saveQuizResult(userId, blockId, score, total) {
+  const completed = score >= Math.ceil(total * 0.6) ? 1 : 0; // 60% to pass
+  db.run(`
+    INSERT INTO block_progress (user_id, block_id, completed, quiz_score, quiz_total, completed_at)
+    VALUES (?, ?, ?, ?, ?, datetime('now'))
+    ON CONFLICT(user_id, block_id) DO UPDATE SET
+      quiz_score   = excluded.quiz_score,
+      quiz_total   = excluded.quiz_total,
+      completed    = excluded.completed,
+      completed_at = CASE WHEN excluded.completed = 1 THEN excluded.completed_at ELSE completed_at END
+  `, [userId, blockId, completed, score, total]);
+  saveDb();
+}
+
+function getCompletedBlockCount(userId) {
+  const s = db.prepare('SELECT COUNT(*) AS n FROM block_progress WHERE user_id = ? AND completed = 1');
+  s.bind([userId]);
+  s.step();
+  const { n } = s.getAsObject();
+  s.free();
+  return n;
 }
 
 // ── Password reset ────────────────────────────────────────────────────────────
@@ -235,7 +308,9 @@ function updateUserPassword(userId, newPassword) {
 module.exports = {
   initDatabase, saveDb,
   findUserByUsername, findUserByEmail,
-  createUser, getAllUsers, setUserRole, deleteUser, getUserStats,
+  createUser, getAllUsers, setUserRole, deleteUser, deleteUserAccount, getUserStats,
+  setStripeCustomerId, findUserByStripeCustomerId,
   getNotesByUserId, createNote, deleteNote,
+  getBlockProgress, saveQuizResult, getCompletedBlockCount,
   createResetToken, findValidResetToken, deleteResetToken, updateUserPassword,
 };

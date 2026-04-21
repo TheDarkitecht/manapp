@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Integritetspolicy — Joakim Jaksen</title>
+  <meta name="description" content="Integritetspolicy för Joakim Jaksens säljutbildningsplattform — hur vi hanterar dina personuppgifter." />
+  <link rel="canonical" href="https://www.joakimjaksen.se/integritetspolicy" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎯</text></svg>" />
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body class="learn-page">
+
+  <nav class="learn-nav">
+    <a href="/" class="learn-nav-back">← Tillbaka</a>
+    <span class="learn-nav-title">Integritetspolicy</span>
+    <span class="learn-nav-user"><%= username || '' %></span>
+  </nav>
+
+  <div class="legal-wrap">
+    <div class="legal-content">
+
+      <h1>Integritetspolicy</h1>
+      <p class="legal-updated"><strong>Senast uppdaterad:</strong> April 2026</p>
+
+      <p>Brilliant Values Global AB ("vi", "oss") är personuppgiftsansvarig för behandlingen av dina personuppgifter när du använder Joakim Jaksens plattform.</p>
+
+      <h2>1. Vilka uppgifter samlar vi in?</h2>
+      <ul>
+        <li><strong>Kontouppgifter</strong> — användarnamn, e-postadress, lösenord (krypterat med bcrypt, aldrig i klartext)</li>
+        <li><strong>GDPR-samtycke</strong> — tidpunkt och att samtycke givits</li>
+        <li><strong>Aktivitetsdata</strong> — quizresultat och avklarade block (kopplat till ditt konto)</li>
+        <li><strong>Anteckningar</strong> — sådant du själv skriver in på plattformen</li>
+        <li><strong>Betalningsinformation</strong> — hanteras uteslutande av Stripe. Vi lagrar aldrig kortuppgifter.</li>
+        <li><strong>Tekniska loggdata</strong> — IP-adress och timestamp vid inloggning (för säkerhet och missbruksskydd)</li>
+      </ul>
+
+      <h2>2. Varför behandlar vi dina uppgifter?</h2>
+      <table class="legal-table">
+        <thead><tr><th>Ändamål</th><th>Rättslig grund</th></tr></thead>
+        <tbody>
+          <tr><td>Tillhandahålla plattformen och ditt konto</td><td>Avtal (GDPR art. 6.1.b)</td></tr>
+          <tr><td>Behandla betalningar via Stripe</td><td>Avtal (GDPR art. 6.1.b)</td></tr>
+          <tr><td>Skicka transaktionsmejl (välkomst, lösenordsåterställning)</td><td>Berättigat intresse (GDPR art. 6.1.f)</td></tr>
+          <tr><td>Missbruksskydd och säkerhet</td><td>Berättigat intresse (GDPR art. 6.1.f)</td></tr>
+          <tr><td>GDPR-dokumentation</td><td>Rättslig förpliktelse (GDPR art. 6.1.c)</td></tr>
+        </tbody>
+      </table>
+
+      <h2>3. Hur länge sparar vi dina uppgifter?</h2>
+      <p>Dina uppgifter sparas så länge ditt konto är aktivt. Om du avslutar ditt konto raderas alla personuppgifter inom 30 dagar, utom sådana vi är skyldiga att behålla av legala skäl (t.ex. bokföringsdata hos Stripe).</p>
+
+      <h2>4. Tredjepartsleverantörer</h2>
+      <ul>
+        <li><strong>Stripe</strong> — betalningshantering (USA/Irland). Stripe är certifierat enligt PCI DSS.</li>
+        <li><strong>Resend</strong> — e-postutskick (USA). Behandlar din e-postadress för att leverera transaktionsmejl.</li>
+        <li><strong>Cloudflare Turnstile</strong> — CAPTCHA-verifiering vid registrering.</li>
+        <li><strong>Railway</strong> — hosting och serverinfrastruktur (USA). Din data lagras på Railway-servrar.</li>
+        <li><strong>Groq</strong> — AI-assistent (USA). Dina meddelanden till Jocke bearbetas av Groq. Skicka inte känsliga personuppgifter till assistenten.</li>
+      </ul>
+      <p>Alla leverantörer behandlar uppgifter i enlighet med GDPR och har ingått nödvändiga avtal om personuppgiftsbehandling (DPA).</p>
+
+      <h2>5. Dina rättigheter</h2>
+      <ul>
+        <li><strong>Rätt till tillgång</strong> — du kan begära en kopia av dina uppgifter</li>
+        <li><strong>Rätt till rättelse</strong> — begär korrigering av felaktiga uppgifter</li>
+        <li><strong>Rätt till radering</strong> — du kan radera ditt konto direkt i appen (Inställningar → Radera konto) eller kontakta oss</li>
+        <li><strong>Rätt att invända</strong> — du kan invända mot behandling baserad på berättigat intresse</li>
+        <li><strong>Rätt till dataportabilitet</strong> — begär export av dina uppgifter</li>
+        <li><strong>Rätt att klaga</strong> — du kan klaga hos Integritetsskyddsmyndigheten (IMY): imy.se</li>
+      </ul>
+
+      <h2>6. Cookies</h2>
+      <p>Vi använder en session-cookie (HttpOnly, Secure) för att hålla dig inloggad. Den raderas när webbläsaren stängs eller efter 8 timmar. Vi sätter inga spårningscookies eller annons-cookies utan ditt samtycke.</p>
+
+      <h2>7. Kontakt</h2>
+      <p>Vid frågor om din data: kontakta oss via plattformens support.<br>
+      <strong>Brilliant Values Global AB</strong> — organisationsnummer: [ORG-NR]</p>
+
+    </div>
+  </div>
+
+</body>
+</html>

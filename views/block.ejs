@@ -25,6 +25,8 @@
     </div>
     <% if (isTeaser) { %>
       <div class="block-hero-lock-badge">🔒 Premium</div>
+    <% } else if (blockProg && blockProg.completed) { %>
+      <div class="block-hero-done-badge">✓ Avklarad</div>
     <% } %>
   </div>
 
@@ -250,8 +252,14 @@
       `;
       resultEl.style.display = 'block';
       resultEl.scrollIntoView({ behavior: 'smooth' });
-
       document.querySelector('.quiz-submit-btn').style.display = 'none';
+
+      // Save result to server
+      fetch('/quiz-result', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ blockId: '<%= block.id %>', score, total: correctAnswers.length }),
+      }).catch(() => {});
     }
 
     function retryQuiz() {

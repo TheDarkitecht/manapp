@@ -9,8 +9,10 @@ const { Resend } = require('resend');
 const helmet    = require('helmet');
 const {
   initDatabase, findUserByUsername, findUserByEmail, createUser,
-  getAllUsers, setUserRole, deleteUser, getUserStats,
+  getAllUsers, setUserRole, deleteUser, deleteUserAccount, getUserStats,
+  setStripeCustomerId, findUserByStripeCustomerId,
   getNotesByUserId, createNote, deleteNote,
+  getBlockProgress, saveQuizResult, getCompletedBlockCount,
   createResetToken, findValidResetToken, deleteResetToken, updateUserPassword,
 } = require('./database');
 const salesBlocks   = require('./salesContent');
@@ -54,23 +56,61 @@ app.post('/webhook', express.raw({ type: 'application/json' }), async (req, res)
   }
 
   if (event.type === 'checkout.session.completed') {
-    const session = event.data.object;
-    const userId  = parseInt(session.metadata.userId);
+    const sess   = event.data.object;
+    const userId = parseInt(sess.metadata?.userId);
     if (userId) {
       setUserRole(userId, 'premium');
-      console.log(`✅ User ${userId} upgraded to premium via Stripe`);
+      // Store Stripe customer ID for future webhook lookups
+      if (sess.customer) setStripeCustomerId(userId, sess.customer);
+      console.log(`✅ User ${userId} upgraded to premium`);
     }
   }
 
-  // Handle subscription cancellations / failed payments
+  // Subscription cancelled (voluntary or non-payment)
   if (event.type === 'customer.subscription.deleted') {
-    const sub    = event.data.object;
-    const custId = sub.customer;
-    // Find user by stripe_customer_id (stored in metadata on checkout)
-    const userId = parseInt(sub.metadata?.userId);
+    const sub  = event.data.object;
+    // Try metadata first, fall back to customer ID lookup
+    let userId = parseInt(sub.metadata?.userId);
+    if (!userId && sub.customer) {
+      const u = findUserByStripeCustomerId(sub.customer);
+      if (u) userId = u.id;
+    }
     if (userId) {
       setUserRole(userId, 'free');
       console.log(`⬇️ User ${userId} downgraded to free (subscription cancelled)`);
+    }
+  }
+
+  // Payment failed — grace: keep premium until subscription is actually deleted
+  // But log it so we can act if needed
+  if (event.type === 'invoice.payment_failed') {
+    const inv = event.data.object;
+    console.warn(`⚠️ Payment failed for customer ${inv.customer} — invoice ${inv.id}`);
+    // Stripe will retry and eventually fire subscription.deleted if unrecoverable
+  }
+
+  // Subscription paused / updated to unpaid
+  if (event.type === 'customer.subscription.updated') {
+    const sub = event.data.object;
+    if (sub.status === 'unpaid' || sub.status === 'past_due') {
+      let userId = parseInt(sub.metadata?.userId);
+      if (!userId && sub.customer) {
+        const u = findUserByStripeCustomerId(sub.customer);
+        if (u) userId = u.id;
+      }
+      if (userId) {
+        console.warn(`⚠️ Subscription ${sub.status} for user ${userId}`);
+        // Don't revoke premium yet — keep access until subscription.deleted
+      }
+    }
+    // If subscription is re-activated
+    if (sub.status === 'active') {
+      let userId = parseInt(sub.metadata?.userId);
+      if (!userId && sub.customer) {
+        const u = findUserByStripeCustomerId(sub.customer);
+        if (u) userId = u.id;
+      }
+      if (userId) setUserRole(userId, 'premium');
     }
   }
 
@@ -122,6 +162,45 @@ const loginLimiter = rateLimit({
   },
 });
 
+// ── Rate limiter — max 5 registrations per hour per IP ───────────────────────
+
+const registerLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: 5,
+  handler: (req, res) => {
+    res.render('login', {
+      error: null,
+      registerError: '🔒 För många registreringsförsök. Försök igen senare.',
+      success: null,
+      turnstileSiteKey: TURNSTILE_SITE_KEY,
+    });
+  },
+});
+
+// ── Rate limiter — max 30 chat messages per 10 min per user ──────────────────
+
+const chatLimiter = rateLimit({
+  windowMs: 10 * 60 * 1000, // 10 minutes
+  max: 30,
+  keyGenerator: (req) => `chat_${req.session?.userId || req.ip}`,
+  handler: (req, res) => {
+    res.status(429).json({ error: 'För många meddelanden. Vänta lite och försök igen.' });
+  },
+});
+
+// ── Rate limiter — max 5 password reset requests per hour per IP ─────────────
+
+const resetLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 5,
+  handler: (req, res) => {
+    res.render('forgot-password', {
+      error: 'För många försök. Försök igen om en timme.',
+      success: null,
+    });
+  },
+});
+
 // ── Auth helpers ──────────────────────────────────────────────────────────────
 
 function requireLogin(req, res, next) {
@@ -169,7 +248,7 @@ app.post('/login', loginLimiter, async (req, res) => {
   res.redirect('/dashboard');
 });
 
-app.post('/register', async (req, res) => {
+app.post('/register', registerLimiter, async (req, res) => {
   const { username, email, password, confirmPassword, gdpr } = req.body;
   const turnstileToken = req.body['cf-turnstile-response'];
 
@@ -195,6 +274,11 @@ app.post('/register', async (req, res) => {
   if (!username || !email || !password)
     return res.render('login', { error: null, success: null, turnstileSiteKey: TURNSTILE_SITE_KEY,
       registerError: 'Fyll i alla fält.' });
+
+  // Username: 3–30 chars, alphanumeric + underscore + hyphen only
+  if (!/^[a-zA-Z0-9_-]{3,30}$/.test(username.trim()))
+    return res.render('login', { error: null, success: null, turnstileSiteKey: TURNSTILE_SITE_KEY,
+      registerError: 'Användarnamnet måste vara 3–30 tecken och får bara innehålla bokstäver, siffror, _ och -.' });
 
   if (!gdpr)
     return res.render('login', { error: null, success: null, turnstileSiteKey: TURNSTILE_SITE_KEY,
@@ -269,7 +353,7 @@ app.get('/forgot-password', (req, res) => {
   res.render('forgot-password', { error: null, success: null });
 });
 
-app.post('/forgot-password', async (req, res) => {
+app.post('/forgot-password', resetLimiter, async (req, res) => {
   const { email } = req.body;
   const user = findUserByEmail(email?.trim().toLowerCase());
 
@@ -351,11 +435,20 @@ app.post('/reset-password/:token', async (req, res) => {
 // ── Dashboard ─────────────────────────────────────────────────────────────────
 
 app.get('/dashboard', requireLogin, (req, res) => {
-  const notes = getNotesByUserId(req.session.userId);
+  const notes       = getNotesByUserId(req.session.userId);
+  const progress    = getBlockProgress(req.session.userId);
+  const completed   = getCompletedBlockCount(req.session.userId);
+  const deleteError = req.query.deleteError === '1';
   res.render('dashboard', {
     username: req.session.username,
     role:     req.session.role,
     notes,
+    progress,
+    completed,
+    totalBlocks: salesBlocks.length,
+    deleteError,
+    blocks: salesBlocks,
+    freeBlockIds: FREE_BLOCK_IDS,
   });
 });
 
@@ -373,11 +466,13 @@ app.post('/notes/:id/delete', requireLogin, (req, res) => {
 // ── Learn ─────────────────────────────────────────────────────────────────────
 
 app.get('/learn', requireLogin, (req, res) => {
+  const progress = getBlockProgress(req.session.userId);
   res.render('learn', {
     username:     req.session.username,
     role:         req.session.role,
     blocks:       salesBlocks,
     freeBlockIds: FREE_BLOCK_IDS,
+    progress,
   });
 });
 
@@ -389,6 +484,9 @@ app.get('/learn/:id', requireLogin, (req, res) => {
   const hasAccess  = req.session.role === 'premium' || req.session.role === 'admin';
   const isTeaser   = isPremium && !hasAccess;
 
+  const progress   = getBlockProgress(req.session.userId);
+  const blockProg  = progress[block.id] || {};
+
   res.render('block', {
     username:     req.session.username,
     role:         req.session.role,
@@ -396,6 +494,52 @@ app.get('/learn/:id', requireLogin, (req, res) => {
     blocks:       salesBlocks,
     freeBlockIds: FREE_BLOCK_IDS,
     isTeaser,
+    blockProg,
+  });
+});
+
+// ── Quiz result — save score to DB ───────────────────────────────────────────
+
+app.post('/quiz-result', requireLogin, (req, res) => {
+  const { blockId, score, total } = req.body;
+  if (!blockId || score === undefined || !total) return res.json({ ok: false });
+  const block = salesBlocks.find(b => b.id === blockId);
+  if (!block) return res.json({ ok: false });
+  const isPremium = FREE_BLOCK_IDS.includes(block.id) || req.session.role === 'premium' || req.session.role === 'admin';
+  if (!isPremium) return res.json({ ok: false });
+  saveQuizResult(req.session.userId, blockId, parseInt(score), parseInt(total));
+  res.json({ ok: true });
+});
+
+// ── Account deletion (GDPR right to erasure) ─────────────────────────────────
+
+app.post('/account/delete', requireLogin, async (req, res) => {
+  const { confirmDelete } = req.body;
+  if (confirmDelete !== 'RADERA') {
+    return res.redirect('/dashboard?deleteError=1');
+  }
+  const userId = req.session.userId;
+  req.session.destroy(() => {
+    deleteUserAccount(userId);
+    res.redirect('/?deleted=1');
+  });
+});
+
+// ── Terms of Service ──────────────────────────────────────────────────────────
+
+app.get('/terms', (req, res) => {
+  res.render('terms', {
+    username: req.session?.username || null,
+    role:     req.session?.role || null,
+  });
+});
+
+// ── Privacy Policy (standalone page) ─────────────────────────────────────────
+
+app.get('/integritetspolicy', (req, res) => {
+  res.render('privacy', {
+    username: req.session?.username || null,
+    role:     req.session?.role || null,
   });
 });
 
@@ -490,7 +634,7 @@ app.get('/upgrade/success', requireLogin, async (req, res) => {
 
 // ── Chat ──────────────────────────────────────────────────────────────────────
 
-app.post('/chat', requireLogin, async (req, res) => {
+app.post('/chat', requireLogin, chatLimiter, async (req, res) => {
   const { messages } = req.body;
   if (!Array.isArray(messages))
     return res.status(400).json({ error: 'Invalid format.' });
