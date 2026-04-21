@@ -115,6 +115,7 @@
           <% } %>
 
           <form method="POST" action="/upgrade/checkout">
+            <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
             <button type="submit" class="up-checkout-btn">
               Kom igång nu →
             </button>
@@ -225,6 +226,7 @@
       <h2>Redo att ta nästa steg?</h2>
       <p>199 kr/mån. Avsluta när som helst. Tillgång direkt.</p>
       <form method="POST" action="/upgrade/checkout">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
         <button type="submit" class="up-checkout-btn">Uppgradera till Premium nu →</button>
       </form>
     </div>

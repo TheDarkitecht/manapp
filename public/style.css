@@ -1943,15 +1943,7 @@ textarea:focus {
   margin-top: -0.5rem;
 }
 
-.upgrade-error {
-  background: #7f1d1d40;
-  color: #fca5a5;
-  border: 1px solid #7f1d1d;
-  border-radius: 8px;
-  padding: 0.65rem 1rem;
-  font-size: 0.85rem;
-  text-align: center;
-}
+/* .upgrade-error defined further down in the upgrade v2 section */
 
 .upgrade-trust {
   display: flex;
@@ -3643,3 +3635,80 @@ body.dash-page {
   line-height: 1;
 }
 .btn-email:hover { background: rgba(14,165,233,0.2); }
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   MOBILE APP BOTTOM NAVIGATION
+   Fixed bottom bar visible on mobile for all authenticated app pages.
+   Provides nav access to: Dashboard, Utbildning, Ordbok, Upgrade/Logout.
+═══════════════════════════════════════════════════════════════════════════════ */
+
+.app-bottom-nav {
+  display: none; /* Hidden by default — shown via media query below */
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 200;
+  background: rgba(9, 9, 22, 0.97);
+  border-top: 1px solid rgba(255, 255, 255, 0.09);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  padding: 0.4rem 0.5rem env(safe-area-inset-bottom, 0.4rem);
+  justify-content: space-around;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.app-bottom-nav-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.18rem;
+  text-decoration: none;
+  color: #475569;
+  padding: 0.35rem 0.65rem;
+  border-radius: 10px;
+  transition: color 0.18s, background 0.18s;
+  min-width: 58px;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.app-bottom-nav-item:hover,
+.app-bottom-nav-item.active {
+  color: #a5b4fc;
+  background: rgba(99, 102, 241, 0.08);
+}
+
+.abn-icon {
+  font-size: 1.25rem;
+  line-height: 1;
+}
+
+.abn-label {
+  font-size: 0.62rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+}
+
+/* Upgrade item highlighted in amber */
+.app-bottom-nav-item.abn-upgrade { color: #f59e0b; }
+.app-bottom-nav-item.abn-upgrade:hover,
+.app-bottom-nav-item.abn-upgrade.active { color: #fbbf24; background: rgba(245,158,11,0.08); }
+
+@media (max-width: 768px) {
+  .app-bottom-nav { display: flex; }
+
+  /* Push page content above the bottom nav so last items aren't hidden */
+  .dash-main         { padding-bottom: 5rem !important; }
+  .blocks-grid       { padding-bottom: 6rem !important; }
+  .ordbok-grid       { padding-bottom: 6rem !important; }
+  .tab-content-wrapper { padding-bottom: 5rem !important; }
+  .block-nav-footer  { margin-bottom: 3.5rem !important; }
+
+  /* Chat bubble: lift it above the bottom nav */
+  .chat-bubble { bottom: 5rem !important; }
+}
+
+/* tdgdpr display none fix */
+.td-gdpr { white-space: nowrap; }

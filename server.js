@@ -777,12 +777,13 @@ app.get('/upgrade', requireLogin, (req, res) => {
     return res.redirect('/dashboard');
   }
   res.render('upgrade', {
-    username: req.session.username,
-    role:     req.session.role,
+    username:  req.session.username,
+    role:      req.session.role,
+    csrfToken: generateCsrfToken(req),
   });
 });
 
-app.post('/upgrade/checkout', requireLogin, async (req, res) => {
+app.post('/upgrade/checkout', requireLogin, verifyCsrf, async (req, res) => {
   if (req.session.role === 'premium' || req.session.role === 'admin') {
     return res.redirect('/dashboard');
   }
@@ -809,9 +810,10 @@ app.post('/upgrade/checkout', requireLogin, async (req, res) => {
   } catch (err) {
     console.error('Stripe error:', err.message);
     res.render('upgrade', {
-      username: req.session.username,
-      role:     req.session.role,
-      error:    'Betalningen kunde inte startas. Försök igen.',
+      username:  req.session.username,
+      role:      req.session.role,
+      csrfToken: generateCsrfToken(req),
+      error:     'Betalningen kunde inte startas. Försök igen.',
     });
   }
 });
