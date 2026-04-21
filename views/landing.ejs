@@ -168,10 +168,11 @@
           <div class="lp-video-wrap">
             <div class="lp-video-placeholder">
               <div class="lp-play-btn">▶</div>
-              <p>Hej, jag är Joakim.<br><span>Klicka för att se videon</span></p>
+              <p>Hej, jag är Joakim.</p>
+              <span class="lp-video-coming">Presentationsvideo kommer snart</span>
             </div>
             <!-- Byt ut mot riktigt YouTube-ID när video är klar: -->
-            <!-- <iframe src="https://www.youtube.com/embed/DIN_VIDEO_ID?rel=0" frameborder="0" allowfullscreen></iframe> -->
+            <!-- <iframe src="https://www.youtube.com/embed/DIN_VIDEO_ID?rel=0" frameborder="0" allowfullscreen loading="lazy"></iframe> -->
           </div>
         </div>
 
@@ -491,6 +492,37 @@
       window.open('/integritetspolicy', '_blank');
     }
 
+    // Animated counter for stats
+    (function() {
+      if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+      const counters = [
+        { el: document.querySelector('.lp-stat:nth-child(1) .lp-stat-num'), target: 120, suffix: 'M', duration: 1200 },
+        { el: document.querySelector('.lp-stat:nth-child(3) .lp-stat-num'), target: 22, suffix: '+', duration: 900 },
+        { el: document.querySelector('.lp-stat:nth-child(5) .lp-stat-num'), target: 500, suffix: '+', duration: 1100 },
+      ];
+
+      function animateCounter(el, target, suffix, duration) {
+        const start = performance.now();
+        function update(now) {
+          const progress = Math.min((now - start) / duration, 1);
+          const eased = 1 - Math.pow(1 - progress, 3); // ease-out cubic
+          el.textContent = Math.round(eased * target) + suffix;
+          if (progress < 1) requestAnimationFrame(update);
+        }
+        requestAnimationFrame(update);
+      }
+
+      const statsSection = document.querySelector('.lp-stats');
+      if (!statsSection) return;
+      const obs = new IntersectionObserver(entries => {
+        if (entries[0].isIntersecting) {
+          counters.forEach(c => { if (c.el) animateCounter(c.el, c.target, c.suffix, c.duration); });
+          obs.disconnect();
+        }
+      }, { threshold: 0.5 });
+      obs.observe(statsSection);
+    })();
+
     // FAQ accordion (landing page)
     function toggleLpFaq(btn) {
       const item = btn.closest('.lp-faq-item');
@@ -509,6 +541,37 @@
         arrow.textContent = '▴';
       }
     }
+  </script>
+
+  <!-- Scroll-reveal animations (respects prefers-reduced-motion) -->
+  <script>
+    (function() {
+      if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+      const els = document.querySelectorAll(
+        '.lp-about-grid, .lp-why-item, .lp-block-card, .lp-price-card, .lp-quote, .lp-faq-item, .lp-stat'
+      );
+      // Precompute index map to avoid O(n) lookup inside observer callback
+      const indexMap = new Map();
+      els.forEach((el, i) => {
+        indexMap.set(el, i);
+        el.style.opacity = '0';
+        el.style.transform = 'translateY(20px)';
+        el.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
+      });
+      const obs = new IntersectionObserver((entries) => {
+        entries.forEach(e => {
+          if (e.isIntersecting) {
+            const delay = 60 * (indexMap.get(e.target) % 4); // stagger siblings
+            setTimeout(() => {
+              e.target.style.opacity = '1';
+              e.target.style.transform = 'translateY(0)';
+            }, delay);
+            obs.unobserve(e.target);
+          }
+        });
+      }, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
+      els.forEach(el => obs.observe(el));
+    })();
   </script>
 
   <!-- Plausible Analytics (privacy-first, no cookies) -->
