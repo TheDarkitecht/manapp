@@ -240,15 +240,36 @@
 
       const resultEl = document.getElementById('quizResult');
       const pct = Math.round((score / correctAnswers.length) * 100);
+      const passed = pct >= 60;
       const emoji = pct >= 80 ? '🏆' : pct >= 60 ? '👍' : '📚';
       const msg   = pct >= 80 ? 'Utmärkt! Du behärskar det här blocket.'
                   : pct >= 60 ? 'Bra jobbat! Lite mer repetition gör dig till expert.'
                   : 'Läs igenom teorin igen — du klarar det!';
 
+      <% const blockIdx = blocks.findIndex(b => b.id === block.id); %>
+      <% const nextBlock = blocks[blockIdx + 1]; %>
+      <% const role = typeof role !== 'undefined' ? role : 'free'; %>
+
+      let nextBtnHtml = '';
+      if (passed) {
+        <% if (nextBlock) { %>
+          <% if (role === 'free' && !freeBlockIds.includes(nextBlock.id)) { %>
+            nextBtnHtml = `<a href="/upgrade" class="next-block-btn upgrade-next">⭐ Lås upp Block <%= blockIdx + 2 %>: <%= nextBlock.title %> →</a>`;
+          <% } else { %>
+            nextBtnHtml = `<a href="/learn/<%= nextBlock.id %>" class="next-block-btn">Nästa block: <%= nextBlock.title %> →</a>`;
+          <% } %>
+        <% } else { %>
+          nextBtnHtml = `<a href="/learn" class="next-block-btn">🏆 Du har klarat alla block! Se översikt →</a>`;
+        <% } %>
+      }
+
       resultEl.innerHTML = `
         <div class="result-score">${emoji} ${score} / ${correctAnswers.length} rätt (${pct}%)</div>
         <p class="result-msg">${msg}</p>
-        <button onclick="retryQuiz()" class="retry-btn">Försök igen</button>
+        <div class="result-actions">
+          <button onclick="retryQuiz()" class="retry-btn">Försök igen</button>
+          ${nextBtnHtml}
+        </div>
       `;
       resultEl.style.display = 'block';
       resultEl.scrollIntoView({ behavior: 'smooth' });

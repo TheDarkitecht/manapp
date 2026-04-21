@@ -23,6 +23,8 @@ const app    = express();
 const PORT   = process.env.PORT || 3000;
 const stripe = Stripe(process.env['STRIPE_SECRET_KEY'] || '');
 const resend = process.env['RESEND_API_KEY'] ? new Resend(process.env['RESEND_API_KEY']) : null;
+// Set RESEND_FROM to a verified Resend sender, e.g. "Joakim Jaksen <noreply@joakimjaksen.se>"
+const RESEND_FROM = process.env['RESEND_FROM'] || 'Joakim Jaksen <onboarding@resend.dev>';
 
 // Block 1 is free; 2–16 require premium (teaser shown for locked blocks)
 const FREE_BLOCK_IDS = ['forsta-intrycket'];
@@ -360,7 +362,7 @@ app.post('/register', registerLimiter, async (req, res) => {
   try {
     if (resend) {
       await resend.emails.send({
-        from:    'Joakim Jaksen <onboarding@resend.dev>',
+        from:    RESEND_FROM,
         to:      email.trim(),
         subject: 'Välkommen till Joakim Jaksens Säljutbildning! 🎯',
         html: `
@@ -426,7 +428,7 @@ app.post('/forgot-password', resetLimiter, async (req, res) => {
   try {
     if (!resend) throw new Error('RESEND_API_KEY not configured');
     await resend.emails.send({
-      from:    'Joakim Jaksen <onboarding@resend.dev>',
+      from:    RESEND_FROM,
       to:      user.email,
       subject: 'Återställ ditt lösenord',
       html: `
