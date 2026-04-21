@@ -126,6 +126,11 @@
         <a href="/register" class="lp-btn-primary">Börja gratis — inget betalkort →</a>
         <a href="#om" class="lp-btn-ghost">Vem är Joakim? ↓</a>
       </div>
+      <div class="lp-hero-microtrust">
+        <span>✓ Gratis att börja</span>
+        <span>✓ Klar på 30 sek</span>
+        <span>✓ Avsluta när som helst</span>
+      </div>
       <div class="lp-stats">
         <div class="lp-stat">
           <span class="lp-stat-num">120M</span>
@@ -386,12 +391,24 @@
   <!-- ══ FINAL CTA ══════════════════════════════════════════════════════════ -->
   <section class="lp-final-cta">
     <div class="lp-final-cta-inner">
-      <h2>Redo att börja?</h2>
-      <p>Block 1 är gratis. Inget betalkort. Du bestämmer om du vill fortsätta.</p>
-      <a href="/register" class="lp-btn-primary lp-btn-large">Skapa ditt konto gratis →</a>
+      <div class="lp-final-tag">🎯 Investera i dig själv</div>
+      <h2>Börja med Block 1. Gratis.</h2>
+      <p>Inget betalkort. Inget löfte. Bara rakt in i det första blocket och se om det ger värde — inom 10 minuter.</p>
+      <a href="/register" class="lp-btn-primary lp-btn-large">Skapa konto och börja nu →</a>
+      <div class="lp-final-trust">
+        <span>✓ Gratis att börja</span>
+        <span>✓ Inget betalkort</span>
+        <span>✓ Klar på 30 sekunder</span>
+      </div>
       <p class="lp-final-sub">Redan registrerad? <a href="/login">Logga in här</a></p>
     </div>
   </section>
+
+  <!-- ══ MOBILE STICKY CTA BAR ════════════════════════════════════════════ -->
+  <div class="lp-sticky-bar" id="lpStickyBar">
+    <a href="/register" class="lp-sticky-btn">Börja gratis →</a>
+    <span class="lp-sticky-sub">Inget betalkort</span>
+  </div>
 
   <!-- ══ GDPR COOKIE BANNER ══════════════════════════════════════════════════ -->
   <div class="cookie-banner" id="cookieBanner">
@@ -432,9 +449,15 @@
       setTimeout(() => t.style.display = 'none', 6000);
     }
 
-    // Sticky nav
+    // Sticky nav + mobile sticky bar
     window.addEventListener('scroll', () => {
-      document.getElementById('lpNav').classList.toggle('lp-nav-scrolled', window.scrollY > 60);
+      const scrolled = window.scrollY > 60;
+      document.getElementById('lpNav').classList.toggle('lp-nav-scrolled', scrolled);
+      // Show mobile sticky bar after scrolling past hero (~500px)
+      const bar = document.getElementById('lpStickyBar');
+      if (bar) {
+        bar.classList.toggle('visible', window.scrollY > 500);
+      }
     });
 
     // Mobile menu
