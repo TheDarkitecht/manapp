@@ -126,6 +126,10 @@
                       <button type="submit" class="btn-email" title="Skicka välkomstmail" aria-label="Skicka välkomstmail till <%= u.username %>">📧</button>
                     </form>
                     <% } %>
+                    <!-- Set new password -->
+                    <button type="button" class="btn-email" title="Sätt nytt lösenord"
+                            aria-label="Sätt nytt lösenord för <%= u.username %>"
+                            onclick="openPwModal(<%= u.id %>, '<%= u.username.replace(/'/g, "\\'") %>')">🔑</button>
                     <!-- Delete -->
                     <form method="POST" action="/admin/users/<%= u.id %>/delete" class="inline-form"
                           onsubmit="return confirm('Radera <%= u.username %>? Det går inte att ångra.')">
@@ -144,8 +148,75 @@
   </div>
   </main>
 
+  <!-- ── Flash banner (password reset result) ──────────────────────────────── -->
+  <div class="dash-toast" id="adminToast" style="display:none;"></div>
+
+  <!-- ── Set-password modal (admin) ────────────────────────────────────────── -->
+  <div class="modal-backdrop" id="pwModal" onclick="closePwModal(event)" role="dialog" aria-modal="true" aria-labelledby="pwModalTitle">
+    <div class="modal delete-modal">
+      <div class="privacy-header">
+        <h2 id="pwModalTitle">🔑 Sätt nytt lösenord</h2>
+        <button type="button" class="modal-close-btn" aria-label="Stäng dialog" onclick="closePwModal(null)">✕</button>
+      </div>
+      <div class="privacy-body">
+        <p>Sätt ett nytt lösenord för <strong id="pwModalUser">—</strong>. Användaren loggas ut från alla aktiva sessioner.</p>
+        <form method="POST" id="pwModalForm" class="delete-confirm-form" autocomplete="off">
+          <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+          <input type="password" name="newPassword" id="pwModalInput" placeholder="Nytt lösenord (minst 8 tecken)"
+                 minlength="8" maxlength="128" required autocomplete="new-password"
+                 class="delete-confirm-input" />
+          <button type="submit" class="delete-confirm-btn">Spara nytt lösenord</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
   <script>
     const totalUsers = document.querySelectorAll('#userTable tbody tr').length;
+
+    // ── Flash banner for ?pwOk=<id> / ?pwError=1 ──────────────────────────────
+    (function() {
+      const p = new URLSearchParams(window.location.search);
+      const toast = document.getElementById('adminToast');
+      function show(msg, type) {
+        toast.textContent = msg;
+        toast.style.cssText = `
+          display:flex; position:fixed; bottom:1.5rem; left:50%; transform:translateX(-50%);
+          background:${type === 'success' ? '#10b981' : '#ef4444'};
+          color:#fff; padding:.65rem 1.25rem; border-radius:8px; font-weight:600;
+          font-size:.875rem; z-index:500; box-shadow:0 4px 20px rgba(0,0,0,0.4);
+        `;
+        setTimeout(() => { toast.style.display = 'none'; }, 3500);
+      }
+      if (p.has('pwOk'))    { show('✓ Lösenordet är uppdaterat.', 'success'); history.replaceState({}, '', '/admin'); }
+      if (p.has('pwError')) { show('⚠️ Lösenordet måste vara 8–128 tecken.', 'error'); history.replaceState({}, '', '/admin'); }
+    })();
+
+    // ── Set-password modal ────────────────────────────────────────────────────
+    let _pwOpener = null;
+    function openPwModal(userId, username) {
+      _pwOpener = document.activeElement;
+      document.getElementById('pwModalUser').textContent = username;
+      const form = document.getElementById('pwModalForm');
+      form.action = '/admin/users/' + userId + '/password';
+      const input = document.getElementById('pwModalInput');
+      input.value = '';
+      document.getElementById('pwModal').classList.add('open');
+      setTimeout(() => input.focus(), 80);
+    }
+    function closePwModal(e) {
+      const modal = document.getElementById('pwModal');
+      if (!e || e.target === modal) {
+        modal.classList.remove('open');
+        if (_pwOpener) { _pwOpener.focus(); _pwOpener = null; }
+      }
+    }
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape') {
+        const modal = document.getElementById('pwModal');
+        if (modal && modal.classList.contains('open')) closePwModal(null);
+      }
+    });
 
     function filterUsers() {
       const q = document.getElementById('userSearch').value.toLowerCase();

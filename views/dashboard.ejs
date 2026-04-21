@@ -77,6 +77,7 @@
 
       <!-- Account section at bottom -->
       <div class="sidebar-section sidebar-account">
+        <a href="/account" class="sidebar-link">🔐 Mitt konto</a>
         <% if (role === 'premium') { %>
           <form method="POST" action="/billing/portal" class="inline-form">
             <input type="hidden" name="_csrf" value="<%= csrfToken %>" />

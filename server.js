@@ -275,6 +275,15 @@ const deleteLimiter = rateLimit({
   handler: (req, res) => res.redirect('/dashboard?deleteError=1'),
 });
 
+// ── Rate limiter — max 10 password changes per hour per user ─────────────────
+
+const passwordChangeLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 10,
+  keyGenerator: (req) => `pwchg_${req.session?.userId || req.ip}`,
+  handler: (req, res) => res.redirect('/account?pwError=ratelimit'),
+});
+
 // ── CSRF token helper ─────────────────────────────────────────────────────────
 
 const crypto = require('crypto');
@@ -751,6 +760,40 @@ app.post('/account/delete', requireLogin, deleteLimiter, verifyCsrf, async (req,
   });
 });
 
+// ── Mitt konto — byt lösenord ────────────────────────────────────────────────
+
+app.get('/account', requireLogin, (req, res) => {
+  const user = findUserById(req.session.userId);
+  res.render('account', {
+    username:  req.session.username,
+    role:      req.session.role,
+    email:     user?.email || '',
+    pwError:   req.query.pwError || null,
+    pwOk:      req.query.pwOk === '1',
+    csrfToken: generateCsrfToken(req),
+  });
+});
+
+app.post('/account/change-password', requireLogin, passwordChangeLimiter, verifyCsrf, async (req, res) => {
+  const { currentPassword, newPassword, confirmPassword } = req.body;
+  const user = findUserById(req.session.userId);
+
+  if (!user || !(await bcrypt.compare(currentPassword || '', user.password_hash))) {
+    return res.redirect('/account?pwError=current');
+  }
+  if (!newPassword || newPassword.length < 8) return res.redirect('/account?pwError=short');
+  if (newPassword.length > 128)                return res.redirect('/account?pwError=long');
+  if (newPassword !== confirmPassword)         return res.redirect('/account?pwError=match');
+  if (newPassword === currentPassword)         return res.redirect('/account?pwError=same');
+
+  updateUserPassword(user.id, newPassword);
+  // Keep the current session alive: sync session's pwVersion to the new DB value
+  // so the requireLogin middleware doesn't invalidate us on the next request.
+  const fresh = findUserById(user.id);
+  req.session.pwVersion = fresh?.pw_version || 0;
+  res.redirect('/account?pwOk=1');
+});
+
 // ── Terms of Service ──────────────────────────────────────────────────────────
 
 app.get('/terms', (req, res) => {
@@ -811,6 +854,25 @@ app.post('/admin/users/:id/delete', requireLogin, requireAdmin, verifyCsrf, (req
   const id = Number(req.params.id);
   if (id !== req.session.userId) deleteUser(id); // can't delete yourself
   res.redirect('/admin');
+});
+
+// ── Admin: sätt nytt lösenord för en användare ───────────────────────────────
+// Admin sets the password directly. pw_version bumps in updateUserPassword,
+// which kicks the target out of any active sessions on their next request.
+app.post('/admin/users/:id/password', requireLogin, requireAdmin, verifyCsrf, (req, res) => {
+  const targetId = Number(req.params.id);
+  // Admin must use /account to change their own password (so session stays in sync)
+  if (targetId === req.session.userId) return res.redirect('/account');
+
+  const { newPassword } = req.body;
+  if (!newPassword || newPassword.length < 8 || newPassword.length > 128) {
+    return res.redirect('/admin?pwError=1');
+  }
+  const target = findUserById(targetId);
+  if (!target) return res.redirect('/admin');
+
+  updateUserPassword(targetId, newPassword);
+  res.redirect('/admin?pwOk=' + targetId);
 });
 
 // ── Admin: manually send welcome email ───────────────────────────────────────
