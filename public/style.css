@@ -1086,17 +1086,37 @@ textarea:focus {
   font-size: 0.97rem;
 }
 
-.theory-body ul {
-  margin: 0.5rem 0 1rem 1.25rem;
+.theory-body ul,
+.theory-body ol {
+  margin: 0.5rem 0 1rem 1.5rem;
 }
 
+.theory-body ol { list-style-type: decimal; }
+.theory-body ul { list-style-type: disc; }
+
 .theory-body li {
-  margin-bottom: 0.45rem;
+  margin-bottom: 0.5rem;
   font-size: 0.95rem;
+  line-height: 1.7;
+}
+
+.theory-body h4 {
+  color: #e2e8f0;
+  font-size: 1rem;
+  font-weight: 700;
+  margin: 1.25rem 0 0.5rem;
 }
 
 .theory-body strong { color: #e2e8f0; }
 .theory-body em { color: #94a3b8; }
+.theory-body a { color: #818cf8; text-decoration: underline; }
+.theory-body blockquote {
+  border-left: 3px solid rgba(99,102,241,0.4);
+  padding: 0.5rem 1rem;
+  margin: 1rem 0;
+  color: #94a3b8;
+  font-style: italic;
+}
 
 /* ── Video ──────────────────────────────────────────────────────── */
 
@@ -3328,4 +3348,33 @@ body.dash-page {
 @keyframes fadeInUp {
   from { opacity: 0; transform: translateY(8px); }
   to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Admin section header with export button ────────────────────────────────── */
+.admin-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+}
+.admin-section-header h2 {
+  margin: 0;
+}
+.admin-export-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: rgba(99,102,241,0.1);
+  border: 1px solid rgba(99,102,241,0.2);
+  color: #a5b4fc;
+  padding: 0.45rem 0.875rem;
+  border-radius: 8px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: background 0.2s, border-color 0.2s;
+}
+.admin-export-btn:hover {
+  background: rgba(99,102,241,0.2);
+  border-color: rgba(99,102,241,0.4);
 }

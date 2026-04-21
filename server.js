@@ -637,6 +637,28 @@ app.post('/admin/users/:id/delete', requireLogin, requireAdmin, verifyCsrf, (req
   res.redirect('/admin');
 });
 
+// ── Admin CSV export ──────────────────────────────────────────────────────────
+
+app.get('/admin/export/users.csv', requireLogin, requireAdmin, (req, res) => {
+  const users = getAllUsers();
+  const header = ['id', 'username', 'email', 'role', 'gdpr', 'created_at', 'last_login'].join(',');
+  const rows   = users.map(u =>
+    [
+      u.id,
+      `"${(u.username || '').replace(/"/g, '""')}"`,
+      `"${(u.email    || '').replace(/"/g, '""')}"`,
+      u.role,
+      u.gdpr ? '1' : '0',
+      (u.created_at  || '').slice(0, 10),
+      (u.last_login  || '').slice(0, 10),
+    ].join(',')
+  );
+  const csv = [header, ...rows].join('\n');
+  res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+  res.setHeader('Content-Disposition', `attachment; filename="users-${new Date().toISOString().slice(0,10)}.csv"`);
+  res.send('\uFEFF' + csv); // UTF-8 BOM for Excel compatibility
+});
+
 // ── Upgrade / Stripe Checkout ─────────────────────────────────────────────────
 
 app.get('/upgrade', requireLogin, (req, res) => {

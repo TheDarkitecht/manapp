@@ -10,5 +10,8 @@ Disallow: /chat
 Disallow: /notes
 Disallow: /logout
 Disallow: /reset-password
+Disallow: /billing
+Disallow: /webhook
+Disallow: /health
 
 Sitemap: https://www.joakimjaksen.se/sitemap.xml
