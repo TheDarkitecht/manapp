@@ -79,6 +79,12 @@
 </head>
 <body class="landing-page">
 
+  <!-- ══ Account deleted toast ══════════════════════════════════════════ -->
+  <div class="deleted-toast" id="deletedToast" style="display:none;">
+    Ditt konto har raderats. Hoppas vi ses igen!
+    <button onclick="document.getElementById('deletedToast').style.display='none'">✕</button>
+  </div>
+
   <!-- ══ NAV ══════════════════════════════════════════════════════════════ -->
   <nav class="lp-nav" id="lpNav">
     <div class="lp-nav-inner">
@@ -419,6 +425,13 @@
   </footer>
 
   <script>
+    // Account deleted toast
+    if (new URLSearchParams(location.search).get('deleted') === '1') {
+      const t = document.getElementById('deletedToast');
+      t.style.display = 'flex';
+      setTimeout(() => t.style.display = 'none', 6000);
+    }
+
     // Sticky nav
     window.addEventListener('scroll', () => {
       document.getElementById('lpNav').classList.toggle('lp-nav-scrolled', window.scrollY > 60);

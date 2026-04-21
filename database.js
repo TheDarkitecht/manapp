@@ -82,6 +82,7 @@ async function initDatabase() {
     "ALTER TABLE users ADD COLUMN gdpr_at            TEXT",
     "ALTER TABLE users ADD COLUMN created_at         TEXT    DEFAULT (datetime('now'))",
     "ALTER TABLE users ADD COLUMN stripe_customer_id TEXT",
+    "ALTER TABLE users ADD COLUMN last_login         TEXT",
   ];
   migrations.forEach(sql => { try { db.run(sql); } catch (_) {} });
 
@@ -192,8 +193,15 @@ function deleteUserAccount(userId) {
 }
 
 function deleteUser(userId) {
+  db.run('DELETE FROM block_progress WHERE user_id = ?', [userId]);
   db.run('DELETE FROM notes WHERE user_id = ?', [userId]);
+  db.run('DELETE FROM reset_tokens WHERE user_id = ?', [userId]);
   db.run('DELETE FROM users WHERE id = ?', [userId]);
+  saveDb();
+}
+
+function updateLastLogin(userId) {
+  db.run("UPDATE users SET last_login = datetime('now') WHERE id = ?", [userId]);
   saveDb();
 }
 
@@ -202,11 +210,17 @@ function getUserStats() {
     const s = db.prepare(sql); s.step();
     const r = s.getAsObject(); s.free(); return r;
   };
+  const total   = run('SELECT COUNT(*) AS n FROM users').n;
+  const premium = run("SELECT COUNT(*) AS n FROM users WHERE role = 'premium'").n;
+  const free    = run("SELECT COUNT(*) AS n FROM users WHERE role = 'free'").n;
   return {
-    total:     run('SELECT COUNT(*) AS n FROM users').n,
-    premium:   run("SELECT COUNT(*) AS n FROM users WHERE role = 'premium'").n,
-    free:      run("SELECT COUNT(*) AS n FROM users WHERE role = 'free'").n,
-    thisWeek:  run("SELECT COUNT(*) AS n FROM users WHERE created_at >= datetime('now', '-7 days')").n,
+    total,
+    premium,
+    free,
+    thisWeek:   run("SELECT COUNT(*) AS n FROM users WHERE created_at >= datetime('now', '-7 days')").n,
+    activeToday: run("SELECT COUNT(*) AS n FROM users WHERE last_login >= datetime('now', '-1 day')").n,
+    conversion: total > 0 ? Math.round((premium / total) * 100) : 0,
+    mrr:        premium * 199,
   };
 }
 
@@ -222,6 +236,11 @@ function getNotesByUserId(userId) {
 }
 
 function createNote(userId, content) {
+  // Enforce limit of 50 notes per user
+  const s = db.prepare('SELECT COUNT(*) AS n FROM notes WHERE user_id = ?');
+  s.bind([userId]); s.step();
+  const { n } = s.getAsObject(); s.free();
+  if (n >= 50) return; // silently ignore if limit reached
   db.run('INSERT INTO notes (user_id, content) VALUES (?, ?)', [userId, content]);
   saveDb();
 }
@@ -310,6 +329,7 @@ module.exports = {
   findUserByUsername, findUserByEmail,
   createUser, getAllUsers, setUserRole, deleteUser, deleteUserAccount, getUserStats,
   setStripeCustomerId, findUserByStripeCustomerId,
+  updateLastLogin,
   getNotesByUserId, createNote, deleteNote,
   getBlockProgress, saveQuizResult, getCompletedBlockCount,
   createResetToken, findValidResetToken, deleteResetToken, updateUserPassword,

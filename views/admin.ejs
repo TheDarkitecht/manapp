@@ -33,7 +33,19 @@
       </div>
       <div class="stat-card new">
         <span class="stat-num"><%= stats.thisWeek %></span>
-        <span class="stat-label">Nya senaste 7 dagar</span>
+        <span class="stat-label">Nya 7 dagar</span>
+      </div>
+      <div class="stat-card active">
+        <span class="stat-num"><%= stats.activeToday %></span>
+        <span class="stat-label">Aktiva idag</span>
+      </div>
+      <div class="stat-card conversion">
+        <span class="stat-num"><%= stats.conversion %>%</span>
+        <span class="stat-label">Konvertering</span>
+      </div>
+      <div class="stat-card mrr">
+        <span class="stat-num"><%= stats.mrr.toLocaleString('sv-SE') %> kr</span>
+        <span class="stat-label">MRR (est.)</span>
       </div>
     </div>
 
@@ -55,6 +67,7 @@
               <th>Roll</th>
               <th>GDPR</th>
               <th>Registrerad</th>
+              <th>Senast inloggad</th>
               <th>Åtgärder</th>
             </tr>
           </thead>
@@ -80,6 +93,7 @@
                   <% } %>
                 </td>
                 <td class="td-date"><%= (u.created_at || '').slice(0,10) %></td>
+                <td class="td-date"><%= (u.last_login || '—').slice(0,10) %></td>
                 <td>
                   <div class="action-cell">
                     <!-- Change role -->
