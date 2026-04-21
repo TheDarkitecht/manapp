@@ -99,7 +99,8 @@ async function initDatabase() {
        VALUES (?, ?, ?, 'admin', 1, datetime('now'), datetime('now'))`,
       ['admin', 'admin@example.com', hash]
     );
-    console.log('Seeded admin user: admin / 123456');
+    console.warn('⚠️  SECURITY: Seeded admin user with default password admin/123456.');
+    console.warn('    → Change the password immediately via the admin panel or ADMIN_RESET_PASSWORD env var!');
   } else {
     // Ensure existing admin account has admin role
     db.run(`UPDATE users SET role = 'admin' WHERE username = 'admin' AND role = 'free'`);

@@ -220,6 +220,17 @@ const chatLimiter = rateLimit({
   },
 });
 
+// ── Rate limiter — max 60 quiz submissions per 10 min per user ───────────────
+
+const quizLimiter = rateLimit({
+  windowMs: 10 * 60 * 1000, // 10 minutes
+  max: 60, // 6 blocks × 10 retries
+  keyGenerator: (req) => `quiz_${req.session?.userId || req.ip}`,
+  handler: (req, res) => {
+    res.status(429).json({ ok: false, error: 'För många försök.' });
+  },
+});
+
 // ── Rate limiter — max 5 password reset requests per hour per IP ─────────────
 
 const resetLimiter = rateLimit({
@@ -562,7 +573,7 @@ app.get('/learn/:id', requireLogin, (req, res) => {
 
 // ── Quiz result — save score to DB ───────────────────────────────────────────
 
-app.post('/quiz-result', requireLogin, (req, res) => {
+app.post('/quiz-result', requireLogin, quizLimiter, (req, res) => {
   const { blockId, score, total } = req.body;
   if (!blockId || score === undefined || !total) return res.json({ ok: false });
   const block = salesBlocks.find(b => b.id === blockId);
@@ -818,7 +829,24 @@ app.use((err, req, res, _next) => {
 
 async function startServer() {
   await initDatabase();
-  app.listen(PORT, () => console.log(`Server running at http://localhost:${PORT}`));
+
+  // ── Production security checks ─────────────────────────────────────────────
+  if (isProd) {
+    const warnings = [];
+    if (!process.env.SESSION_SECRET || process.env.SESSION_SECRET === 'change-in-production')
+      warnings.push('SESSION_SECRET is not set — sessions are insecure!');
+    if (!process.env.STRIPE_SECRET_KEY)
+      warnings.push('STRIPE_SECRET_KEY is not set — payments will not work.');
+    if (!process.env.GROQ_API_KEY)
+      warnings.push('GROQ_API_KEY is not set — AI chat will not work.');
+    if (warnings.length > 0) {
+      console.warn('\n⚠️  Production security warnings:');
+      warnings.forEach(w => console.warn(`   • ${w}`));
+      console.warn('');
+    }
+  }
+
+  app.listen(PORT, () => console.log(`✅ Server running at http://localhost:${PORT}`));
 }
 
 startServer();
