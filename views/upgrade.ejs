@@ -4,102 +4,243 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Uppgradera till Premium — Joakim Jaksen</title>
-  <meta name="description" content="Lås upp alla 16 säljblock, AI-assistenten Jocke och premiumvideor för 199 kr/mån." />
+  <meta name="description" content="Lås upp alla 16 säljblock, AI-assistenten Jocke och premiumvideor för 199 kr/mån. Avsluta när som helst." />
+  <meta name="robots" content="noindex" />
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎯</text></svg>" />
   <link rel="stylesheet" href="/style.css" />
 </head>
-<body class="learn-page">
+<body class="upgrade-page">
 
   <nav class="learn-nav">
     <a href="/dashboard" class="learn-nav-back">← Dashboard</a>
-    <span class="learn-nav-title">⭐ Uppgradera</span>
+    <span class="learn-nav-title">⭐ Uppgradera till Premium</span>
     <span class="learn-nav-user"><%= username %></span>
   </nav>
 
-  <div class="upgrade-wrap">
+  <div class="upgrade-v2-wrap">
 
-    <!-- Hero -->
-    <div class="upgrade-hero">
-      <h1>Lås upp hela utbildningen</h1>
-      <p>Gratis-kontot ger dig Block 1. Premium ger dig allt — 16 block, Jocke och premiumvideor.</p>
+    <!-- ── Hero ──────────────────────────────────────────────────────────────── -->
+    <div class="up-hero">
+      <div class="up-hero-tag">⭐ Premium</div>
+      <h1>Lås upp hela säljutbildningen</h1>
+      <p>15 avancerade block, AI-coachen Jocke och verktyg som faktiskt gör dig till en bättre säljare.</p>
     </div>
 
-    <!-- Comparison -->
-    <div class="upgrade-compare">
+    <!-- ── Main pricing section ───────────────────────────────────────────────── -->
+    <div class="up-main">
 
-      <!-- Free -->
-      <div class="plan-card plan-free">
-        <div class="plan-header">
-          <span class="plan-badge free-badge">Gratis</span>
-          <div class="plan-price">0 kr<span>/mån</span></div>
+      <!-- Left — what you get -->
+      <div class="up-features-col">
+        <h2>Vad du får med Premium</h2>
+
+        <div class="up-feature-group">
+          <div class="up-feature-item">
+            <div class="up-feat-icon">📚</div>
+            <div>
+              <strong>Alla 16 block</strong>
+              <p>Prospektering, invändningshantering, avslutstekniker, förhandling, LinkedIn, videosamtal, e-post, mental styrka och mer. Teori, video och prov per block.</p>
+            </div>
+          </div>
+          <div class="up-feature-item">
+            <div class="up-feat-icon">🤖</div>
+            <div>
+              <strong>AI-assistenten Jocke</strong>
+              <p>Din personlige säljcoach är tillgänglig dygnet runt. Träna invändningar, få feedback på din pitch, ställ frågor om specifika situationer.</p>
+            </div>
+          </div>
+          <div class="up-feature-item">
+            <div class="up-feat-icon">🎬</div>
+            <div>
+              <strong>Kuraterade videogenomgångar</strong>
+              <p>En utvald video per block som fördjupar och visualiserar teorin. Se den på när det passar dig.</p>
+            </div>
+          </div>
+          <div class="up-feature-item">
+            <div class="up-feat-icon">🧠</div>
+            <div>
+              <strong>Prov per block — spåra din framgång</strong>
+              <p>10 frågor per block. Se exakt vad du behärskar och vad du behöver repetera. Din progress sparas.</p>
+            </div>
+          </div>
+          <div class="up-feature-item">
+            <div class="up-feat-icon">📖</div>
+            <div>
+              <strong>Säljordboken (60+ termer)</strong>
+              <p>Komplett säljlexikon med alla viktiga begrepp och ramverk — SPIN, BANT, FAB, BATNA och mycket mer.</p>
+            </div>
+          </div>
+          <div class="up-feature-item">
+            <div class="up-feat-icon">🚀</div>
+            <div>
+              <strong>Tillgång till nya block direkt</strong>
+              <p>När nya block släpps får du dem automatiskt utan extra kostnad.</p>
+            </div>
+          </div>
         </div>
-        <ul class="plan-features">
-          <li class="feat-yes">✅ Block 1 — Inledning & Första Intrycket</li>
-          <li class="feat-yes">✅ Säljordboken (60+ termer)</li>
-          <li class="feat-yes">✅ Personliga anteckningar</li>
-          <li class="feat-no">❌ Block 2–16 (15 block)</li>
-          <li class="feat-no">❌ AI-assistenten Jocke</li>
-          <li class="feat-no">❌ Förhandling & avslutstekniker</li>
-          <li class="feat-no">❌ LinkedIn & digital försäljning</li>
-          <li class="feat-no">❌ Mental styrka & tidshantering</li>
-          <li class="feat-no">❌ Premiuminspelningar</li>
-        </ul>
-        <div class="plan-cta plan-cta-disabled">Ditt nuvarande konto</div>
+
+        <!-- Social proof -->
+        <div class="up-quotes">
+          <blockquote>
+            <p>"Invändningsblocket förändrade hur jag tänker på hela säljprocessen. Mitt stängningsresultat ökade 40% på sex veckor."</p>
+            <cite>— Marcus L., B2B-säljare</cite>
+          </blockquote>
+          <blockquote>
+            <p>"Byggt av någon som faktiskt gjort jobbet. Varje block känns äkta — inga konstgjorda modeller."</p>
+            <cite>— Sofia K., Teamledare</cite>
+          </blockquote>
+        </div>
       </div>
 
-      <!-- Premium -->
-      <div class="plan-card plan-premium">
-        <div class="plan-popular">⭐ Mest populär</div>
-        <div class="plan-header">
-          <span class="plan-badge premium-badge">Premium</span>
-          <div class="plan-price">199 kr<span>/mån</span></div>
+      <!-- Right — checkout card -->
+      <div class="up-checkout-col">
+        <div class="up-checkout-card">
+          <div class="up-checkout-badge">Mest populär</div>
+          <div class="up-checkout-price">
+            <span class="up-price-amount">199 kr</span>
+            <span class="up-price-period">/mån</span>
+          </div>
+          <p class="up-price-sub">Avsluta när som helst</p>
+
+          <ul class="up-checkout-list">
+            <li>✅ Alla 16 block</li>
+            <li>✅ AI-assistenten Jocke</li>
+            <li>✅ Teori, video & prov per block</li>
+            <li>✅ Progressspårning</li>
+            <li>✅ Säljordboken</li>
+            <li>✅ Nya block inkluderade</li>
+          </ul>
+
+          <% if (typeof error !== 'undefined' && error) { %>
+            <p class="upgrade-error"><%= error %></p>
+          <% } %>
+
+          <form method="POST" action="/upgrade/checkout">
+            <button type="submit" class="up-checkout-btn">
+              Kom igång nu →
+            </button>
+          </form>
+
+          <div class="up-trust-row">
+            <span>🔒 Säker betalning via Stripe</span>
+            <span>↩️ Avsluta när som helst</span>
+          </div>
+
+          <p class="up-guarantee">
+            Inte nöjd? Kontakta oss inom 7 dagar — vi löser det.
+          </p>
         </div>
-        <ul class="plan-features">
-          <li class="feat-yes">✅ Alla 16 block upplåsta</li>
-          <li class="feat-yes">✅ Teori, video & prov per block</li>
-          <li class="feat-yes">✅ AI-assistenten Jocke (din säljcoach)</li>
-          <li class="feat-yes">✅ Säljordboken (60+ termer)</li>
-          <li class="feat-yes">✅ Personliga anteckningar</li>
-          <li class="feat-yes">✅ Förhandling & avslutstekniker</li>
-          <li class="feat-yes">✅ LinkedIn & digital försäljning</li>
-          <li class="feat-yes">✅ Mental styrka & tidshantering</li>
-          <li class="feat-yes">✅ Nya block när de släpps</li>
-        </ul>
 
-        <% if (typeof error !== 'undefined' && error) { %>
-          <p class="upgrade-error"><%= error %></p>
-        <% } %>
+        <!-- Free vs Premium mini-compare -->
+        <div class="up-compare-mini">
+          <div class="up-compare-row header">
+            <span>Funktion</span><span>Gratis</span><span>Premium</span>
+          </div>
+          <div class="up-compare-row">
+            <span>Block 1</span><span class="yes">✓</span><span class="yes">✓</span>
+          </div>
+          <div class="up-compare-row">
+            <span>Block 2–16</span><span class="no">✗</span><span class="yes">✓</span>
+          </div>
+          <div class="up-compare-row">
+            <span>AI-assistent Jocke</span><span class="no">✗</span><span class="yes">✓</span>
+          </div>
+          <div class="up-compare-row">
+            <span>Video per block</span><span class="no">✗</span><span class="yes">✓</span>
+          </div>
+          <div class="up-compare-row">
+            <span>Säljordboken</span><span class="yes">✓</span><span class="yes">✓</span>
+          </div>
+          <div class="up-compare-row">
+            <span>Progressspårning</span><span class="partial">Delvis</span><span class="yes">✓</span>
+          </div>
+        </div>
 
-        <form method="POST" action="/upgrade/checkout">
-          <button type="submit" class="plan-cta plan-cta-premium">
-            Uppgradera nu — 199 kr/mån →
+      </div>
+    </div>
+
+    <!-- ── FAQ ───────────────────────────────────────────────────────────────── -->
+    <div class="up-faq">
+      <h2>Vanliga frågor</h2>
+      <div class="faq-grid">
+
+        <div class="faq-item">
+          <button class="faq-q" onclick="toggleFaq(this)">
+            Kan jag avsluta när som helst? <span class="faq-arrow">▾</span>
           </button>
-        </form>
-        <p class="plan-fine">Avsluta när som helst. Säker betalning via Stripe.</p>
+          <div class="faq-a">
+            <p>Ja, absolut. Du kan avsluta din prenumeration när som helst via din Stripe-kundportal. Du behåller Premium-tillgången fram till slutet av den betalda perioden. Inga bindningstider, inga dolda avgifter.</p>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-q" onclick="toggleFaq(this)">
+            Vad är AI-assistenten Jocke? <span class="faq-arrow">▾</span>
+          </button>
+          <div class="faq-a">
+            <p>Jocke är en AI-tränad säljcoach med Joakims stil och tankesätt. Du kan öva invändningshantering i rollspel, få feedback på din pitch, ställa frågor om specifika säljsituationer — och få svar direkt, dygnet runt. Jocke är block-medveten och anpassar sig efter var du är i utbildningen.</p>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-q" onclick="toggleFaq(this)">
+            Passar utbildningen om jag säljer B2C och inte B2B? <span class="faq-arrow">▾</span>
+          </button>
+          <div class="faq-a">
+            <p>Ja. Grunderna i sälj — första intrycket, behovsanalys, invändningshantering, avslutstekniker, mindset — gäller oberoende av om du säljer till konsumenter eller företag. Vissa exempel är B2B-fokuserade men principerna är universella.</p>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-q" onclick="toggleFaq(this)">
+            Hur snabbt får jag tillgång efter betalning? <span class="faq-arrow">▾</span>
+          </button>
+          <div class="faq-a">
+            <p>Direkt. Så fort betalningen bekräftas av Stripe uppgraderas ditt konto automatiskt och du har tillgång till alla 16 block och Jocke.</p>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-q" onclick="toggleFaq(this)">
+            Jag är redan ganska erfaren säljare — finns det värde för mig? <span class="faq-arrow">▾</span>
+          </button>
+          <div class="faq-a">
+            <p>Ja. De avancerade blocken — förhandling, LinkedIn, videosamtal, mental styrka, personligt varumärke — är specifikt designade för säljare som vill ta sin prestation från bra till exceptionell. Och Jocke är ett utmärkt verktyg för att träna specifika situationer som du faktiskt möter.</p>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-q" onclick="toggleFaq(this)">
+            Vad händer med mina uppgifter och mina anteckningar? <span class="faq-arrow">▾</span>
+          </button>
+          <div class="faq-a">
+            <p>Dina anteckningar och din progress sparas i ditt konto och är synliga bara för dig. Vi delar aldrig dina uppgifter med tredje part. Du kan läsa mer i vår <a href="/integritetspolicy">integritetspolicy</a>.</p>
+          </div>
+        </div>
+
       </div>
-
     </div>
 
-    <!-- Trust bar -->
-    <div class="upgrade-trust">
-      <span>🔒 Säker betalning via Stripe</span>
-      <span>↩️ Avsluta när som helst</span>
-      <span>⚡ Tillgång direkt efter betalning</span>
-    </div>
-
-    <!-- Social proof -->
-    <div class="upgrade-quotes">
-      <blockquote>
-        <p>"Mitt stängningsresultat ökade med 40% på sex veckor. Invändningsblocket var game-changer."</p>
-        <cite>— Marcus L., B2B-säljare</cite>
-      </blockquote>
-      <blockquote>
-        <p>"Byggt av någon som faktiskt gjort jobbet. Varje block känns äkta."</p>
-        <cite>— Sofia K., Teamledare</cite>
-      </blockquote>
+    <!-- ── Final CTA ──────────────────────────────────────────────────────────── -->
+    <div class="up-final-cta">
+      <h2>Redo att ta nästa steg?</h2>
+      <p>199 kr/mån. Avsluta när som helst. Tillgång direkt.</p>
+      <form method="POST" action="/upgrade/checkout">
+        <button type="submit" class="up-checkout-btn">Uppgradera till Premium nu →</button>
+      </form>
     </div>
 
   </div>
+
+  <script>
+    function toggleFaq(btn) {
+      const item = btn.closest('.faq-item');
+      const answer = item.querySelector('.faq-a');
+      const arrow = btn.querySelector('.faq-arrow');
+      const isOpen = answer.style.display === 'block';
+      answer.style.display = isOpen ? 'none' : 'block';
+      arrow.textContent = isOpen ? '▾' : '▴';
+    }
+  </script>
 
 </body>
 </html>

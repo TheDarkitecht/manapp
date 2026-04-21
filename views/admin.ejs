@@ -84,6 +84,7 @@
                   <div class="action-cell">
                     <!-- Change role -->
                     <form method="POST" action="/admin/users/<%= u.id %>/role" class="inline-form">
+                      <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
                       <select name="role" onchange="this.form.submit()" class="role-select">
                         <option value="free"    <%= u.role === 'free'    ? 'selected' : '' %>>Gratis</option>
                         <option value="premium" <%= u.role === 'premium' ? 'selected' : '' %>>Premium</option>
@@ -93,6 +94,7 @@
                     <!-- Delete -->
                     <form method="POST" action="/admin/users/<%= u.id %>/delete" class="inline-form"
                           onsubmit="return confirm('Radera <%= u.username %>? Det går inte att ångra.')">
+                      <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
                       <button type="submit" class="btn-del">🗑</button>
                     </form>
                   </div>

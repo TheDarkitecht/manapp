@@ -235,6 +235,7 @@
         <p>Detta raderar ditt konto, alla anteckningar och all progress permanent. Det går <strong>inte att ångra</strong>.</p>
         <p>Skriv <strong>RADERA</strong> i fältet nedan för att bekräfta.</p>
         <form method="POST" action="/account/delete" class="delete-confirm-form">
+          <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
           <input type="text" name="confirmDelete" placeholder="RADERA" class="delete-confirm-input" autocomplete="off" />
           <button type="submit" class="delete-confirm-btn">Radera mitt konto permanent</button>
         </form>

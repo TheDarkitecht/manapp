@@ -201,6 +201,25 @@ const resetLimiter = rateLimit({
   },
 });
 
+// ── CSRF token helper ─────────────────────────────────────────────────────────
+
+const crypto = require('crypto');
+
+function generateCsrfToken(req) {
+  if (!req.session.csrfToken) {
+    req.session.csrfToken = crypto.randomBytes(24).toString('hex');
+  }
+  return req.session.csrfToken;
+}
+
+function verifyCsrf(req, res, next) {
+  const token = req.body?._csrf || req.headers['x-csrf-token'];
+  if (!token || token !== req.session.csrfToken) {
+    return res.status(403).send('Ogiltig begäran. Ladda om sidan och försök igen.');
+  }
+  next();
+}
+
 // ── Auth helpers ──────────────────────────────────────────────────────────────
 
 function requireLogin(req, res, next) {
@@ -242,10 +261,14 @@ app.post('/login', loginLimiter, async (req, res) => {
     });
   }
 
-  req.session.userId   = user.id;
-  req.session.username = user.username;
-  req.session.role     = user.role;
-  res.redirect('/dashboard');
+  // Regenerate session ID to prevent session fixation attacks
+  req.session.regenerate((err) => {
+    if (err) return res.redirect('/login');
+    req.session.userId   = user.id;
+    req.session.username = user.username;
+    req.session.role     = user.role;
+    res.redirect('/dashboard');
+  });
 });
 
 app.post('/register', registerLimiter, async (req, res) => {
@@ -440,15 +463,16 @@ app.get('/dashboard', requireLogin, (req, res) => {
   const completed   = getCompletedBlockCount(req.session.userId);
   const deleteError = req.query.deleteError === '1';
   res.render('dashboard', {
-    username: req.session.username,
-    role:     req.session.role,
+    username:   req.session.username,
+    role:       req.session.role,
     notes,
     progress,
     completed,
-    totalBlocks: salesBlocks.length,
+    totalBlocks:  salesBlocks.length,
     deleteError,
-    blocks: salesBlocks,
+    blocks:       salesBlocks,
     freeBlockIds: FREE_BLOCK_IDS,
+    csrfToken:    generateCsrfToken(req),
   });
 });
 
@@ -513,7 +537,7 @@ app.post('/quiz-result', requireLogin, (req, res) => {
 
 // ── Account deletion (GDPR right to erasure) ─────────────────────────────────
 
-app.post('/account/delete', requireLogin, async (req, res) => {
+app.post('/account/delete', requireLogin, verifyCsrf, async (req, res) => {
   const { confirmDelete } = req.body;
   if (confirmDelete !== 'RADERA') {
     return res.redirect('/dashboard?deleteError=1');
@@ -559,13 +583,14 @@ app.get('/ordbok', requireLogin, (req, res) => {
 
 app.get('/admin', requireLogin, requireAdmin, (req, res) => {
   res.render('admin', {
-    username: req.session.username,
-    users:    getAllUsers(),
-    stats:    getUserStats(),
+    username:  req.session.username,
+    users:     getAllUsers(),
+    stats:     getUserStats(),
+    csrfToken: generateCsrfToken(req),
   });
 });
 
-app.post('/admin/users/:id/role', requireLogin, requireAdmin, (req, res) => {
+app.post('/admin/users/:id/role', requireLogin, requireAdmin, verifyCsrf, (req, res) => {
   const { role } = req.body;
   if (['free', 'premium', 'admin'].includes(role)) {
     setUserRole(Number(req.params.id), role);
@@ -573,7 +598,7 @@ app.post('/admin/users/:id/role', requireLogin, requireAdmin, (req, res) => {
   res.redirect('/admin');
 });
 
-app.post('/admin/users/:id/delete', requireLogin, requireAdmin, (req, res) => {
+app.post('/admin/users/:id/delete', requireLogin, requireAdmin, verifyCsrf, (req, res) => {
   const id = Number(req.params.id);
   if (id !== req.session.userId) deleteUser(id); // can't delete yourself
   res.redirect('/admin');
