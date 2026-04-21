@@ -1326,6 +1326,10 @@ textarea:focus {
   font-size: 0.85rem;
   font-weight: 600;
   transition: background 0.2s, color 0.2s;
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .block-nav-btn:hover { background: rgba(255,255,255,0.12); color: #fff; }
@@ -1359,7 +1363,7 @@ textarea:focus {
 
 .admin-stats {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
   gap: 1rem;
   margin-bottom: 2rem;
 }

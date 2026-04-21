@@ -202,7 +202,7 @@
         <div class="note-form-section" id="noteForm" style="display:none;">
           <form method="POST" action="/notes" class="note-form">
             <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
-            <textarea name="content" placeholder="Skriv din anteckning här..." rows="4" required autofocus></textarea>
+            <textarea name="content" placeholder="Skriv din anteckning här..." rows="4" required autofocus maxlength="2000"></textarea>
             <div class="form-actions">
               <button type="submit">Spara</button>
               <button type="button" class="btn-cancel" onclick="toggleForm()">Avbryt</button>

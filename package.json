@@ -1,10 +1,14 @@
 {
-  "name": "manapp",
-  "version": "1.0.0",
-  "description": "Simple login app with Node.js, Express, and SQLite",
+  "name": "joakim-jaksen-saljutbildning",
+  "version": "2.0.0",
+  "description": "Joakim Jaksens Säljutbildning — 16 block, AI-coach Jocke, premium subscriptions via Stripe",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "engines": {
+    "node": ">=18.0.0"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
