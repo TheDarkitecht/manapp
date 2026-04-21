@@ -22,6 +22,9 @@
     <div>
       <h1><%= block.title %></h1>
       <p><%= block.subtitle %></p>
+      <% if (!isTeaser) { %>
+        <span class="block-read-time">📖 ~<%= readTime %> min läsning</span>
+      <% } %>
     </div>
     <% if (isTeaser) { %>
       <div class="block-hero-lock-badge">🔒 Premium</div>

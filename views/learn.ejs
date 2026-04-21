@@ -16,11 +16,33 @@
     <span class="learn-nav-user"><%= username %></span>
   </nav>
 
+  <%
+    const completedCount = blocks.filter(b => progress && progress[b.id]?.completed).length;
+    const total = blocks.length;
+    const pct   = total > 0 ? Math.round((completedCount / total) * 100) : 0;
+    const nextUnfinished = blocks.find(b => !(progress && progress[b.id]?.completed));
+  %>
+
   <div class="learn-hero">
     <h1>Joakim Jaksens Säljutbildning</h1>
-    <p>16 block — från första intrycket till mental styrka. Teori, video och prov per block.</p>
     <% if (role === 'free') { %>
-      <a href="/upgrade" class="learn-upgrade-cta">⭐ Lås upp alla 16 block med Premium →</a>
+      <p>Du har tillgång till <strong>Block 1</strong>. De övriga 15 blocken kräver Premium.</p>
+      <a href="/upgrade" class="learn-upgrade-cta">⭐ Lås upp alla 16 block — 199 kr/mån →</a>
+    <% } else { %>
+      <p><%= completedCount %> av <%= total %> block avklarade</p>
+      <% if (completedCount < total) { %>
+        <div class="learn-progress-bar-wrap">
+          <div class="learn-progress-bar">
+            <div class="learn-progress-fill" style="width:<%= pct %>%;"></div>
+          </div>
+          <span class="learn-pct-label"><%= pct %>%</span>
+        </div>
+        <% if (nextUnfinished) { %>
+          <a href="/learn/<%= nextUnfinished.id %>" class="learn-continue-btn">Fortsätt: <%= nextUnfinished.title %> →</a>
+        <% } %>
+      <% } else { %>
+        <div class="learn-completed-badge">🏆 Alla block avklarade!</div>
+      <% } %>
     <% } %>
   </div>
 
@@ -29,8 +51,9 @@
       <% const isLocked = role === 'free' && !freeBlockIds.includes(block.id); %>
       <% const prog = (progress && progress[block.id]) || {}; %>
       <% const isDone = prog.completed; %>
+      <% const isNext = !isLocked && !isDone && nextUnfinished && nextUnfinished.id === block.id; %>
       <a href="/learn/<%= block.id %>"
-         class="block-card <%= isLocked ? 'block-locked' : '' %> <%= isDone ? 'block-completed' : '' %>"
+         class="block-card <%= isLocked ? 'block-locked' : '' %> <%= isDone ? 'block-completed' : '' %> <%= isNext ? 'block-next' : '' %>"
          style="--card-gradient: <%= block.gradient %>;">
         <div class="block-card-number">
           <% if (isDone) { %>✓<% } else { %><%= i + 1 %><% } %>
@@ -41,6 +64,9 @@
           <p><%= block.subtitle %></p>
           <% if (prog.quiz_score !== undefined && prog.quiz_score !== null) { %>
             <span class="block-score-badge"><%= prog.quiz_score %>/<%= prog.quiz_total %> rätt</span>
+          <% } %>
+          <% if (isNext) { %>
+            <span class="block-next-badge">Fortsätt här →</span>
           <% } %>
         </div>
         <div class="block-card-arrow"><%= isLocked ? '👁' : (isDone ? '↺' : '→') %></div>

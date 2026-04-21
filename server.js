@@ -544,6 +544,10 @@ app.get('/learn/:id', requireLogin, (req, res) => {
   const progress   = getBlockProgress(req.session.userId);
   const blockProg  = progress[block.id] || {};
 
+  // Estimate reading time (200 wpm average)
+  const wordCount  = (block.theory || '').replace(/<[^>]+>/g, ' ').split(/\s+/).filter(Boolean).length;
+  const readTime   = Math.max(1, Math.round(wordCount / 200));
+
   res.render('block', {
     username:     req.session.username,
     role:         req.session.role,
@@ -552,6 +556,7 @@ app.get('/learn/:id', requireLogin, (req, res) => {
     freeBlockIds: FREE_BLOCK_IDS,
     isTeaser,
     blockProg,
+    readTime,
   });
 });
 
