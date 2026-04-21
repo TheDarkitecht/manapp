@@ -3260,3 +3260,37 @@ body.dash-page {
 .stat-card.conversion .stat-num { color: #fb923c; }
 .stat-card.mrr { border-color: rgba(16,185,129,0.3); }
 .stat-card.mrr .stat-num { color: #34d399; font-size: 1.4rem; }
+
+/* ── Billing portal button (sidebar) ───────────────────────────────────────── */
+.sidebar-billing-btn {
+  width: 100%;
+  background: rgba(99,102,241,0.1);
+  border: 1px solid rgba(99,102,241,0.2);
+  color: #a5b4fc;
+  padding: 0.55rem 0.875rem;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: left;
+  margin-bottom: 0.5rem;
+  transition: background 0.2s, border-color 0.2s;
+  font-family: inherit;
+}
+.sidebar-billing-btn:hover {
+  background: rgba(99,102,241,0.18);
+  border-color: rgba(99,102,241,0.4);
+}
+
+/* ── Note content truncation ────────────────────────────────────────────────── */
+.note-content {
+  display: -webkit-box;
+  -webkit-line-clamp: 6;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  color: #94a3b8;
+  font-size: 0.875rem;
+  line-height: 1.6;
+  margin: 0 0 0.75rem;
+  word-break: break-word;
+}

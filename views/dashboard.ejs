@@ -66,6 +66,12 @@
 
       <!-- Account section at bottom -->
       <div class="sidebar-section sidebar-account">
+        <% if (role === 'premium') { %>
+          <form method="POST" action="/billing/portal" class="inline-form">
+            <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+            <button type="submit" class="sidebar-billing-btn">Hantera prenumeration</button>
+          </form>
+        <% } %>
         <button onclick="toggleDeleteModal()" class="sidebar-delete-btn">Radera konto</button>
         <a href="/terms" class="sidebar-legal-link">Användarvillkor</a>
         <a href="/integritetspolicy" class="sidebar-legal-link">Integritetspolicy</a>

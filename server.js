@@ -508,7 +508,7 @@ app.get('/dashboard', requireLogin, (req, res) => {
 });
 
 app.post('/notes', requireLogin, verifyCsrf, (req, res) => {
-  const content = (req.body.content || '').trim();
+  const content = (req.body.content || '').trim().slice(0, 2000); // max 2000 chars
   if (content) createNote(req.session.userId, content);
   res.redirect('/dashboard');
 });
@@ -706,6 +706,83 @@ app.post('/chat', requireLogin, chatLimiter, async (req, res) => {
     console.error('Groq error:', err.message);
     res.status(500).json({ error: 'Kunde inte nå assistenten just nu.' });
   }
+});
+
+// ── Stripe Customer Portal ───────────────────────────────────────────────────
+// Allows premium users to manage/cancel their subscription directly
+
+app.post('/billing/portal', requireLogin, verifyCsrf, async (req, res) => {
+  const user    = findUserByUsername(req.session.username);
+  const baseUrl = process.env.APP_URL || `${req.protocol}://${req.get('host')}`;
+
+  if (!user?.stripe_customer_id) {
+    return res.redirect('/dashboard');
+  }
+
+  try {
+    const session = await stripe.billingPortal.sessions.create({
+      customer:   user.stripe_customer_id,
+      return_url: `${baseUrl}/dashboard`,
+    });
+    res.redirect(303, session.url);
+  } catch (err) {
+    console.error('Billing portal error:', err.message);
+    res.redirect('/dashboard');
+  }
+});
+
+// ── Health check ─────────────────────────────────────────────────────────────
+
+app.get('/health', (req, res) => {
+  res.json({ status: 'ok', ts: new Date().toISOString() });
+});
+
+// ── 404 handler ──────────────────────────────────────────────────────────────
+
+app.use((req, res) => {
+  res.status(404).send(`
+    <!DOCTYPE html>
+    <html lang="sv">
+    <head>
+      <meta charset="UTF-8" />
+      <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+      <title>404 — Joakim Jaksen</title>
+      <link rel="stylesheet" href="/style.css" />
+    </head>
+    <body class="learn-page" style="display:flex;align-items:center;justify-content:center;min-height:100vh;">
+      <div style="text-align:center;padding:2rem;">
+        <div style="font-size:4rem;margin-bottom:1rem;">🎯</div>
+        <h1 style="font-size:2rem;font-weight:900;color:#f1f5f9;margin-bottom:0.5rem;">404 — Sidan hittades inte</h1>
+        <p style="color:#64748b;margin-bottom:2rem;">Sidan du letar efter finns inte eller har flyttats.</p>
+        <a href="/dashboard" style="background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;padding:0.875rem 2rem;border-radius:10px;text-decoration:none;font-weight:600;">Till dashboarden →</a>
+      </div>
+    </body>
+    </html>
+  `);
+});
+
+// ── Global error handler ─────────────────────────────────────────────────────
+
+app.use((err, req, res, _next) => {
+  console.error('Unhandled error:', err);
+  res.status(500).send(`
+    <!DOCTYPE html>
+    <html lang="sv">
+    <head>
+      <meta charset="UTF-8" />
+      <title>Fel — Joakim Jaksen</title>
+      <link rel="stylesheet" href="/style.css" />
+    </head>
+    <body class="learn-page" style="display:flex;align-items:center;justify-content:center;min-height:100vh;">
+      <div style="text-align:center;padding:2rem;">
+        <div style="font-size:4rem;margin-bottom:1rem;">⚠️</div>
+        <h1 style="font-size:1.75rem;font-weight:900;color:#f1f5f9;margin-bottom:0.5rem;">Något gick fel</h1>
+        <p style="color:#64748b;margin-bottom:2rem;">Vi har loggat felet och tittar på det. Försök igen om en stund.</p>
+        <a href="/dashboard" style="background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;padding:0.875rem 2rem;border-radius:10px;text-decoration:none;font-weight:600;">Till dashboarden →</a>
+      </div>
+    </body>
+    </html>
+  `);
 });
 
 // ── Start ─────────────────────────────────────────────────────────────────────
