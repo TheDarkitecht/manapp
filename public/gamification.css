@@ -1230,6 +1230,13 @@
   overflow: hidden;
 }
 
+@media (max-width: 640px) {
+  .starter-card { padding: 1.75rem 1.25rem; margin: 1rem auto; border-radius: 16px; }
+  .starter-title { font-size: 1.4rem !important; }
+  .starter-step { padding: 1rem; }
+  .ss-num { width: 36px; height: 36px; font-size: 1rem; }
+}
+
 .starter-card::before {
   content: '';
   position: absolute;
@@ -1579,6 +1586,13 @@
 
 .ask-jocke-fab span:first-child {
   font-size: 1.2rem;
+}
+
+@media (max-width: 768px) {
+  /* Lyft FAB ovanför app-bottom-nav (som syns ≤768px, ~65px hög) */
+  .ask-jocke-fab {
+    bottom: 5.5rem;
+  }
 }
 
 @media (max-width: 640px) {
