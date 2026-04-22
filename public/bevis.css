@@ -1,0 +1,272 @@
+/* ═══════════════════════════════════════════════════════════════════
+   BEVIS — Level certificate (premium, shareable)
+═══════════════════════════════════════════════════════════════════ */
+
+.bevis-wrap {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 1.5rem 1rem;
+}
+
+/* Själva certifikatet — print/screenshot-friendly */
+.bevis-card {
+  position: relative;
+  aspect-ratio: 1200 / 630;
+  padding: 3rem 3.5rem;
+  background: linear-gradient(145deg, #0f172a, #020617);
+  border-radius: 20px;
+  overflow: hidden;
+  box-shadow: 0 30px 90px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  margin-bottom: 1.5rem;
+  display: flex;
+  flex-direction: column;
+}
+
+.bevis-card::before {
+  content: '';
+  position: absolute;
+  inset: 12px;
+  border: 2px solid transparent;
+  border-radius: 14px;
+  pointer-events: none;
+}
+
+/* Per-level gradients */
+.bevis-level-2 .bevis-card::before {
+  border-image: linear-gradient(135deg, #6366f1, #8b5cf6) 1;
+}
+.bevis-level-3 .bevis-card::before {
+  border-image: linear-gradient(135deg, #10b981, #059669) 1;
+}
+.bevis-level-4 .bevis-card::before {
+  border-image: linear-gradient(135deg, #f59e0b, #d97706) 1;
+}
+.bevis-level-5 .bevis-card::before {
+  border-image: linear-gradient(135deg, #ec4899, #8b5cf6) 1;
+}
+
+/* Decorative accent line top */
+.bevis-card::after {
+  content: '';
+  position: absolute;
+  top: 40px;
+  left: 3.5rem;
+  width: 200px;
+  height: 3px;
+  border-radius: 2px;
+  background: linear-gradient(90deg, var(--bevis-c1, #6366f1), var(--bevis-c2, #8b5cf6));
+}
+
+.bevis-level-2 { --bevis-c1: #6366f1; --bevis-c2: #8b5cf6; --bevis-accent: #a5b4fc; }
+.bevis-level-3 { --bevis-c1: #10b981; --bevis-c2: #059669; --bevis-accent: #34d399; }
+.bevis-level-4 { --bevis-c1: #f59e0b; --bevis-c2: #d97706; --bevis-accent: #fbbf24; }
+.bevis-level-5 { --bevis-c1: #ec4899; --bevis-c2: #8b5cf6; --bevis-accent: #f9a8d4; }
+
+.bc-eyebrow {
+  color: var(--bevis-accent, #a5b4fc);
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: 0.25em;
+  margin-bottom: 0.35rem;
+}
+
+.bc-subtitle {
+  color: #94a3b8;
+  font-size: 0.85rem;
+  letter-spacing: 0.2em;
+  margin-bottom: 1.5rem;
+}
+
+.bc-level {
+  font-size: clamp(2.8rem, 9vw, 5.5rem);
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  background: linear-gradient(135deg, var(--bevis-c1, #6366f1), var(--bevis-c2, #8b5cf6));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 0.75rem;
+  filter: drop-shadow(0 4px 24px rgba(99, 102, 241, 0.25));
+}
+
+.bc-divider {
+  width: 180px;
+  height: 2px;
+  background: linear-gradient(90deg, var(--bevis-c1, #6366f1), transparent);
+  border-radius: 1px;
+  margin-bottom: 1rem;
+}
+
+.bc-meta {
+  color: #cbd5e1;
+  font-size: clamp(0.85rem, 1.6vw, 1.05rem);
+  margin-bottom: 1rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.bc-signalizes {
+  color: #e2e8f0;
+  font-size: clamp(0.9rem, 1.5vw, 1.05rem);
+  line-height: 1.5;
+  font-style: italic;
+  margin: 0 0 auto;
+  max-width: 90%;
+}
+
+.bc-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 2rem;
+  margin-top: auto;
+  padding-top: 1.25rem;
+}
+
+.bc-label {
+  color: #64748b;
+  font-size: 0.75rem;
+  letter-spacing: 0.2em;
+  margin-bottom: 0.35rem;
+  font-weight: 600;
+}
+
+.bc-name {
+  color: #f1f5f9;
+  font-size: clamp(1.1rem, 2.5vw, 1.75rem);
+  font-weight: 700;
+  line-height: 1;
+}
+
+.bc-date {
+  color: #e2e8f0;
+  font-size: clamp(0.9rem, 1.5vw, 1.1rem);
+  line-height: 1;
+}
+
+.bc-brand {
+  position: absolute;
+  top: 2rem;
+  right: 3.5rem;
+  color: #94a3b8;
+  font-size: 0.85rem;
+  font-weight: 500;
+  letter-spacing: 0.05em;
+}
+
+@media (max-width: 640px) {
+  .bevis-card {
+    padding: 1.75rem 1.5rem;
+    aspect-ratio: auto;
+  }
+  .bc-footer { flex-direction: column; align-items: flex-start; gap: 1rem; }
+  .bc-footer > div:last-child { text-align: left !important; }
+  .bc-brand { top: 1rem; right: 1.5rem; font-size: 0.75rem; }
+  .bevis-card::after { left: 1.5rem; width: 120px; }
+}
+
+/* Actions row */
+.bevis-actions {
+  display: flex;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  justify-content: center;
+  margin-bottom: 1.5rem;
+}
+
+.bevis-hint {
+  background: rgba(99, 102, 241, 0.06);
+  border-left: 3px solid #6366f1;
+  border-radius: 8px;
+  padding: 1rem 1.25rem;
+  color: #cbd5e1;
+  font-size: 0.9rem;
+  line-height: 1.6;
+  margin-bottom: 1.5rem;
+}
+
+.bevis-hint strong { color: #f1f5f9; }
+.bevis-hint em { color: #a5b4fc; font-style: normal; }
+
+.bevis-info {
+  padding: 1.5rem;
+  background: linear-gradient(145deg, #1e293b, #0f172a);
+  border: 1px solid rgba(99, 102, 241, 0.15);
+  border-radius: 14px;
+}
+
+.bevis-info h3 {
+  margin: 0 0 0.75rem;
+  color: #f1f5f9;
+  font-size: 1.05rem;
+}
+
+.bevis-info p {
+  margin: 0 0 1rem;
+  color: #cbd5e1;
+  line-height: 1.6;
+}
+
+.bevis-next {
+  padding: 0.85rem 1rem;
+  background: rgba(16, 185, 129, 0.06);
+  border-left: 3px solid #10b981;
+  border-radius: 8px;
+  color: #d1fae5;
+  font-size: 0.9rem;
+  line-height: 1.6;
+}
+
+.bevis-next strong { color: #34d399; }
+
+/* Achievements row on /mina-framsteg */
+.achievements-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.achievement-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 1rem;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  text-decoration: none;
+  transition: transform 0.15s, border-color 0.15s;
+}
+
+.achievement-card:hover {
+  transform: translateY(-2px);
+}
+
+.achievement-card.ach-unlocked {
+  border-color: rgba(251, 191, 36, 0.3);
+  background: linear-gradient(145deg, rgba(251, 191, 36, 0.08), rgba(255, 255, 255, 0.03));
+}
+
+.achievement-card.ach-locked { opacity: 0.4; }
+
+.ach-icon {
+  font-size: 2rem;
+  margin-bottom: 0.4rem;
+  filter: grayscale(100%);
+}
+
+.achievement-card.ach-unlocked .ach-icon { filter: none; }
+
+.ach-name {
+  color: #f1f5f9;
+  font-weight: 700;
+  font-size: 0.95rem;
+  margin-bottom: 0.2rem;
+}
+
+.ach-sub {
+  color: #94a3b8;
+  font-size: 0.75rem;
+}

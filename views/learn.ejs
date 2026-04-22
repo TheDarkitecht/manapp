@@ -4,10 +4,11 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Säljutbildning — Joakim Jaksen</title>
-  <meta name="description" content="16 block som täcker hela säljprocessen — teori, video och prov. Byggt av Joakim Jaksen." />
+  <meta name="description" content="20 block som täcker hela säljprocessen — teori, video och prov. Byggt av Joakim Jaksen." />
   <meta name="robots" content="noindex" />
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎯</text></svg>" />
   <link rel="stylesheet" href="/style.css" />
+  <link rel="stylesheet" href="/recommendations.css" />
 </head>
 <body class="learn-page">
 
@@ -29,8 +30,8 @@
   <div class="learn-hero">
     <h1>Joakim Jaksens Säljutbildning</h1>
     <% if (role === 'free') { %>
-      <p>Du har tillgång till <strong>Block 1</strong>. De övriga 15 blocken kräver Premium.</p>
-      <a href="/upgrade" class="learn-upgrade-cta">⭐ Lås upp alla 16 block — 199 kr/mån →</a>
+      <p>Du har tillgång till <strong>Block 1 & 2</strong>. De övriga 18 blocken kräver Premium.</p>
+      <a href="/upgrade" class="learn-upgrade-cta">⭐ Lås upp alla 20 block — 199 kr/mån →</a>
     <% } else { %>
       <p><%= completedCount %> av <%= total %> block avklarade</p>
       <% if (completedCount < total) { %>
@@ -59,29 +60,47 @@
     <% blocks.forEach(function(block, i) { %>
       <% const isLocked = role === 'free' && !freeBlockIds.includes(block.id); %>
       <% const prog = (progress && progress[block.id]) || {}; %>
-      <% const isDone = prog.completed; %>
-      <% const isNext = !isLocked && !isDone && nextUnfinished && nextUnfinished.id === block.id; %>
+      <% const status = (blockStatus && blockStatus[block.id]) || { status: 'untouched', stepsDone: 0 }; %>
+      <% const isMastered = status.status === 'mastered'; %>
+      <% const isAdvanced = status.status === 'advanced'; %>
+      <% const isQuizDone = status.status === 'quiz_done'; %>
+      <% const isInProgress = status.status === 'in_progress'; %>
+      <% const isNext = !isLocked && !isMastered && nextUnfinished && nextUnfinished.id === block.id; %>
       <a href="/learn/<%= block.id %>"
-         class="block-card <%= isLocked ? 'block-locked' : '' %> <%= isDone ? 'block-completed' : '' %> <%= isNext ? 'block-next' : '' %>"
+         class="block-card block-card-status-<%= status.status %> <%= isLocked ? 'block-locked' : '' %> <%= isMastered ? 'block-mastered' : '' %> <%= prog.completed ? 'block-completed' : '' %> <%= isNext ? 'block-next' : '' %>"
          style="--card-gradient: <%= block.gradient %>;">
         <div class="block-card-number">
-          <% if (isDone) { %>✓<% } else { %><%= i + 1 %><% } %>
+          <% if (isMastered) { %>🏆<% } else if (isAdvanced) { %>⚡<% } else if (isQuizDone) { %>✓<% } else { %><%= i + 1 %><% } %>
         </div>
         <div class="block-card-icon"><%= isLocked ? '🔒' : block.icon %></div>
         <div class="block-card-body">
           <h3><%= block.title %></h3>
           <p><%= block.subtitle %></p>
+
+          <% if (!isLocked && status.stepsDone > 0) { %>
+            <div class="block-card-steps" aria-label="<%= status.stepsDone %> av 4 steg klara">
+              <span class="bcs-dot <%= status.stepsDone >= 1 ? 'bcs-done' : '' %>" title="Läs">📖</span>
+              <span class="bcs-dot <%= status.stepsDone >= 2 ? 'bcs-done' : '' %>" title="Öva">🎭</span>
+              <span class="bcs-dot <%= status.stepsDone >= 3 ? 'bcs-done' : '' %>" title="Gör">🎯</span>
+              <span class="bcs-dot <%= status.stepsDone >= 4 ? 'bcs-done' : '' %>" title="Reflektera">💭</span>
+            </div>
+          <% } %>
+
           <% if (prog.quiz_score !== undefined && prog.quiz_score !== null) { %>
             <span class="block-score-badge"><%= prog.quiz_score %>/<%= prog.quiz_total %> rätt</span>
           <% } %>
-          <% if (isNext) { %>
+          <% if (isMastered) { %>
+            <span class="block-mastered-badge">🏆 Bemästrad</span>
+          <% } else if (isAdvanced) { %>
+            <span class="block-advanced-badge">⚡ <%= status.stepsDone %>/4 steg</span>
+          <% } else if (isNext) { %>
             <span class="block-next-badge">Fortsätt här →</span>
           <% } %>
           <% if (isLocked) { %>
             <span class="block-preview-hint">Förhandsgranskning →</span>
           <% } %>
         </div>
-        <div class="block-card-arrow"><%= isLocked ? '👁' : (isDone ? '↺' : '→') %></div>
+        <div class="block-card-arrow"><%= isLocked ? '👁' : (isMastered ? '↺' : '→') %></div>
       </a>
     <% }); %>
   </div>

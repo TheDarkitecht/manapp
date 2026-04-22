@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Bevis: <%= level.name %> — Joakim Jaksen</title>
+  <meta name="robots" content="noindex" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🏆</text></svg>" />
+  <link rel="stylesheet" href="/style.css" />
+  <link rel="stylesheet" href="/gamification.css" />
+  <link rel="stylesheet" href="/bevis.css" />
+</head>
+<body class="block-page bevis-page bevis-level-<%= level.id %>">
+
+  <a href="#main-content" class="skip-to-main">Hoppa till innehåll</a>
+
+  <nav class="learn-nav">
+    <a href="/mina-framsteg" class="learn-nav-back">← Mina framsteg</a>
+    <span class="learn-nav-title">🏆 Bevis: <%= level.name %></span>
+    <span class="learn-nav-user"><%= username %></span>
+  </nav>
+
+  <main id="main-content" class="bevis-wrap">
+
+    <!-- Själva certifikatet — print-friendly -->
+    <div class="bevis-card">
+      <div class="bc-eyebrow">JOAKIM JAKSENS SÄLJUTBILDNING</div>
+      <div class="bc-subtitle">BEVIS PÅ UPPNÅDD NIVÅ</div>
+
+      <div class="bc-level"><%= level.name %></div>
+      <div class="bc-divider"></div>
+
+      <div class="bc-meta">
+        Nivå <%= level.id %> av 5 · <%= stats.xp %> XP · <%= stats.totalBlocksMastered %>/20 block bemästrade
+      </div>
+
+      <p class="bc-signalizes"><%= level.signalizes %></p>
+
+      <div class="bc-footer">
+        <div>
+          <div class="bc-label">BEVIS FÖR</div>
+          <div class="bc-name"><%= username %></div>
+        </div>
+        <div style="text-align:right;">
+          <div class="bc-label">UPPNÅDD</div>
+          <div class="bc-date"><%= date %></div>
+        </div>
+      </div>
+
+      <div class="bc-brand">joakimjaksen.se</div>
+    </div>
+
+    <!-- Actions -->
+    <div class="bevis-actions">
+      <a href="/mina-framsteg/bevis/<%= level.id %>.svg?download=1" class="jc-btn" download>
+        💾 Ladda ner som bild
+      </a>
+      <button type="button" class="jc-btn jc-btn-ghost" onclick="copyLink()">
+        🔗 Kopiera länk
+      </button>
+      <a href="https://www.linkedin.com/sharing/share-offsite/?url=<%= encodeURIComponent('https://app.joakimjaksen.se') %>" target="_blank" rel="noopener" class="jc-btn jc-btn-ghost">
+        💼 Dela på LinkedIn
+      </a>
+    </div>
+
+    <div class="bevis-hint">
+      <strong>💡 Tips:</strong> Ladda ner som bild, lägg upp på LinkedIn med texten:
+      <em>"Uppnådde precis <%= level.name %>-nivån i Joakim Jaksens säljutbildning. <%= stats.totalBlocksMastered %>/20 block bemästrade, <%= stats.xp %> XP."</em>
+    </div>
+
+    <section class="bevis-info">
+      <h3>Vad <%= level.name %> betyder</h3>
+      <p><%= level.signalizes %></p>
+
+      <% if (stats.level.next) { %>
+        <div class="bevis-next">
+          <strong>Nästa nivå: <%= stats.level.next.name %></strong><br>
+          <%= stats.level.xpToNext %> XP kvar. Läs, träna, logga — fortsätt bygga.
+        </div>
+      <% } %>
+    </section>
+
+  </main>
+
+  <script>
+    function copyLink() {
+      const url = window.location.origin + window.location.pathname;
+      if (navigator.clipboard) {
+        navigator.clipboard.writeText(url).then(() => {
+          const btn = event.target;
+          const orig = btn.textContent;
+          btn.textContent = '✓ Kopierat';
+          setTimeout(() => { btn.textContent = orig; }, 2000);
+        });
+      }
+    }
+  </script>
+
+</body>
+</html>

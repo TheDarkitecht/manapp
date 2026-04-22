@@ -217,6 +217,103 @@ const terms = [
   { term: 'Referral', category: 'Säljprocess', blockId: 'uppfoljning',
     definition: 'En rekommendation från en nöjd kund till en ny potentiell kund. Konverterar 4x snabbare än cold outreach och är den mest kostnadseffektiva källan till nya affärer.' },
 
+  // ── AI & Säljteknologi ────────────────────────────────────────────────────
+  { term: 'Prompt engineering', category: 'Digital Försäljning', blockId: 'ai-saljverktyg',
+    definition: 'Konsten att formulera frågor till AI så att svaret blir användbart. Bygg prompten på fyra delar: roll, uppgift, kontext, ramar. Kvaliteten på svaret beror 90% på kvaliteten på frågan.' },
+
+  { term: 'Agentic AI', category: 'Digital Försäljning', blockId: 'ai-saljverktyg',
+    definition: 'AI som inte bara svarar på frågor utan utför uppgifter åt dig — bokar möten, researchar prospekts, skickar uppföljningar. 2026 års stora skifte i säljproduktivitet.' },
+
+  { term: 'AI-hallucination', category: 'Digital Försäljning', blockId: 'ai-saljverktyg',
+    definition: 'När en AI-modell hittar på statistik, citat eller fakta som låter rimliga men är felaktiga. Verifiera alltid kritiska fakta innan du citerar AI-genererat material i kundkontakt.' },
+
+  { term: 'EU AI Act', category: 'Digital Försäljning', blockId: 'ai-saljverktyg',
+    definition: 'EU-förordningen som gäller från 2026 och reglerar AI-användning. För säljare: transparens krävs när kunden interagerar med AI — låtsas-människor är förbjudna.' },
+
+  { term: 'AI-sparring', category: 'Digital Försäljning', blockId: 'ai-saljverktyg',
+    definition: 'Att använda AI som privat rollspelspartner för att öva invändningar, förhandlingar och svåra samtal. Omdömesfritt, tillgängligt dygnet runt — ett av AI:s mest underutnyttjade säljverktyg.' },
+
+  // ── Påverkanspsykologi (Cialdini) ─────────────────────────────────────────
+  { term: 'Reciprocitet', category: 'Kommunikation', blockId: 'rekommenderad-lasning',
+    definition: 'Cialdinis första påverkansprincip: människor vill återgälda det de får. Ge värde först — insikt, en gratis analys, en ärlig rekommendation — så ökar kundens benägenhet att säga ja.' },
+
+  { term: 'Commitment & Consistency', category: 'Kommunikation', blockId: 'rekommenderad-lasning',
+    definition: 'Cialdinis princip: människor vill agera konsekvent med tidigare åtaganden. Små ja leder till större ja. Få kunden att uttala värdet — då blir det hens egen övertygelse.' },
+
+  { term: 'Auktoritet', category: 'Kommunikation', blockId: 'rekommenderad-lasning',
+    definition: 'Cialdinis princip: vi lyssnar mer på experter. Bygg auktoritet genom konkret kompetens, erfarenhet och tydlig expertis — inte genom självbeprisning.' },
+
+  { term: 'Knapphet', category: 'Kommunikation', blockId: 'rekommenderad-lasning',
+    definition: 'Cialdinis princip: begränsad tillgång ökar upplevt värde. Fungerar bara om knappheten är äkta — fabricerad knapphet skadar förtroendet permanent.' },
+
+  { term: 'Gillande', category: 'Kommunikation', blockId: 'rekommenderad-lasning',
+    definition: 'Cialdinis princip: vi köper av människor vi gillar. Likhet, komplimanger och samarbete ökar gillandet. Rapport är det tekniska namnet på detta i säljsammanhang.' },
+
+  // ── Förhandlings- & psykologitermer från bokblocket ───────────────────────
+  { term: 'Tactical empathy', category: 'Förhandling', blockId: 'rekommenderad-lasning',
+    definition: 'Chris Voss begrepp (Never Split the Difference): att aktivt visa att du förstår motpartens perspektiv — även om du inte håller med. Sänker motstånd och öppnar samtalet.' },
+
+  { term: 'Labeling', category: 'Förhandling', blockId: 'rekommenderad-lasning',
+    definition: 'Voss-teknik: att sätta ord på motpartens känsla — "Det låter som att du är orolig för leveranstiden." Avväpnar starka känslor och skapar förtroende i förhandlingen.' },
+
+  { term: '"Det stämmer"', category: 'Förhandling', blockId: 'rekommenderad-lasning',
+    definition: 'Voss-mantra: målet i en förhandling är inte att höra "ja", utan "det stämmer". Det betyder att motparten känner sig förstådd på djupet — och då öppnar de för samarbete.' },
+
+  { term: 'System 1 & System 2', category: 'Mindset', blockId: 'rekommenderad-lasning',
+    definition: 'Kahnemans modell (Thinking, Fast and Slow): System 1 = snabbt, intuitivt, emotionellt. System 2 = långsamt, logiskt, ansträngande. De flesta köpbeslut börjar i System 1.' },
+
+  { term: 'Challenger Selling', category: 'Säljprocess', blockId: 'rekommenderad-lasning',
+    definition: 'Dixons B2B-forskning visade att toppsäljare inte är "relationship builders" — de är "challengers" som utmanar kundens tänkande med nya insikter och leder samtalet.' },
+
+  { term: 'Deep Work', category: 'Mindset', blockId: 'rekommenderad-lasning',
+    definition: 'Cal Newports begrepp: fokuserat, ostört arbete på kognitivt krävande uppgifter. En superkraft i en distraherad värld. Säljare som skyddar deep-work-timmar stänger fler affärer.' },
+
+  { term: 'Atomic Habits', category: 'Mindset', blockId: 'rekommenderad-lasning',
+    definition: 'James Clears ramverk för beteendeförändring: 1% bättre varje dag slår stora beslut. Cue–Craving–Response–Reward. Systemet slår målet varje gång.' },
+
+  // ── Tonfall & Retorik ─────────────────────────────────────────────────────
+  { term: 'Ethos', category: 'Kommunikation', blockId: 'inledning',
+    definition: 'Aristoteles första påverkanspelare: trovärdighet. Vem är du och varför ska jag lyssna? Utan ethos biter inga argument.' },
+
+  { term: 'Pathos', category: 'Kommunikation', blockId: 'inledning',
+    definition: 'Aristoteles andra pelare: känsla. Alla köp är först emotionella — människor köper med känslan och rättfärdigar med logiken.' },
+
+  { term: 'Logos', category: 'Kommunikation', blockId: 'inledning',
+    definition: 'Aristoteles tredje pelare: logik. Argumenten, bevisen, ROI:n. Utan logos kan kunden inte försvara beslutet för sig själv eller sin chef.' },
+
+  { term: 'Majevtik', category: 'Kommunikation', blockId: 'tonfall',
+    definition: 'Sokrates "barnmorskekonst" — att genom nyfikna, till synes naiva frågor få motparten att själv föda fram insikter. Antik föregångare till dagens "Förvirrad ton" i sälj.' },
+
+  { term: 'Curiosity tone', category: 'Kommunikation', blockId: 'tonfall',
+    definition: 'Nyfiken ton. Avväpnar och får motparten att fylla i. "Jaså, så ni bytte nyligen …?" Perfekt öppning och mirroring-följeslagare.' },
+
+  { term: 'Confused tone', category: 'Kommunikation', blockId: 'tonfall',
+    definition: 'Förvirrad ton (Columbo-teknik). "Stanna …? Du menar …?" Triggar kundens behov av att förklara — och den som förklarar tappar greppet om sina invändningar.' },
+
+  { term: 'Playful tone', category: 'Kommunikation', blockId: 'tonfall',
+    definition: 'Skojsam/lättsam ton. Skapar rapport, gör samtalet mindre formellt. "Det låter ju nästan som ni betalar för grannens el också." Voss kallar detta default-rösten.' },
+
+  { term: 'No-oriented questions', category: 'Förhandling', blockId: 'tonfall',
+    definition: 'Voss-teknik: formulera frågor så att "nej" är det trygga svaret. "Skulle det vara dumt att bara kika på siffrorna?" Kunden slappnar av — och svarar oftast ja.' },
+
+  { term: 'Disbelief / Challenge', category: 'Förhandling', blockId: 'tonfall',
+    definition: 'Mild misstro. "Jag har svårt att tro att ert bolag inte erbjuder bättre villkor än så." Triggar motpartens vilja att försvara sig — avslöjar värdefulla detaljer.' },
+
+  { term: 'Controlled silence', category: 'Förhandling', blockId: 'tonfall',
+    definition: 'Kontrollerad tystnad efter en laddad fråga. Cicero: silentium eloquens — den vältaliga tystnaden. Den som tål 3–5 sekunder tystnad vinner nästa informationsbit.' },
+
+  { term: 'Framing', category: 'Kommunikation', blockId: 'tonfall',
+    definition: 'Att rama in verkligheten. Samma fakta kan låta billigt eller dyrt beroende på inramning: "500 kr/mån" vs "16 kr om dagen". Din inramning formar kundens upplevelse.' },
+
+  { term: 'Anchoring', category: 'Förhandling', blockId: 'tonfall',
+    definition: 'Första siffran du nämner blir referenspunkten hjärnan jämför mot. Säg "många betalar 90 öre/kWh" innan du presenterar ditt pris på 60 öre — och 60 upplevs som billigt.' },
+
+  { term: 'Foot-in-the-door', category: 'Säljprocess', blockId: 'tonfall',
+    definition: 'Få motparten att säga ja till något litet först — chansen för ett större ja ökar dramatiskt. "Kan vi ta 5 minuter?" öppnar för hela genomgången.' },
+
+  { term: 'Elicitation', category: 'Förhandling', blockId: 'tonfall',
+    definition: 'Att framlocka information via ett mindre felaktigt påstående. "Så ni betalar väl runt 800 i månaden?" → motparten korrigerar och avslöjar det faktiska beloppet.' },
+
 ];
 
 module.exports = terms;

@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>🎭 Öva: <%= block.title %> — Joakim Jaksen</title>
+  <meta name="robots" content="noindex" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎯</text></svg>" />
+  <link rel="stylesheet" href="/style.css" />
+  <link rel="stylesheet" href="/journey.css" />
+</head>
+<body class="block-page">
+
+  <a href="#main-content" class="skip-to-main">Hoppa till innehåll</a>
+
+  <nav class="learn-nav">
+    <a href="/learn/<%= block.id %>" class="learn-nav-back">← Tillbaka till blocket</a>
+    <span class="learn-nav-title">🎭 Öva med Jocke</span>
+    <span class="learn-nav-user"><%= username %></span>
+  </nav>
+
+  <main id="main-content" class="ova-wrap">
+
+    <div class="ova-header">
+      <div class="ova-eyebrow">Steg 2 av 4: Öva</div>
+      <h1><%= block.title %> — träningsläget</h1>
+      <p>Jocke spelar kunden. Du tränar teknikerna i tryggt läge — utan risk för riktiga affärer. Välj ett scenario och börja.</p>
+      <% if (journey.roleplayCount > 0) { %>
+        <div class="ova-done-badge">✓ Du har klarat <%= journey.roleplayCount %> rollspel — bra jobbat</div>
+      <% } %>
+    </div>
+
+    <% if (block.roleplays && block.roleplays.length) { %>
+      <div class="ova-grid">
+        <% block.roleplays.forEach(function(rp) { %>
+          <% const done = completedIds.has(rp.id); %>
+          <a href="/learn/<%= block.id %>/ova/<%= rp.id %>" class="ova-card <%= done ? 'ova-card-done' : '' %>">
+            <div class="ova-card-head">
+              <span class="ova-card-icon"><%= rp.icon || '🎭' %></span>
+              <span class="ova-difficulty difficulty-<%= (rp.difficulty||'').toLowerCase().replace(/[^a-z]/g,'') %>"><%= rp.difficulty %></span>
+            </div>
+            <h3><%= rp.title %></h3>
+            <p class="ova-goal">🎯 <%= rp.goal %></p>
+            <div class="ova-card-footer">
+              <% if (done) { %>
+                <span class="ova-card-status">✓ Klar — gör om?</span>
+              <% } else { %>
+                <span class="ova-card-status">Starta rollspelet →</span>
+              <% } %>
+            </div>
+          </a>
+        <% }); %>
+      </div>
+
+      <div class="ova-tip">
+        <strong>💡 Tips:</strong> Varje rollspel tar 5–15 min. Skriv "[KLAR]" när du är klar — då bryter Jocke rollen och ger feedback.
+      </div>
+    <% } else { %>
+      <p>Inga rollspel för detta block ännu. Kommer snart.</p>
+    <% } %>
+
+    <div class="snabb-cta-row">
+      <a href="/learn/<%= block.id %>" class="jc-btn jc-btn-ghost">← Tillbaka</a>
+      <% if (journey.roleplayDone && !journey.missionDone && block.mission) { %>
+        <a href="/learn/<%= block.id %>/uppdrag" class="jc-btn">🎯 Nästa: Veckans uppdrag →</a>
+      <% } %>
+    </div>
+
+  </main>
+
+</body>
+</html>

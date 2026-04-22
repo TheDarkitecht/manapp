@@ -73,6 +73,88 @@ async function initDatabase() {
     )
   `);
 
+  // ── Pedagogical 4-step learning system ──────────────────────────────────────
+  // Tracks user's journey through each block: LÄR → ÖVA → GÖR → REFLEKTERA
+
+  // User reflections (free-text responses to reflection prompts)
+  db.run(`
+    CREATE TABLE IF NOT EXISTS user_reflections (
+      id         INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id    INTEGER NOT NULL,
+      block_id   TEXT    NOT NULL,
+      prompt_idx INTEGER NOT NULL,
+      response   TEXT    NOT NULL,
+      created_at TEXT    NOT NULL DEFAULT (datetime('now')),
+      FOREIGN KEY (user_id) REFERENCES users(id)
+    )
+  `);
+
+  // User roleplay completions (each completed role-play session)
+  db.run(`
+    CREATE TABLE IF NOT EXISTS user_roleplays (
+      id           INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id      INTEGER NOT NULL,
+      block_id     TEXT    NOT NULL,
+      roleplay_id  TEXT    NOT NULL,
+      turn_count   INTEGER NOT NULL DEFAULT 0,
+      completed_at TEXT    NOT NULL DEFAULT (datetime('now')),
+      FOREIGN KEY (user_id) REFERENCES users(id)
+    )
+  `);
+
+  // User missions (field missions with real-world action + reflection)
+  db.run(`
+    CREATE TABLE IF NOT EXISTS user_missions (
+      id           INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id      INTEGER NOT NULL,
+      block_id     TEXT    NOT NULL,
+      started_at   TEXT    NOT NULL DEFAULT (datetime('now')),
+      completed_at TEXT,
+      progress     INTEGER NOT NULL DEFAULT 0,
+      reflection   TEXT,
+      UNIQUE(user_id, block_id),
+      FOREIGN KEY (user_id) REFERENCES users(id)
+    )
+  `);
+
+  // ── Gamification-system (prestations- och progressionssystem) ──────────────
+  // Verkliga handlingar loggade av användaren — enda "nya" event-källan
+  db.run(`
+    CREATE TABLE IF NOT EXISTS user_actions (
+      id         INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id    INTEGER NOT NULL,
+      category   TEXT    NOT NULL,
+      count      INTEGER NOT NULL DEFAULT 1,
+      note       TEXT,
+      block_id   TEXT,
+      created_at TEXT    NOT NULL DEFAULT (datetime('now')),
+      FOREIGN KEY (user_id) REFERENCES users(id)
+    )
+  `);
+
+  // Preferenser som JSON-blob (schema-flexibel för framtida inställningar)
+  db.run(`
+    CREATE TABLE IF NOT EXISTS user_preferences (
+      user_id     INTEGER PRIMARY KEY,
+      preferences TEXT    NOT NULL DEFAULT '{}',
+      updated_at  TEXT    NOT NULL DEFAULT (datetime('now')),
+      FOREIGN KEY (user_id) REFERENCES users(id)
+    )
+  `);
+
+  // Dagens challenges per användare
+  db.run(`
+    CREATE TABLE IF NOT EXISTS daily_challenges (
+      id             INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id        INTEGER NOT NULL,
+      date           TEXT    NOT NULL,
+      challenge_data TEXT    NOT NULL,
+      completed_at   TEXT,
+      UNIQUE(user_id, date),
+      FOREIGN KEY (user_id) REFERENCES users(id)
+    )
+  `);
+
   // Migration: add new columns if they don't exist yet.
   // SQLite doesn't support "ADD COLUMN IF NOT EXISTS" so we catch errors.
   const migrations = [
@@ -94,6 +176,12 @@ async function initDatabase() {
     "CREATE INDEX IF NOT EXISTS idx_notes_user_id           ON notes(user_id)",
     "CREATE INDEX IF NOT EXISTS idx_block_progress_user_id  ON block_progress(user_id)",
     "CREATE INDEX IF NOT EXISTS idx_reset_tokens_user_id    ON reset_tokens(user_id)",
+    "CREATE INDEX IF NOT EXISTS idx_reflections_user_block  ON user_reflections(user_id, block_id)",
+    "CREATE INDEX IF NOT EXISTS idx_roleplays_user_block    ON user_roleplays(user_id, block_id)",
+    "CREATE INDEX IF NOT EXISTS idx_missions_user_block     ON user_missions(user_id, block_id)",
+    "CREATE INDEX IF NOT EXISTS idx_actions_user_date       ON user_actions(user_id, created_at DESC)",
+    "CREATE INDEX IF NOT EXISTS idx_actions_user_cat        ON user_actions(user_id, category)",
+    "CREATE INDEX IF NOT EXISTS idx_challenges_user_date    ON daily_challenges(user_id, date DESC)",
   ];
   migrations.forEach(sql => { try { db.run(sql); } catch (_) {} });
 
@@ -326,6 +414,306 @@ function getCompletedBlockCount(userId) {
   return n;
 }
 
+// ── Pedagogical 4-step tracking: reflections, roleplays, missions ─────────────
+
+function saveReflection(userId, blockId, promptIdx, response) {
+  db.run(
+    'INSERT INTO user_reflections (user_id, block_id, prompt_idx, response) VALUES (?, ?, ?, ?)',
+    [userId, blockId, promptIdx, response]
+  );
+  saveDb();
+}
+
+function getReflectionsForBlock(userId, blockId) {
+  const s = db.prepare(
+    'SELECT * FROM user_reflections WHERE user_id = ? AND block_id = ? ORDER BY created_at DESC'
+  );
+  s.bind([userId, blockId]);
+  const rows = [];
+  while (s.step()) rows.push(s.getAsObject());
+  s.free();
+  return rows;
+}
+
+function countReflectionsForBlock(userId, blockId) {
+  const s = db.prepare(
+    'SELECT COUNT(*) AS n FROM user_reflections WHERE user_id = ? AND block_id = ?'
+  );
+  s.bind([userId, blockId]);
+  s.step();
+  const { n } = s.getAsObject();
+  s.free();
+  return n;
+}
+
+function recordRoleplayCompletion(userId, blockId, roleplayId, turnCount) {
+  db.run(
+    'INSERT INTO user_roleplays (user_id, block_id, roleplay_id, turn_count) VALUES (?, ?, ?, ?)',
+    [userId, blockId, roleplayId, turnCount]
+  );
+  saveDb();
+}
+
+function getRoleplaysForBlock(userId, blockId) {
+  const s = db.prepare(
+    'SELECT * FROM user_roleplays WHERE user_id = ? AND block_id = ? ORDER BY completed_at DESC'
+  );
+  s.bind([userId, blockId]);
+  const rows = [];
+  while (s.step()) rows.push(s.getAsObject());
+  s.free();
+  return rows;
+}
+
+function startMission(userId, blockId) {
+  db.run(`
+    INSERT INTO user_missions (user_id, block_id) VALUES (?, ?)
+    ON CONFLICT(user_id, block_id) DO NOTHING
+  `, [userId, blockId]);
+  saveDb();
+}
+
+function updateMissionProgress(userId, blockId, progress) {
+  db.run(
+    'UPDATE user_missions SET progress = ? WHERE user_id = ? AND block_id = ?',
+    [progress, userId, blockId]
+  );
+  saveDb();
+}
+
+function completeMission(userId, blockId, reflection) {
+  db.run(`
+    UPDATE user_missions
+    SET completed_at = datetime('now'), reflection = ?
+    WHERE user_id = ? AND block_id = ?
+  `, [reflection || null, userId, blockId]);
+  saveDb();
+}
+
+function getMissionForBlock(userId, blockId) {
+  const s = db.prepare(
+    'SELECT * FROM user_missions WHERE user_id = ? AND block_id = ?'
+  );
+  s.bind([userId, blockId]);
+  if (s.step()) { const r = s.getAsObject(); s.free(); return r; }
+  s.free();
+  return null;
+}
+
+function getAllMissionsForUser(userId) {
+  const s = db.prepare('SELECT * FROM user_missions WHERE user_id = ? ORDER BY started_at DESC');
+  s.bind([userId]);
+  const rows = [];
+  while (s.step()) rows.push(s.getAsObject());
+  s.free();
+  return rows;
+}
+
+function getAllRoleplaysForUser(userId) {
+  const s = db.prepare('SELECT * FROM user_roleplays WHERE user_id = ? ORDER BY completed_at DESC');
+  s.bind([userId]);
+  const rows = [];
+  while (s.step()) rows.push(s.getAsObject());
+  s.free();
+  return rows;
+}
+
+function getAllReflectionsForUser(userId) {
+  const s = db.prepare('SELECT * FROM user_reflections WHERE user_id = ? ORDER BY created_at DESC');
+  s.bind([userId]);
+  const rows = [];
+  while (s.step()) rows.push(s.getAsObject());
+  s.free();
+  return rows;
+}
+
+/**
+ * Aggregate all learning-state data for a user in a single call.
+ * Used by the recommendations engine.
+ */
+function getUserLearningState(userId) {
+  const progressArr = [];
+  const pS = db.prepare('SELECT * FROM block_progress WHERE user_id = ?');
+  pS.bind([userId]);
+  while (pS.step()) progressArr.push(pS.getAsObject());
+  pS.free();
+
+  const missions    = getAllMissionsForUser(userId);
+  const roleplays   = getAllRoleplaysForUser(userId);
+  const reflections = getAllReflectionsForUser(userId);
+  const user        = findUserById(userId);
+
+  // Build quick-lookup maps by block_id
+  const progressByBlock    = {};
+  progressArr.forEach(p => { progressByBlock[p.block_id] = p; });
+  const missionByBlock     = {};
+  missions.forEach(m => { missionByBlock[m.block_id] = m; });
+  const roleplaysByBlock   = {};
+  roleplays.forEach(r => {
+    if (!roleplaysByBlock[r.block_id]) roleplaysByBlock[r.block_id] = [];
+    roleplaysByBlock[r.block_id].push(r);
+  });
+  const reflectionsByBlock = {};
+  reflections.forEach(r => {
+    if (!reflectionsByBlock[r.block_id]) reflectionsByBlock[r.block_id] = [];
+    reflectionsByBlock[r.block_id].push(r);
+  });
+
+  // Determine "last activity" — newest timestamp across all sources
+  const timestamps = [
+    user && user.last_login,
+    ...progressArr.map(p => p.completed_at),
+    ...missions.map(m => m.completed_at || m.started_at),
+    ...roleplays.map(r => r.completed_at),
+    ...reflections.map(r => r.created_at),
+  ].filter(Boolean).map(t => new Date(t).getTime()).filter(n => !isNaN(n));
+  const lastActivity = timestamps.length ? new Date(Math.max(...timestamps)).toISOString() : null;
+
+  return {
+    progressByBlock,
+    missionByBlock,
+    roleplaysByBlock,
+    reflectionsByBlock,
+    lastActivity,
+    totalBlocksCompleted: progressArr.filter(p => p.completed).length,
+    totalRoleplays:       roleplays.length,
+    totalReflections:     reflections.length,
+  };
+}
+
+// ── Retention: hämta alla användare med email (för digest + re-engagement) ──
+
+function getAllUsersWithEmail() {
+  const s = db.prepare("SELECT id, username, email, gdpr, last_login FROM users WHERE email IS NOT NULL AND email != ''");
+  const rows = [];
+  while (s.step()) rows.push(s.getAsObject());
+  s.free();
+  return rows;
+}
+
+// ── Gamification: user_actions, user_preferences, daily_challenges ────────────
+
+function logUserAction(userId, category, count, note, blockId) {
+  db.run(
+    'INSERT INTO user_actions (user_id, category, count, note, block_id) VALUES (?, ?, ?, ?, ?)',
+    [userId, category, Math.max(1, parseInt(count) || 1), note || null, blockId || null]
+  );
+  saveDb();
+}
+
+function getUserActions(userId, limit) {
+  const lim = parseInt(limit) || 500;
+  const s = db.prepare('SELECT * FROM user_actions WHERE user_id = ? ORDER BY created_at DESC LIMIT ?');
+  s.bind([userId, lim]);
+  const rows = [];
+  while (s.step()) rows.push(s.getAsObject());
+  s.free();
+  return rows;
+}
+
+function deleteUserAction(userId, actionId) {
+  db.run('DELETE FROM user_actions WHERE id = ? AND user_id = ?', [actionId, userId]);
+  saveDb();
+}
+
+function getActionsToday(userId) {
+  const today = new Date().toISOString().slice(0, 10);
+  const s = db.prepare("SELECT * FROM user_actions WHERE user_id = ? AND date(created_at) = ?");
+  s.bind([userId, today]);
+  const rows = [];
+  while (s.step()) rows.push(s.getAsObject());
+  s.free();
+  return rows;
+}
+
+function getUserPreferences(userId) {
+  const s = db.prepare('SELECT preferences FROM user_preferences WHERE user_id = ?');
+  s.bind([userId]);
+  if (s.step()) { const r = s.getAsObject(); s.free(); return r.preferences || '{}'; }
+  s.free();
+  return '{}';
+}
+
+function setUserPreferences(userId, prefsJson) {
+  db.run(`
+    INSERT INTO user_preferences (user_id, preferences, updated_at)
+    VALUES (?, ?, datetime('now'))
+    ON CONFLICT(user_id) DO UPDATE SET
+      preferences = excluded.preferences,
+      updated_at  = excluded.updated_at
+  `, [userId, prefsJson]);
+  saveDb();
+}
+
+function getDailyChallenge(userId, dateStr) {
+  const s = db.prepare('SELECT * FROM daily_challenges WHERE user_id = ? AND date = ?');
+  s.bind([userId, dateStr]);
+  if (s.step()) { const r = s.getAsObject(); s.free(); return r; }
+  s.free();
+  return null;
+}
+
+function saveDailyChallenge(userId, dateStr, challengeData) {
+  db.run(`
+    INSERT INTO daily_challenges (user_id, date, challenge_data) VALUES (?, ?, ?)
+    ON CONFLICT(user_id, date) DO NOTHING
+  `, [userId, dateStr, JSON.stringify(challengeData)]);
+  saveDb();
+}
+
+function completeDailyChallenge(userId, dateStr) {
+  db.run(`
+    UPDATE daily_challenges SET completed_at = datetime('now')
+    WHERE user_id = ? AND date = ? AND completed_at IS NULL
+  `, [userId, dateStr]);
+  saveDb();
+}
+
+/**
+ * Compute full journey status per block (all 4 steps: LÄR, ÖVA, GÖR, REFLEKTERA).
+ * A block is "truly mastered" when all 4 are done.
+ */
+function getJourneyStatus(userId, blockId) {
+  // Step 1: LÄR — quiz passed counts as theory completed
+  const progS = db.prepare('SELECT * FROM block_progress WHERE user_id = ? AND block_id = ?');
+  progS.bind([userId, blockId]);
+  const prog = progS.step() ? progS.getAsObject() : null;
+  progS.free();
+
+  // Step 2: ÖVA — at least 1 roleplay completed
+  const rpS = db.prepare('SELECT COUNT(*) AS n FROM user_roleplays WHERE user_id = ? AND block_id = ?');
+  rpS.bind([userId, blockId]);
+  rpS.step();
+  const { n: roleplayCount } = rpS.getAsObject();
+  rpS.free();
+
+  // Step 3: GÖR — mission started (in progress) or completed
+  const mission = getMissionForBlock(userId, blockId);
+
+  // Step 4: REFLEKTERA — at least 1 reflection saved
+  const reflectionCount = countReflectionsForBlock(userId, blockId);
+
+  const theoryDone     = !!(prog && prog.completed);
+  const roleplayDone   = roleplayCount > 0;
+  const missionDone    = !!(mission && mission.completed_at);
+  const reflectionDone = reflectionCount > 0;
+
+  return {
+    theoryDone,
+    roleplayDone,
+    missionDone,
+    reflectionDone,
+    roleplayCount,
+    reflectionCount,
+    missionStarted: !!(mission && mission.started_at),
+    missionProgress: mission ? mission.progress : 0,
+    quizScore:      prog ? prog.quiz_score : null,
+    quizTotal:      prog ? prog.quiz_total : null,
+    fullyMastered:  theoryDone && roleplayDone && missionDone && reflectionDone,
+    stepsCompleted: [theoryDone, roleplayDone, missionDone, reflectionDone].filter(Boolean).length,
+  };
+}
+
 // ── Password reset ────────────────────────────────────────────────────────────
 
 function createResetToken(userId) {
@@ -373,4 +761,18 @@ module.exports = {
   getNotesByUserId, createNote, deleteNote,
   getBlockProgress, saveQuizResult, getCompletedBlockCount,
   createResetToken, findValidResetToken, deleteResetToken, updateUserPassword,
+  // 4-step pedagogical tracking
+  saveReflection, getReflectionsForBlock, countReflectionsForBlock,
+  recordRoleplayCompletion, getRoleplaysForBlock,
+  startMission, updateMissionProgress, completeMission, getMissionForBlock,
+  getJourneyStatus,
+  // Recommendations engine
+  getAllMissionsForUser, getAllRoleplaysForUser, getAllReflectionsForUser,
+  getUserLearningState,
+  // Gamification
+  logUserAction, getUserActions, deleteUserAction, getActionsToday,
+  getUserPreferences, setUserPreferences,
+  getDailyChallenge, saveDailyChallenge, completeDailyChallenge,
+  // Retention emails
+  getAllUsersWithEmail,
 };

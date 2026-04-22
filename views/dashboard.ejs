@@ -7,6 +7,8 @@
   <meta name="robots" content="noindex" />
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎯</text></svg>" />
   <link rel="stylesheet" href="/style.css" />
+  <link rel="stylesheet" href="/recommendations.css" />
+  <link rel="stylesheet" href="/gamification.css" />
 </head>
 <body class="dash-page">
 
@@ -69,7 +71,11 @@
       <!-- Quick links -->
       <div class="sidebar-section sidebar-links">
         <a href="/learn" class="sidebar-link">📚 Säljutbildning</a>
+        <a href="/sok" class="sidebar-link">🔍 Sök innehåll</a>
+        <a href="/mina-framsteg" class="sidebar-link">📈 Mina framsteg</a>
+        <a href="/loggbok" class="sidebar-link">📓 Loggboken</a>
         <a href="/ordbok" class="sidebar-link">📖 Säljordboken</a>
+        <a href="/installningar" class="sidebar-link">⚙️ Inställningar</a>
         <% if (role === 'free') { %>
           <a href="/upgrade" class="sidebar-link sidebar-link-upgrade">⭐ Uppgradera till Premium</a>
         <% } %>
@@ -97,19 +103,263 @@
         <div class="dash-alert dash-alert-error">Ange "RADERA" för att bekräfta att du vill radera ditt konto.</div>
       <% } %>
 
+      <!-- ════════════ ADAPTIV DASHBOARD ═══════════════════════════════════ -->
+      <%
+        // Detektera "brand new"-användare (0 aktivitet alls).
+        const isBrandNew = stats
+          ? (stats.xp === 0 && stats.totalActionsLogged === 0 && stats.totalRoleplays === 0)
+          : completed === 0;
+      %>
+
+      <% if (isBrandNew) { %>
+      <!-- STARTER-VY för helt nya användare — fokuserat, icke-overwhelming -->
+      <section class="starter-card">
+        <div class="starter-header">
+          <div class="starter-tag">🎯 Välkommen, <%= username %></div>
+          <h1 class="starter-title">Låt oss få igång din resa.</h1>
+          <p class="starter-sub">Tre enkla steg att komma igång. 10 minuter — och du är en helt annan säljare.</p>
+        </div>
+
+        <ol class="starter-steps">
+          <li class="starter-step">
+            <div class="ss-num">1</div>
+            <div class="ss-body">
+              <strong>📖 Läs Block 1 — Inledning</strong>
+              <p>Vad sälj egentligen är. Varför skicklighet byggs genom träning — inte talang. 10 min.</p>
+              <a href="/learn/inledning" class="ss-cta">Öppna Block 1 →</a>
+            </div>
+          </li>
+          <li class="starter-step">
+            <div class="ss-num">2</div>
+            <div class="ss-body">
+              <strong>🎭 Testa ett rollspel med Jocke</strong>
+              <p>I Block 2 kan du öva "förvirrad ton" — Jocke spelar kunden. Ingen risk, bara träning.</p>
+              <% if (role === 'free') { %>
+                <span class="ss-locked">Rollspel ingår i Premium</span>
+              <% } else { %>
+                <a href="/learn/forsta-intrycket/ova" class="ss-cta ss-cta-ghost">Gå till övning</a>
+              <% } %>
+            </div>
+          </li>
+          <li class="starter-step">
+            <div class="ss-num">3</div>
+            <div class="ss-body">
+              <strong>📓 Logga din första säljhandling</strong>
+              <p>Gjort ett samtal idag? Skickat ett mejl? Logga det — det är där förändringen börjar.</p>
+              <a href="/loggbok" class="ss-cta ss-cta-ghost">Öppna Loggboken</a>
+            </div>
+          </li>
+        </ol>
+
+        <div class="starter-footer">
+          <p>Utbildningen har <strong>20 block</strong>, ett <strong>AI-rollspelssystem</strong> och ett <strong>prestationssystem</strong>. Allt väntar när du är redo.</p>
+        </div>
+      </section>
+
+      <% } else { %>
+
+      <!-- ════════════ Level-up-modal (elegant, dismissible) ════════════ -->
+      <% if (gamEnabled && levelUp) { %>
+      <div class="levelup-backdrop" id="levelUpBackdrop" role="dialog" aria-labelledby="levelUpTitle" aria-modal="true">
+        <div class="levelup-modal">
+          <div class="levelup-frame">
+            <div class="levelup-eyebrow">Ny nivå</div>
+            <h2 id="levelUpTitle" class="levelup-name"><%= levelUp.levelName %></h2>
+            <div class="levelup-divider"></div>
+            <p class="levelup-body"><%= levelUp.body %></p>
+
+            <% if (levelUp.levelId >= 2) { %>
+              <a href="/mina-framsteg/bevis/<%= levelUp.levelId %>" class="levelup-btn levelup-btn-primary">🏆 Se ditt bevis</a>
+            <% } %>
+
+            <form method="POST" action="/niva/sedd" class="levelup-form">
+              <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+              <input type="hidden" name="levelId" value="<%= levelUp.levelId %>" />
+              <button type="submit" class="levelup-btn <%= levelUp.levelId >= 2 ? 'levelup-btn-ghost' : '' %>">Fortsätt</button>
+            </form>
+          </div>
+        </div>
+      </div>
+      <% } %>
+
+      <!-- ════════════ Prestations-overview (när gamification PÅ) ════════════ -->
+      <% if (gamEnabled && stats) { %>
+      <section class="perf-overview">
+        <div class="perf-level-card">
+          <div class="perf-level-eyebrow">Nivå <%= stats.level.current.id %> av 5</div>
+          <div class="perf-level-name"><%= stats.level.current.name %></div>
+          <div class="perf-level-signal"><%= stats.level.current.signalizes %></div>
+          <% if (stats.level.next) { %>
+            <div class="perf-progress-bar" role="progressbar" aria-valuenow="<%= Math.round(stats.level.progress * 100) %>" aria-valuemin="0" aria-valuemax="100" aria-label="Progress mot <%= stats.level.next.name %>">
+              <div class="perf-progress-fill" style="width: <%= Math.round(stats.level.progress * 100) %>%;"></div>
+            </div>
+            <div class="perf-progress-meta">
+              <span><%= stats.xp %> XP</span>
+              <span><%= stats.level.xpToNext %> XP till <%= stats.level.next.name %></span>
+            </div>
+          <% } else { %>
+            <div class="perf-progress-meta perf-maxed"><strong><%= stats.xp %> XP</strong> — toppnivå uppnådd</div>
+          <% } %>
+        </div>
+
+        <div class="perf-minor-stats">
+          <div class="perf-stat">
+            <div class="perf-stat-val">🔥 <%= stats.streak.current %></div>
+            <div class="perf-stat-label">dagars streak</div>
+            <% if (stats.streak.longest > stats.streak.current) { %>
+              <div class="perf-stat-note">(bäst: <%= stats.streak.longest %>)</div>
+            <% } %>
+          </div>
+          <div class="perf-stat">
+            <div class="perf-stat-val"><%= stats.totalBlocksMastered %>/<%= totalBlocks %></div>
+            <div class="perf-stat-label">bemästrade block</div>
+          </div>
+          <div class="perf-stat">
+            <div class="perf-stat-val"><%= stats.totalActionsThisWeek %></div>
+            <div class="perf-stat-label">actions denna vecka</div>
+          </div>
+          <div class="perf-stat">
+            <div class="perf-stat-val"><%= stats.totalRoleplays %></div>
+            <div class="perf-stat-label">rollspel genomförda</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Skill-radar -->
+      <section class="perf-radar-section">
+        <h3 class="perf-radar-title">Dina skills</h3>
+        <p class="perf-radar-sub">Baserat på bemästrade block per område</p>
+        <div class="perf-radar-list">
+          <% stats.radar.forEach(function(dim) { %>
+            <div class="perf-radar-item">
+              <div class="perf-radar-head">
+                <span class="perf-radar-icon"><%= dim.icon %></span>
+                <span class="perf-radar-name"><%= dim.name %></span>
+                <span class="perf-radar-score"><%= Math.round(dim.score * 100) %>%</span>
+              </div>
+              <div class="perf-radar-bar">
+                <div class="perf-radar-fill" style="width: <%= Math.round(dim.score * 100) %>%;"></div>
+              </div>
+              <div class="perf-radar-meta"><%= dim.mastered %>/<%= dim.total %> block bemästrade</div>
+            </div>
+          <% }); %>
+        </div>
+      </section>
+
+      <!-- Dagens challenge -->
+      <% if (dailyChallenge) { %>
+      <section class="perf-challenge <%= challengeCompleted ? 'perf-challenge-done' : '' %>">
+        <div class="perf-challenge-head">
+          <span class="perf-challenge-eyebrow">🎯 Dagens utmaning</span>
+          <% if (challengeCompleted) { %>
+            <span class="perf-challenge-badge">✓ Klar</span>
+          <% } else { %>
+            <span class="perf-challenge-xp">+<%= dailyChallenge.xp %> XP</span>
+          <% } %>
+        </div>
+        <h3 class="perf-challenge-text"><%= dailyChallenge.text %></h3>
+        <% if (!challengeCompleted) { %>
+          <a href="/loggbok" class="jc-btn">Logga när du gjort det →</a>
+        <% } else { %>
+          <p class="perf-challenge-done-msg">Bra jobbat. Ny challenge imorgon.</p>
+        <% } %>
+      </section>
+      <% } %>
+      <% } %>
+
+      <!-- ════════════ "Din plan" — adaptiv pedagogisk coach ════════════ -->
+      <% if (recommendations && recommendations.length) { %>
+      <section class="dash-plan" role="region" aria-label="Din personliga plan">
+        <div class="dash-plan-header">
+          <div>
+            <span class="dash-plan-eyebrow">🧭 Din plan</span>
+            <h2 class="dash-plan-title">Nästa steg som ger dig mest just nu</h2>
+          </div>
+          <button class="dash-plan-toggle" type="button" onclick="toggleDashPlan()" aria-expanded="true" aria-controls="dashPlanCards">Dölj</button>
+        </div>
+        <div class="dash-plan-cards" id="dashPlanCards">
+          <% recommendations.forEach(function(rec) { %>
+            <div class="dp-card dp-card-<%= rec.type %>" data-dismiss-key="<%= rec.dismissKey %>">
+              <button class="dp-dismiss" type="button" onclick="dismissRecCard(this)" aria-label="Dölj den här rekommendationen">✕</button>
+              <div class="dp-tag">
+                <span class="dp-icon"><%= rec.icon %></span>
+                <span class="dp-tag-label"><%= rec.tag %></span>
+              </div>
+              <h3 class="dp-card-title"><%= rec.title %></h3>
+              <p class="dp-card-desc"><%= rec.description %></p>
+              <a href="<%= rec.url %>" class="dp-card-cta"><%= rec.cta %> →</a>
+            </div>
+          <% }); %>
+        </div>
+      </section>
+      <script>
+        (function(){
+          // Dölj-kort som användaren stängt (localStorage, session-baserad)
+          document.querySelectorAll('.dp-card').forEach(card => {
+            const key = card.getAttribute('data-dismiss-key');
+            if (key && localStorage.getItem('dismiss-' + key)) {
+              card.style.display = 'none';
+            }
+          });
+          // Om alla är dolda — dölj hela sektionen
+          const visible = [...document.querySelectorAll('.dp-card')].filter(c => c.style.display !== 'none');
+          if (!visible.length) {
+            const section = document.querySelector('.dash-plan');
+            if (section) section.style.display = 'none';
+          }
+          // Kollapsat-läge (per-session)
+          if (sessionStorage.getItem('dash-plan-collapsed') === '1') {
+            const cards = document.getElementById('dashPlanCards');
+            const btn = document.querySelector('.dash-plan-toggle');
+            if (cards) cards.style.display = 'none';
+            if (btn) { btn.textContent = 'Visa'; btn.setAttribute('aria-expanded', 'false'); }
+          }
+        })();
+        function dismissRecCard(btn) {
+          const card = btn.closest('.dp-card');
+          const key = card.getAttribute('data-dismiss-key');
+          if (key) localStorage.setItem('dismiss-' + key, '1');
+          card.style.display = 'none';
+          const visible = [...document.querySelectorAll('.dp-card')].filter(c => c.style.display !== 'none');
+          if (!visible.length) {
+            const section = document.querySelector('.dash-plan');
+            if (section) section.style.display = 'none';
+          }
+        }
+        function toggleDashPlan() {
+          const cards = document.getElementById('dashPlanCards');
+          const btn = document.querySelector('.dash-plan-toggle');
+          if (!cards || !btn) return;
+          const hidden = cards.style.display === 'none';
+          cards.style.display = hidden ? '' : 'none';
+          btn.textContent = hidden ? 'Dölj' : 'Visa';
+          btn.setAttribute('aria-expanded', hidden ? 'true' : 'false');
+          sessionStorage.setItem('dash-plan-collapsed', hidden ? '0' : '1');
+        }
+      </script>
+      <% } %>
+
       <!-- ── FREE USER — Onboarding / Upsell ──────────────────────────────── -->
       <% if (role === 'free') { %>
 
         <section class="dash-onboarding">
           <div class="onboarding-header">
             <h1>Välkommen, <%= username %>! 🎯</h1>
-            <p>Du har tillgång till <strong>Block 1 — Inledning & Första Intrycket</strong>. Börja här.</p>
+            <p>Du har tillgång till <strong>Block 1 — Inledning</strong> och <strong>Block 2 — Första Intrycket</strong>. Börja här.</p>
           </div>
           <div class="onboarding-steps">
-            <a href="/learn/forsta-intrycket" class="onboarding-step <% if (progress['forsta-intrycket']?.completed) { %>step-done<% } %>">
-              <div class="step-num"><% if (progress['forsta-intrycket']?.completed) { %>✓<% } else { %>1<% } %></div>
+            <a href="/learn/inledning" class="onboarding-step <% if (progress['inledning']?.completed) { %>step-done<% } %>">
+              <div class="step-num"><% if (progress['inledning']?.completed) { %>✓<% } else { %>1<% } %></div>
               <div class="step-body">
-                <strong>Läs Block 1 — Inledning & Första Intrycket</strong>
+                <strong>Läs Block 1 — Inledning</strong>
+                <span>Vad sälj egentligen är. Retoriken. Varför säljare alltid behövs.</span>
+              </div>
+              <span class="step-arrow">→</span>
+            </a>
+            <a href="/learn/forsta-intrycket" class="onboarding-step <% if (progress['forsta-intrycket']?.completed) { %>step-done<% } %>">
+              <div class="step-num"><% if (progress['forsta-intrycket']?.completed) { %>✓<% } else { %>2<% } %></div>
+              <div class="step-body">
+                <strong>Läs Block 2 — Första Intrycket</strong>
                 <span>De första 7 sekunderna. Mehrabians regel. Hur du öppnar ett samtal.</span>
               </div>
               <span class="step-arrow">→</span>
@@ -117,8 +367,8 @@
             <div class="onboarding-step step-locked">
               <div class="step-num">🔒</div>
               <div class="step-body">
-                <strong>Block 2–16 — Låsta med Premium</strong>
-                <span>Prospektering, invändningar, avslutstekniker, förhandling och mer.</span>
+                <strong>Block 3–20 — Låsta med Premium</strong>
+                <span>Tonfall, prospektering, invändningar, avslutstekniker, förhandling och mer.</span>
               </div>
               <a href="/upgrade" class="step-upgrade-btn">Uppgradera →</a>
             </div>
@@ -129,14 +379,14 @@
           <div class="upsell-card">
             <div class="upsell-left">
               <div class="upsell-tag">⭐ Premium</div>
-              <h2>Lås upp alla 16 block</h2>
+              <h2>Lås upp alla 20 block</h2>
               <p>Teori, video och prov per block. AI-assistenten Jocke. Allt du behöver för att prestera på riktigt.</p>
               <ul class="upsell-list">
-                <li>✅ 15 avancerade block (Block 2–16)</li>
-                <li>✅ Invändningar, avslut, förhandling</li>
+                <li>✅ 18 avancerade block (Block 3–20)</li>
+                <li>✅ Tonfall & psykologisk påverkan, invändningar, avslut, förhandling</li>
                 <li>✅ LinkedIn, videosamtal, e-post</li>
                 <li>✅ AI-assistenten Jocke — din personlige säljcoach</li>
-                <li>✅ Mental styrka & tidshantering</li>
+                <li>✅ Mental styrka, AI-verktyg & rekommenderad läsning</li>
               </ul>
             </div>
             <div class="upsell-right">
@@ -250,6 +500,8 @@
           <% }); %>
         </div>
       </section>
+
+      <% } %> <!-- slut: isBrandNew else-gren -->
 
     </main>
   </div>
