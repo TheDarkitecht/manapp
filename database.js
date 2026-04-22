@@ -750,6 +750,172 @@ function updateUserPassword(userId, newPassword) {
   saveDb();
 }
 
+// ═══════════════════════════════════════════════════════════════════════════════
+// ADMIN ANALYTICS — aggregerade queries för content-insights
+// ═══════════════════════════════════════════════════════════════════════════════
+
+function scalarQuery(sql, params = []) {
+  const s = db.prepare(sql);
+  if (params.length) s.bind(params);
+  s.step();
+  const row = s.getAsObject();
+  s.free();
+  return row;
+}
+
+function rowsQuery(sql, params = []) {
+  const s = db.prepare(sql);
+  if (params.length) s.bind(params);
+  const rows = [];
+  while (s.step()) rows.push(s.getAsObject());
+  s.free();
+  return rows;
+}
+
+/**
+ * Komplett analytics-payload för /admin/analytics.
+ * Alla siffror är anonymiserade aggregat.
+ */
+function getAdminAnalytics() {
+  // ── Användare ──
+  const totalUsers   = scalarQuery('SELECT COUNT(*) AS n FROM users').n;
+  const premiumUsers = scalarQuery("SELECT COUNT(*) AS n FROM users WHERE role = 'premium'").n;
+  const freeUsers    = scalarQuery("SELECT COUNT(*) AS n FROM users WHERE role = 'free'").n;
+  const adminUsers   = scalarQuery("SELECT COUNT(*) AS n FROM users WHERE role = 'admin'").n;
+
+  const newWeek  = scalarQuery("SELECT COUNT(*) AS n FROM users WHERE created_at > datetime('now', '-7 days')").n;
+  const newMonth = scalarQuery("SELECT COUNT(*) AS n FROM users WHERE created_at > datetime('now', '-30 days')").n;
+
+  // ── Aktiva användare (minst 1 event någon av tabellerna) ──
+  // Bygg UNION över alla event-källor
+  const activeWindow = (days) => {
+    const sql = `
+      SELECT COUNT(DISTINCT user_id) AS n FROM (
+        SELECT user_id FROM block_progress WHERE completed_at > datetime('now', '-${days} days')
+        UNION SELECT user_id FROM user_reflections WHERE created_at > datetime('now', '-${days} days')
+        UNION SELECT user_id FROM user_roleplays WHERE completed_at > datetime('now', '-${days} days')
+        UNION SELECT user_id FROM user_missions WHERE started_at > datetime('now', '-${days} days')
+        UNION SELECT user_id FROM user_actions WHERE created_at > datetime('now', '-${days} days')
+      )
+    `;
+    return scalarQuery(sql).n;
+  };
+  const active7  = activeWindow(7);
+  const active30 = activeWindow(30);
+
+  // ── Retention (cohort-approximering) ──
+  // Av användare som registrerades 7+/14+/30+ dagar sen, hur många var aktiva senaste 7 dagar?
+  const retention = (days) => {
+    const eligible = scalarQuery(`
+      SELECT COUNT(*) AS n FROM users WHERE created_at < datetime('now', '-${days} days')
+    `).n;
+    if (!eligible) return { pct: 0, active: 0, eligible: 0 };
+    const activeFromCohort = scalarQuery(`
+      SELECT COUNT(DISTINCT u.id) AS n
+      FROM users u
+      WHERE u.created_at < datetime('now', '-${days} days')
+        AND u.id IN (
+          SELECT user_id FROM block_progress WHERE completed_at > datetime('now', '-7 days')
+          UNION SELECT user_id FROM user_reflections WHERE created_at > datetime('now', '-7 days')
+          UNION SELECT user_id FROM user_roleplays WHERE completed_at > datetime('now', '-7 days')
+          UNION SELECT user_id FROM user_missions WHERE started_at > datetime('now', '-7 days')
+          UNION SELECT user_id FROM user_actions WHERE created_at > datetime('now', '-7 days')
+        )
+    `).n;
+    return {
+      pct: Math.round((activeFromCohort / eligible) * 100),
+      active: activeFromCohort,
+      eligible,
+    };
+  };
+
+  // ── Block-engagement: för varje block, räkna progress per steg ──
+  const blockEngagement = rowsQuery(`
+    SELECT
+      bp.block_id,
+      COUNT(DISTINCT bp.user_id) AS theory_done,
+      SUM(CASE WHEN bp.completed = 1 THEN 1 ELSE 0 END) AS quiz_passed,
+      (SELECT COUNT(DISTINCT user_id) FROM user_roleplays WHERE block_id = bp.block_id) AS roleplay_users,
+      (SELECT COUNT(DISTINCT user_id) FROM user_missions WHERE block_id = bp.block_id) AS mission_started,
+      (SELECT COUNT(DISTINCT user_id) FROM user_missions WHERE block_id = bp.block_id AND completed_at IS NOT NULL) AS mission_done,
+      (SELECT COUNT(DISTINCT user_id) FROM user_reflections WHERE block_id = bp.block_id) AS reflection_users,
+      AVG(CASE WHEN bp.quiz_total > 0 THEN (CAST(bp.quiz_score AS FLOAT) / bp.quiz_total) * 100 ELSE NULL END) AS avg_quiz_pct
+    FROM block_progress bp
+    GROUP BY bp.block_id
+    ORDER BY quiz_passed DESC
+  `);
+
+  // ── Action-kategorier (vad användare loggar i Loggboken) ──
+  const actionCategories = rowsQuery(`
+    SELECT category, COUNT(*) AS total_logs, SUM(count) AS total_units, COUNT(DISTINCT user_id) AS users
+    FROM user_actions
+    GROUP BY category
+    ORDER BY total_logs DESC
+  `);
+
+  const totalActionsLogged   = scalarQuery('SELECT COUNT(*) AS n FROM user_actions').n;
+  const totalRoleplays       = scalarQuery('SELECT COUNT(*) AS n FROM user_roleplays').n;
+  const totalReflections     = scalarQuery('SELECT COUNT(*) AS n FROM user_reflections').n;
+  const totalMissionsStarted = scalarQuery('SELECT COUNT(*) AS n FROM user_missions').n;
+  const totalMissionsDone    = scalarQuery('SELECT COUNT(*) AS n FROM user_missions WHERE completed_at IS NOT NULL').n;
+
+  // ── Fullt bemästrade block-cellar (ej bara quiz utan alla 4 steg) ──
+  const masteryEvents = rowsQuery(`
+    SELECT
+      bp.block_id,
+      COUNT(DISTINCT bp.user_id) AS users
+    FROM block_progress bp
+    WHERE bp.completed = 1
+      AND bp.user_id IN (SELECT user_id FROM user_roleplays WHERE block_id = bp.block_id)
+      AND bp.user_id IN (SELECT user_id FROM user_missions WHERE block_id = bp.block_id AND completed_at IS NOT NULL)
+      AND bp.user_id IN (SELECT user_id FROM user_reflections WHERE block_id = bp.block_id)
+    GROUP BY bp.block_id
+    ORDER BY users DESC
+  `);
+
+  // ── Senaste aktivitet (top 10 actions över alla användare) ──
+  const recentActivity = rowsQuery(`
+    SELECT 'action' AS type, category AS detail, created_at, user_id FROM user_actions
+    UNION ALL SELECT 'quiz', block_id, completed_at, user_id FROM block_progress WHERE completed = 1 AND completed_at IS NOT NULL
+    UNION ALL SELECT 'roleplay', block_id || ':' || roleplay_id, completed_at, user_id FROM user_roleplays
+    UNION ALL SELECT 'reflection', block_id, created_at, user_id FROM user_reflections
+    UNION ALL SELECT 'mission_done', block_id, completed_at, user_id FROM user_missions WHERE completed_at IS NOT NULL
+    ORDER BY created_at DESC
+    LIMIT 20
+  `);
+
+  return {
+    users: {
+      total: totalUsers,
+      premium: premiumUsers,
+      free: freeUsers,
+      admin: adminUsers,
+      newThisWeek: newWeek,
+      newThisMonth: newMonth,
+    },
+    activity: {
+      active7Days: active7,
+      active30Days: active30,
+    },
+    retention: {
+      day7:  retention(7),
+      day14: retention(14),
+      day30: retention(30),
+    },
+    blockEngagement,
+    actionCategories,
+    masteryEvents,
+    totals: {
+      actionsLogged:   totalActionsLogged,
+      roleplays:       totalRoleplays,
+      reflections:     totalReflections,
+      missionsStarted: totalMissionsStarted,
+      missionsDone:    totalMissionsDone,
+    },
+    recentActivity,
+  };
+}
+
 // ── Exports ───────────────────────────────────────────────────────────────────
 
 module.exports = {
@@ -775,4 +941,6 @@ module.exports = {
   getDailyChallenge, saveDailyChallenge, completeDailyChallenge,
   // Retention emails
   getAllUsersWithEmail,
+  // Admin analytics
+  getAdminAnalytics,
 };

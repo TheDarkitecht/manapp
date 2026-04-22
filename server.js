@@ -23,6 +23,7 @@ const {
   getUserPreferences, setUserPreferences,
   getDailyChallenge, saveDailyChallenge, completeDailyChallenge,
   getAllUsersWithEmail,
+  getAdminAnalytics,
 } = require('./database');
 const gamification = require('./gamification');
 const emails = require('./emails');
@@ -1698,6 +1699,19 @@ app.get('/admin', requireLogin, requireAdmin, (req, res) => {
     users:     getAllUsers(),
     stats:     getUserStats(),
     csrfToken: generateCsrfToken(req),
+  });
+});
+
+app.get('/admin/analytics', requireLogin, requireAdmin, (req, res) => {
+  const analytics = getAdminAnalytics();
+  // Berika blockEngagement med block-titlar för läsbarhet
+  const blockTitles = {};
+  salesBlocks.forEach((b, i) => { blockTitles[b.id] = { title: b.title, index: i + 1, icon: b.icon }; });
+  res.render('admin-analytics', {
+    username: req.session.username,
+    analytics,
+    blockTitles,
+    totalBlocks: salesBlocks.length,
   });
 });
 

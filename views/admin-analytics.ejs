@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin — Analytics</title>
+  <meta name="robots" content="noindex" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📊</text></svg>" />
+  <link rel="stylesheet" href="/style.css" />
+  <link rel="stylesheet" href="/gamification.css" />
+  <style>
+    .analytics-wrap { max-width: 1200px; margin: 0 auto; padding: 2rem 1.25rem; }
+    .analytics-nav {
+      display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 2rem;
+    }
+    .an-tab {
+      padding: 0.5rem 1rem; background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.08); border-radius: 999px;
+      color: #cbd5e1; text-decoration: none; font-size: 0.85rem;
+    }
+    .an-tab.active { background: linear-gradient(135deg, #6366f1, #8b5cf6); color: #fff; }
+    .an-tab:hover { border-color: rgba(99,102,241,0.4); }
+
+    .kpi-grid {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 1rem; margin-bottom: 2rem;
+    }
+    .kpi-card {
+      padding: 1.25rem 1.5rem;
+      background: linear-gradient(145deg, #1e293b, #0f172a);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 14px;
+    }
+    .kpi-label {
+      font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.08em;
+      color: #a5b4fc; font-weight: 700; margin-bottom: 0.5rem;
+    }
+    .kpi-value {
+      font-size: 2.2rem; font-weight: 800; color: #f1f5f9; line-height: 1;
+      font-variant-numeric: tabular-nums;
+    }
+    .kpi-sub { font-size: 0.8rem; color: #94a3b8; margin-top: 0.5rem; }
+    .kpi-delta { color: #34d399; font-weight: 600; }
+    .kpi-delta-down { color: #f87171; }
+
+    .section-card {
+      background: linear-gradient(145deg, #1e293b, #0f172a);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 14px; padding: 1.5rem; margin-bottom: 1.5rem;
+    }
+    .section-card h2 {
+      margin: 0 0 0.25rem; color: #f1f5f9; font-size: 1.1rem;
+    }
+    .section-card .section-desc {
+      color: #94a3b8; font-size: 0.85rem; margin: 0 0 1.25rem;
+    }
+
+    .analytics-table {
+      width: 100%; border-collapse: collapse; font-size: 0.88rem;
+    }
+    .analytics-table th, .analytics-table td {
+      padding: 0.65rem 0.75rem; text-align: left;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+    }
+    .analytics-table th {
+      color: #94a3b8; font-size: 0.72rem; text-transform: uppercase;
+      letter-spacing: 0.06em; font-weight: 700;
+    }
+    .analytics-table td { color: #e2e8f0; }
+    .analytics-table td.num { font-variant-numeric: tabular-nums; text-align: right; }
+    .analytics-table tr:hover td { background: rgba(255,255,255,0.02); }
+
+    .bar-wrap {
+      background: rgba(255,255,255,0.05); border-radius: 999px; height: 8px;
+      position: relative; overflow: hidden; min-width: 80px;
+    }
+    .bar-fill {
+      position: absolute; inset: 0 auto 0 0;
+      background: linear-gradient(90deg, #6366f1, #8b5cf6); border-radius: 999px;
+    }
+    .bar-fill-good { background: linear-gradient(90deg, #10b981, #059669); }
+    .bar-fill-warn { background: linear-gradient(90deg, #f59e0b, #d97706); }
+    .bar-fill-bad  { background: linear-gradient(90deg, #ef4444, #b91c1c); }
+
+    .insight {
+      padding: 0.85rem 1rem; background: rgba(251,191,36,0.06);
+      border-left: 3px solid #fbbf24; border-radius: 6px;
+      color: #fef3c7; font-size: 0.88rem; line-height: 1.5; margin-top: 1rem;
+    }
+
+    .recent-list { display: flex; flex-direction: column; gap: 0.4rem; max-height: 400px; overflow-y: auto; }
+    .recent-item {
+      display: flex; justify-content: space-between; gap: 1rem;
+      padding: 0.5rem 0.75rem; background: rgba(255,255,255,0.02);
+      border-radius: 6px; font-size: 0.82rem;
+    }
+    .recent-item .r-type {
+      font-size: 0.7rem; padding: 0.1rem 0.5rem; border-radius: 999px;
+      background: rgba(99,102,241,0.2); color: #a5b4fc;
+      font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;
+    }
+    .recent-item .r-detail { color: #e2e8f0; flex: 1; }
+    .recent-item .r-date { color: #64748b; font-variant-numeric: tabular-nums; }
+    .recent-item .r-user { color: #94a3b8; font-size: 0.75rem; }
+  </style>
+</head>
+<body class="block-page">
+
+  <a href="#main-content" class="skip-to-main">Hoppa till innehåll</a>
+
+  <nav class="learn-nav">
+    <a href="/admin" class="learn-nav-back">← Admin</a>
+    <span class="learn-nav-title">📊 Analytics</span>
+    <span class="learn-nav-user"><%= username %></span>
+  </nav>
+
+  <main id="main-content" class="analytics-wrap">
+
+    <div class="analytics-nav">
+      <a href="/admin" class="an-tab">👥 Användare</a>
+      <a href="/admin/analytics" class="an-tab active">📊 Analytics</a>
+    </div>
+
+    <h1 style="color:#f1f5f9; margin-bottom:0.25rem;">Plattforms-insights</h1>
+    <p style="color:#94a3b8; margin:0 0 2rem;">Anonymiserade aggregat — hjälp för content-iteration och produktutveckling.</p>
+
+    <!-- ═══ ANVÄNDARE ═══ -->
+    <h2 style="color:#f1f5f9; font-size:1rem; text-transform:uppercase; letter-spacing:0.08em; margin-bottom:1rem;">👥 Användare</h2>
+    <div class="kpi-grid">
+      <div class="kpi-card">
+        <div class="kpi-label">Totalt</div>
+        <div class="kpi-value"><%= analytics.users.total %></div>
+        <div class="kpi-sub">
+          <%= analytics.users.premium %> Premium ·
+          <%= analytics.users.free %> Gratis ·
+          <%= analytics.users.admin %> Admin
+        </div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Nya denna vecka</div>
+        <div class="kpi-value"><%= analytics.users.newThisWeek %></div>
+        <div class="kpi-sub">+<%= analytics.users.newThisMonth %> senaste 30 dagar</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Aktiva (7 dagar)</div>
+        <div class="kpi-value"><%= analytics.activity.active7Days %></div>
+        <div class="kpi-sub"><%= analytics.users.total > 0 ? Math.round((analytics.activity.active7Days / analytics.users.total) * 100) : 0 %>% av totalt</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Aktiva (30 dagar)</div>
+        <div class="kpi-value"><%= analytics.activity.active30Days %></div>
+        <div class="kpi-sub"><%= analytics.users.total > 0 ? Math.round((analytics.activity.active30Days / analytics.users.total) * 100) : 0 %>% av totalt</div>
+      </div>
+    </div>
+
+    <!-- ═══ RETENTION ═══ -->
+    <div class="section-card">
+      <h2>🎯 Retention</h2>
+      <p class="section-desc">Av användare som registrerades X dagar sen — hur många är fortfarande aktiva (senaste 7 dagar)?</p>
+      <div class="kpi-grid">
+        <div class="kpi-card">
+          <div class="kpi-label">Dag 7</div>
+          <div class="kpi-value"><%= analytics.retention.day7.pct %>%</div>
+          <div class="kpi-sub"><%= analytics.retention.day7.active %> av <%= analytics.retention.day7.eligible %></div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">Dag 14</div>
+          <div class="kpi-value"><%= analytics.retention.day14.pct %>%</div>
+          <div class="kpi-sub"><%= analytics.retention.day14.active %> av <%= analytics.retention.day14.eligible %></div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">Dag 30</div>
+          <div class="kpi-value"><%= analytics.retention.day30.pct %>%</div>
+          <div class="kpi-sub"><%= analytics.retention.day30.active %> av <%= analytics.retention.day30.eligible %></div>
+        </div>
+      </div>
+      <% if (analytics.retention.day7.eligible < 10) { %>
+        <div class="insight">💡 Tidigt för retention-data — mer meningsfullt när du har 30+ användare som registrerats minst 30 dagar sen.</div>
+      <% } else if (analytics.retention.day7.pct < 30) { %>
+        <div class="insight">⚠️ Låg dag-7-retention. Utforska: är onboarding oklar? Ger första block för lite värde?</div>
+      <% } else if (analytics.retention.day30.pct > 40) { %>
+        <div class="insight">🎉 Hög 30-dagars-retention — användare kommer tillbaka på riktigt. Nu fokus på att driva fler till premium.</div>
+      <% } %>
+    </div>
+
+    <!-- ═══ AKTIVITET-TOTALS ═══ -->
+    <div class="section-card">
+      <h2>⚡ Aktivitet — totalt över alla användare</h2>
+      <div class="kpi-grid">
+        <div class="kpi-card">
+          <div class="kpi-label">Actions loggade</div>
+          <div class="kpi-value"><%= analytics.totals.actionsLogged %></div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">Rollspel genomförda</div>
+          <div class="kpi-value"><%= analytics.totals.roleplays %></div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">Reflektioner skrivna</div>
+          <div class="kpi-value"><%= analytics.totals.reflections %></div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">Uppdrag klara</div>
+          <div class="kpi-value"><%= analytics.totals.missionsDone %></div>
+          <div class="kpi-sub">av <%= analytics.totals.missionsStarted %> startade</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ BLOCK-ENGAGEMENT ═══ -->
+    <div class="section-card">
+      <h2>📚 Block-engagement</h2>
+      <p class="section-desc">För varje block: hur många unika användare gör respektive steg? "Drop-off" = var folk tappar intresset.</p>
+      <% if (!analytics.blockEngagement.length) { %>
+        <p style="color:#94a3b8;">Inga quiz-genomförda ännu. Data visas så fort första användaren klarar ett prov.</p>
+      <% } else { %>
+      <table class="analytics-table">
+        <thead>
+          <tr>
+            <th>Block</th>
+            <th class="num">Quiz klart</th>
+            <th class="num">Ø quiz%</th>
+            <th class="num">Rollspel</th>
+            <th class="num">Mission start</th>
+            <th class="num">Mission klar</th>
+            <th class="num">Reflektioner</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% analytics.blockEngagement.forEach(function(b) { %>
+            <% const meta = blockTitles[b.block_id] || { title: b.block_id, index: '?', icon: '' }; %>
+            <% const avgPct = b.avg_quiz_pct ? Math.round(b.avg_quiz_pct) : null; %>
+            <tr>
+              <td><strong><%= meta.icon %> <%= meta.index %>. <%= meta.title %></strong></td>
+              <td class="num"><%= b.quiz_passed %></td>
+              <td class="num">
+                <% if (avgPct !== null) { %>
+                  <span style="color:<%= avgPct >= 80 ? '#34d399' : avgPct >= 60 ? '#fbbf24' : '#f87171' %>;"><%= avgPct %>%</span>
+                <% } else { %>—<% } %>
+              </td>
+              <td class="num"><%= b.roleplay_users %></td>
+              <td class="num"><%= b.mission_started %></td>
+              <td class="num"><%= b.mission_done %></td>
+              <td class="num"><%= b.reflection_users %></td>
+            </tr>
+          <% }); %>
+        </tbody>
+      </table>
+      <div class="insight">💡 <strong>Low ø quiz%</strong> = svårt block, ev. oklart. <strong>Stor gap mellan Quiz→Rollspel→Mission</strong> = användare når teorin men tappar intresse för aktiv träning.</div>
+      <% } %>
+    </div>
+
+    <!-- ═══ ACTION-KATEGORIER ═══ -->
+    <div class="section-card">
+      <h2>📓 Loggboken — vad folk faktiskt gör</h2>
+      <p class="section-desc">Top-kategorier i Loggboken. Visar vad dina användare prioriterar i verkligheten.</p>
+      <% if (!analytics.actionCategories.length) { %>
+        <p style="color:#94a3b8;">Inga loggade actions ännu.</p>
+      <% } else { %>
+      <table class="analytics-table">
+        <thead>
+          <tr>
+            <th>Kategori</th>
+            <th class="num">Loggar</th>
+            <th class="num">Total antal</th>
+            <th class="num">Unika användare</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% analytics.actionCategories.forEach(function(a) { %>
+            <tr>
+              <td><code style="background:rgba(255,255,255,0.05); padding:0.15rem 0.4rem; border-radius:4px;"><%= a.category %></code></td>
+              <td class="num"><%= a.total_logs %></td>
+              <td class="num"><%= a.total_units %></td>
+              <td class="num"><%= a.users %></td>
+            </tr>
+          <% }); %>
+        </tbody>
+      </table>
+      <% } %>
+    </div>
+
+    <!-- ═══ MASTERY-EVENTS ═══ -->
+    <% if (analytics.masteryEvents && analytics.masteryEvents.length) { %>
+    <div class="section-card">
+      <h2>🏆 Bemästrade block (alla 4 steg klara)</h2>
+      <p class="section-desc">Hur många användare har slutfört hela 4-stegs-resan per block?</p>
+      <table class="analytics-table">
+        <thead>
+          <tr><th>Block</th><th class="num">Användare</th></tr>
+        </thead>
+        <tbody>
+          <% analytics.masteryEvents.forEach(function(m) { %>
+            <% const meta = blockTitles[m.block_id] || { title: m.block_id, index: '?', icon: '' }; %>
+            <tr>
+              <td><strong><%= meta.icon %> <%= meta.index %>. <%= meta.title %></strong></td>
+              <td class="num"><%= m.users %></td>
+            </tr>
+          <% }); %>
+        </tbody>
+      </table>
+    </div>
+    <% } %>
+
+    <!-- ═══ SENASTE AKTIVITET ═══ -->
+    <div class="section-card">
+      <h2>⏱️ Senaste aktivitet</h2>
+      <p class="section-desc">Live-feed av de senaste 20 händelserna (anonymiserat — endast user_id visas).</p>
+      <% if (!analytics.recentActivity.length) { %>
+        <p style="color:#94a3b8;">Ingen aktivitet ännu.</p>
+      <% } else { %>
+      <div class="recent-list">
+        <% analytics.recentActivity.forEach(function(r) { %>
+          <div class="recent-item">
+            <span class="r-type"><%= r.type %></span>
+            <span class="r-detail"><%= r.detail %></span>
+            <span class="r-user">#<%= r.user_id %></span>
+            <span class="r-date"><%= r.created_at ? new Date(r.created_at).toLocaleString('sv-SE', { dateStyle: 'short', timeStyle: 'short' }) : '' %></span>
+          </div>
+        <% }); %>
+      </div>
+      <% } %>
+    </div>
+
+  </main>
+
+</body>
+</html>
