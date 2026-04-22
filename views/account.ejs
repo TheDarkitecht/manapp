@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mitt konto — Joakim Jaksen</title>
+  <meta name="robots" content="noindex, nofollow" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎯</text></svg>" />
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body class="learn-page">
+
+  <a href="#main-content" class="skip-to-main">Hoppa till innehåll</a>
+
+  <nav class="learn-nav">
+    <a href="/dashboard" class="learn-nav-back">← Dashboard</a>
+    <span class="learn-nav-title">🔐 Mitt konto</span>
+    <span class="learn-nav-user"><%= username %></span>
+  </nav>
+
+  <main id="main-content">
+  <div class="success-wrap">
+    <div class="success-card">
+      <div class="success-icon">🔐</div>
+      <h1>Byt lösenord</h1>
+      <p style="color:#94a3b8;margin:0 0 1.25rem;">Inloggad som <strong><%= username %></strong><% if (email) { %> · <%= email %><% } %></p>
+
+      <% if (pwOk) { %>
+        <p class="auth-error" style="background:#064e3b;color:#6ee7b7;border:1px solid #065f46;margin-bottom:1rem;">
+          ✓ Lösenordet är uppdaterat.
+        </p>
+      <% } %>
+
+      <% if (pwError) { %>
+        <p class="auth-error" style="margin-bottom:1rem;">
+          <% if (pwError === 'current')   { %>⚠️ Nuvarande lösenord är fel.
+          <% } else if (pwError === 'short') { %>⚠️ Det nya lösenordet måste vara minst 8 tecken.
+          <% } else if (pwError === 'long')  { %>⚠️ Lösenordet får inte vara längre än 128 tecken.
+          <% } else if (pwError === 'match') { %>⚠️ Lösenorden matchar inte.
+          <% } else if (pwError === 'same')  { %>⚠️ Nytt lösenord får inte vara samma som det nuvarande.
+          <% } else if (pwError === 'ratelimit') { %>🔒 För många försök. Försök igen om en timme.
+          <% } else { %>⚠️ Något gick fel. Försök igen.
+          <% } %>
+        </p>
+      <% } %>
+
+      <form method="POST" action="/account/change-password" style="width:100%;" onsubmit="return validateAcc(event)">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+
+        <div class="field-group" style="text-align:left;margin-bottom:1rem;">
+          <label for="accCurrent" style="color:#94a3b8;font-size:0.85rem;">Nuvarande lösenord</label>
+          <input type="password" id="accCurrent" name="currentPassword" placeholder="••••••••" required
+            autocomplete="current-password"
+            style="width:100%;padding:0.75rem 1rem;border-radius:8px;border:1px solid #334155;background:#0f172a;color:#f1f5f9;font-size:1rem;margin-top:0.35rem;" />
+        </div>
+
+        <div class="field-group" style="text-align:left;margin-bottom:1rem;">
+          <label for="accNew" style="color:#94a3b8;font-size:0.85rem;">Nytt lösenord <span style="color:#64748b;">(minst 8 tecken)</span></label>
+          <input type="password" id="accNew" name="newPassword" placeholder="••••••••" required minlength="8" maxlength="128"
+            autocomplete="new-password"
+            style="width:100%;padding:0.75rem 1rem;border-radius:8px;border:1px solid #334155;background:#0f172a;color:#f1f5f9;font-size:1rem;margin-top:0.35rem;"
+            oninput="checkAccMatch()" />
+        </div>
+
+        <div class="field-group" style="text-align:left;margin-bottom:1.25rem;">
+          <label for="accConfirm" style="color:#94a3b8;font-size:0.85rem;">Bekräfta nytt lösenord</label>
+          <input type="password" id="accConfirm" name="confirmPassword" placeholder="••••••••" required
+            autocomplete="new-password"
+            style="width:100%;padding:0.75rem 1rem;border-radius:8px;border:1px solid #334155;background:#0f172a;color:#f1f5f9;font-size:1rem;margin-top:0.35rem;"
+            oninput="checkAccMatch()" />
+          <p id="accMatchErr" style="display:none;color:#f87171;font-size:.78rem;margin:.3rem 0 0;">⚠️ Lösenorden matchar inte.</p>
+        </div>
+
+        <button type="submit" class="success-btn" style="width:100%;margin-bottom:0;">
+          Spara nytt lösenord →
+        </button>
+      </form>
+
+      <a href="/dashboard" class="success-link">← Tillbaka till dashboard</a>
+    </div>
+  </div>
+  </main>
+
+  <script>
+    function checkAccMatch() {
+      const pw  = document.getElementById('accNew').value;
+      const cfm = document.getElementById('accConfirm').value;
+      document.getElementById('accMatchErr').style.display =
+        (cfm.length > 0 && pw !== cfm) ? 'block' : 'none';
+    }
+    function validateAcc(e) {
+      const pw  = document.getElementById('accNew').value;
+      const cfm = document.getElementById('accConfirm').value;
+      if (pw !== cfm) {
+        e.preventDefault();
+        document.getElementById('accMatchErr').style.display = 'block';
+        return false;
+      }
+      return true;
+    }
+    // Clean ?pwOk=1 / ?pwError=… from the URL after rendering so a refresh doesn't re-show the flash
+    (function() {
+      const p = new URLSearchParams(window.location.search);
+      if (p.has('pwOk') || p.has('pwError')) {
+        history.replaceState({}, '', '/account');
+      }
+    })();
+  </script>
+
+</body>
+</html>
