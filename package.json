@@ -1,7 +1,7 @@
 {
   "name": "joakim-jaksen-saljutbildning",
   "version": "2.0.0",
-  "description": "Joakim Jaksens Säljutbildning — 16 block, AI-coach Jocke, premium subscriptions via Stripe",
+  "description": "Joakim Jaksens Säljutbildning — 20 block, AI-coach Jocke, premium subscriptions via Stripe",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
