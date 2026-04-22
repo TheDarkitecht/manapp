@@ -122,6 +122,7 @@
                       <select name="role" onchange="confirmRoleChange(this, '<%= u.username %>')" class="role-select" aria-label="Roll för <%= u.username %>">
                         <option value="free"    <%= u.role === 'free'    ? 'selected' : '' %>>Gratis</option>
                         <option value="premium" <%= u.role === 'premium' ? 'selected' : '' %>>Premium</option>
+                        <option value="pro"     <%= u.role === 'pro'     ? 'selected' : '' %>>⚡ Pro</option>
                         <option value="admin"   <%= u.role === 'admin'   ? 'selected' : '' %>>Admin</option>
                       </select>
                     </form>

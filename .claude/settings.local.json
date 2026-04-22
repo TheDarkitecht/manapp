@@ -12,7 +12,8 @@
       "Bash(node -e \"const ejs=require\\('ejs'\\),fs=require\\('fs'\\); ejs.compile\\(fs.readFileSync\\('views/admin-analytics.ejs','utf8'\\)\\); ejs.compile\\(fs.readFileSync\\('views/admin.ejs','utf8'\\)\\); console.log\\('views OK'\\);\")",
       "Bash(npm install *)",
       "Bash(node -e \"const m = require\\('multer'\\); console.log\\('multer loaded OK'\\);\")",
-      "Bash(node -c proCallAnalysis.js)"
+      "Bash(node -c proCallAnalysis.js)",
+      "Bash(node -e \"const ejs=require\\('ejs'\\),fs=require\\('fs'\\); ejs.compile\\(fs.readFileSync\\('views/bevis-publik.ejs','utf8'\\)\\); ejs.compile\\(fs.readFileSync\\('views/admin.ejs','utf8'\\)\\); console.log\\('views OK'\\);\")"
     ]
   },
   "defaultMode": "bypassPermissions"

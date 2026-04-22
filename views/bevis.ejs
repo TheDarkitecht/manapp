@@ -52,15 +52,16 @@
 
     <!-- Actions -->
     <div class="bevis-actions">
-      <a href="/mina-framsteg/bevis/<%= level.id %>.svg?download=1" class="jc-btn" download>
+      <a href="/mina-framsteg/bevis/<%= level.id %>/publik-url" target="_blank" class="jc-btn" style="background:linear-gradient(135deg, var(--bevis-c1, #6366f1), var(--bevis-c2, #8b5cf6));">
+        🔗 Skapa delbar länk
+      </a>
+      <a href="/mina-framsteg/bevis/<%= level.id %>.svg?download=1" class="jc-btn jc-btn-ghost" download>
         💾 Ladda ner som bild
       </a>
-      <button type="button" class="jc-btn jc-btn-ghost" onclick="copyLink()">
-        🔗 Kopiera länk
-      </button>
-      <a href="https://www.linkedin.com/sharing/share-offsite/?url=<%= encodeURIComponent('https://app.joakimjaksen.se') %>" target="_blank" rel="noopener" class="jc-btn jc-btn-ghost">
-        💼 Dela på LinkedIn
-      </a>
+    </div>
+
+    <div class="bevis-hint">
+      <strong>💡 Hur delar du?</strong> Klicka "Skapa delbar länk" ovan — du får en unik, verifierbar URL som du kan lägga på LinkedIn. Alla som klickar på länken ser beviset + kan verifiera att det är äkta. Länken är HMAC-signerad och kan inte förfalskas.
     </div>
 
     <div class="bevis-hint">

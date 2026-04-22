@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <% if (valid) { %>
+    <title>Bevis: <%= username %> — <%= level.name %> — Joakim Jaksens Säljutbildning</title>
+    <meta name="description" content="<%= username %> har uppnått nivå <%= level.name %> i Joakim Jaksens Säljutbildning — <%= level.signalizes %>" />
+
+    <!-- Open Graph för LinkedIn/Facebook -->
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="<%= username %> — <%= level.name %> · Joakim Jaksens Säljutbildning" />
+    <meta property="og:description" content="<%= level.signalizes %>" />
+
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="<%= username %> — <%= level.name %>" />
+    <meta name="twitter:description" content="<%= level.signalizes %>" />
+  <% } else { %>
+    <title>Ogiltig certifikat-länk</title>
+  <% } %>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🏆</text></svg>" />
+  <link rel="stylesheet" href="/style.css" />
+  <link rel="stylesheet" href="/gamification.css" />
+  <link rel="stylesheet" href="/bevis.css" />
+</head>
+<body class="block-page bevis-page <%= valid ? `bevis-level-${level.id}` : '' %>" style="padding:2rem 1rem;">
+
+  <main style="max-width:720px;margin:0 auto;">
+
+    <% if (!valid) { %>
+      <!-- Ogiltig -->
+      <div style="text-align:center;padding:4rem 2rem;background:linear-gradient(145deg,#1e293b,#0f172a);border:1px solid rgba(239,68,68,0.25);border-radius:16px;">
+        <div style="font-size:3rem;margin-bottom:1rem;">⚠️</div>
+        <h1 style="color:#f1f5f9;margin:0 0 0.75rem;">Certifikatet kunde inte verifieras</h1>
+        <p style="color:#94a3b8;max-width:400px;margin:0 auto 2rem;line-height:1.6;"><%= error %></p>
+        <a href="/" style="color:#a5b4fc;text-decoration:none;font-weight:600;">← Till Joakim Jaksens Säljutbildning</a>
+      </div>
+
+    <% } else { %>
+
+      <!-- Header: verified-badge -->
+      <div style="text-align:center;margin-bottom:1.5rem;">
+        <div style="display:inline-block;padding:0.4rem 0.85rem;background:rgba(16,185,129,0.1);color:#34d399;border:1px solid rgba(16,185,129,0.3);border-radius:999px;font-size:0.85rem;font-weight:700;">
+          ✓ VERIFIERAT · JOAKIMJAKSEN.SE
+        </div>
+      </div>
+
+      <!-- Själva certifikatet — samma design som /mina-framsteg/bevis/:level -->
+      <div class="bevis-card">
+        <div class="bc-eyebrow">JOAKIM JAKSENS SÄLJUTBILDNING</div>
+        <div class="bc-subtitle">BEVIS PÅ UPPNÅDD NIVÅ</div>
+
+        <div class="bc-level"><%= level.name %></div>
+        <div class="bc-divider"></div>
+
+        <div class="bc-meta">
+          Nivå <%= level.id %> av 5  ·  Utfärdat <%= issuedAt.toLocaleDateString('sv-SE', { year: 'numeric', month: 'long', day: 'numeric' }) %>
+        </div>
+
+        <p class="bc-signalizes"><%= level.signalizes %></p>
+
+        <div class="bc-footer">
+          <div>
+            <div class="bc-label">BEVIS FÖR</div>
+            <div class="bc-name"><%= username %></div>
+          </div>
+          <div style="text-align:right;">
+            <div class="bc-label">NUVARANDE NIVÅ</div>
+            <div class="bc-date"><%= currentLevel.name %></div>
+          </div>
+        </div>
+
+        <div class="bc-brand">joakimjaksen.se</div>
+      </div>
+
+      <% if (!stillValid) { %>
+        <div style="margin-top:1rem;padding:1rem;background:rgba(245,158,11,0.08);border-left:3px solid #fbbf24;border-radius:6px;color:#fde68a;">
+          <strong>Notering:</strong> Certifikatet utfärdades <%= issuedAt.toLocaleDateString('sv-SE') %>, men personen har sedan dess nått en lägre nivå. Aktuell nivå: <strong><%= currentLevel.name %></strong>.
+        </div>
+      <% } %>
+
+      <!-- Info + CTAs -->
+      <div style="margin-top:2rem;padding:1.75rem;background:linear-gradient(145deg,#1e293b,#0f172a);border:1px solid rgba(99,102,241,0.2);border-radius:14px;">
+        <h2 style="color:#f1f5f9;margin:0 0 0.75rem;font-size:1.15rem;">Vad betyder <%= level.name %>?</h2>
+        <p style="color:#cbd5e1;line-height:1.7;margin:0 0 1.25rem;"><%= level.signalizes %></p>
+
+        <div style="padding:1rem;background:rgba(255,255,255,0.03);border-radius:10px;margin-bottom:1.25rem;">
+          <p style="color:#94a3b8;font-size:0.9rem;line-height:1.6;margin:0;">
+            Joakim Jaksens Säljutbildning är en 20-blocks-kurs byggd av Joakim Jaksen — 22+ år i säljbranschen, 200+ MSEK i säljresultat, 1000+ tränade säljare. Brilliant Values — utsett till Årets Säljbolag.
+          </p>
+        </div>
+
+        <div style="display:flex;gap:0.75rem;flex-wrap:wrap;">
+          <a href="/" style="padding:0.75rem 1.25rem;background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;text-decoration:none;border-radius:10px;font-weight:600;font-size:0.9rem;">📚 Läs mer om utbildningen</a>
+          <a href="/register" style="padding:0.75rem 1.25rem;background:rgba(99,102,241,0.1);color:#a5b4fc;border:1px solid rgba(99,102,241,0.25);text-decoration:none;border-radius:10px;font-weight:600;font-size:0.9rem;">🎯 Börja gratis</a>
+        </div>
+      </div>
+
+      <!-- Verifiering-info (för employers etc) -->
+      <div style="margin-top:1rem;padding:1rem;color:#64748b;font-size:0.82rem;text-align:center;">
+        Denna länk är kryptografiskt signerad av joakimjaksen.se och kan verifieras av vem som helst.<br>
+        Misstänker du missbruk? Kontakta <a href="mailto:info@joakimjaksen.se" style="color:#a5b4fc;">info@joakimjaksen.se</a>
+      </div>
+
+    <% } %>
+
+  </main>
+
+</body>
+</html>

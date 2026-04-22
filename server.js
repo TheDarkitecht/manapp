@@ -1370,6 +1370,92 @@ function hasAchievedLevel(userId, levelId) {
   return stats.level.current.id >= levelId;
 }
 
+// ── Publik verifierbar URL för certifikat (för LinkedIn-delning) ───────────
+// Format: /bevis/<base64url(userId.levelId.timestamp.sig)>
+// HMAC-signerat med SESSION_SECRET — kan inte förfalskas.
+// (crypto-modulen är redan require:ad högre upp)
+
+function getCertSecret() {
+  return process.env.SESSION_SECRET || process.env.CERT_SECRET || 'dev-fallback';
+}
+
+function createPublicCertToken(userId, levelId) {
+  const payload = `${userId}.${levelId}.${Math.floor(Date.now() / 1000)}`;
+  const sig = crypto.createHmac('sha256', getCertSecret()).update(payload).digest('hex').slice(0, 16);
+  return Buffer.from(`${payload}.${sig}`).toString('base64url');
+}
+
+function verifyPublicCertToken(token) {
+  try {
+    const decoded = Buffer.from(token, 'base64url').toString('utf8');
+    const parts = decoded.split('.');
+    if (parts.length !== 4) return null;
+    const [userId, levelId, ts, sig] = parts;
+    const expectedSig = crypto.createHmac('sha256', getCertSecret()).update(`${userId}.${levelId}.${ts}`).digest('hex').slice(0, 16);
+    if (sig.length !== expectedSig.length) return null;
+    let ok = 0;
+    for (let i = 0; i < sig.length; i++) ok |= sig.charCodeAt(i) ^ expectedSig.charCodeAt(i);
+    if (ok !== 0) return null;
+    // Token är evig (ingen expiry — certifikatet ska kunna delas länge)
+    return { userId: parseInt(userId), levelId: parseInt(levelId), issuedAt: parseInt(ts) };
+  } catch (_) {
+    return null;
+  }
+}
+
+// Publik cert-route — ingen login krävs
+app.get('/bevis/:token', (req, res) => {
+  const verified = verifyPublicCertToken(req.params.token);
+  if (!verified) {
+    return res.status(404).render('bevis-publik', {
+      valid: false,
+      error: 'Ogiltig eller skadad certifikat-länk.',
+    });
+  }
+
+  const { userId, levelId, issuedAt } = verified;
+  const user = findUserById(userId);
+  if (!user) {
+    return res.status(404).render('bevis-publik', {
+      valid: false,
+      error: 'Användaren finns inte längre.',
+    });
+  }
+
+  const level = gamification.LEVELS.find(l => l.id === levelId);
+  if (!level) {
+    return res.status(404).render('bevis-publik', { valid: false, error: 'Ogiltig nivå.' });
+  }
+
+  // Verifiera FORTFARANDE gäller — dvs användaren har inte nerdegraderats under nivån
+  const stats = computeStatsForUser(userId);
+  const stillValid = stats.level.current.id >= levelId;
+
+  res.render('bevis-publik', {
+    valid: true,
+    stillValid,
+    level,
+    username: user.username,
+    currentLevel: stats.level.current,
+    issuedAt: new Date(issuedAt * 1000),
+    xp: stats.xp,
+    totalBlocksMastered: stats.totalBlocksMastered,
+  });
+});
+
+// Route för att GENERERA publik URL för sitt eget certifikat
+app.get('/mina-framsteg/bevis/:level/publik-url', requireLogin, (req, res) => {
+  const levelId = parseInt(req.params.level);
+  if (!levelId || levelId < 2 || levelId > 5) return res.redirect('/mina-framsteg');
+  if (!hasAchievedLevel(req.session.userId, levelId)) return res.redirect('/mina-framsteg');
+
+  const token = createPublicCertToken(req.session.userId, levelId);
+  const baseUrl = process.env.APP_URL || `${req.protocol}://${req.get('host')}`;
+  const publicUrl = `${baseUrl}/bevis/${token}`;
+
+  res.redirect(publicUrl);
+});
+
 // Rendera en bild-som-html-version av beviset (för visning + screenshot)
 app.get('/mina-framsteg/bevis/:level', requireLogin, (req, res) => {
   const levelId = parseInt(req.params.level);
