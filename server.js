@@ -27,6 +27,7 @@ const {
   createProCallAnalysis, updateProCallAnalysis, getProCallAnalysis,
   getProCallAnalysesForUser, canProUserUploadCall, deleteProCallAnalysis,
   PRO_CALL_LIMIT_PER_MONTH,
+  getOrCreateReferralCode, findUserByReferralCode, setReferrerForUser, getReferralStats,
 } = require('./database');
 const gamification = require('./gamification');
 const emails = require('./emails');
@@ -294,6 +295,19 @@ app.use(session({
   },
 }));
 
+// ── Referral tracker: sparar ?ref=CODE i session i 30 dagar ───────────────────
+app.use((req, res, next) => {
+  const ref = req.query.ref;
+  if (ref && typeof ref === 'string' && /^[A-Z0-9]{4,12}$/i.test(ref)) {
+    // Endast sätt om ingen referral redan spårad (förhindra overwrite)
+    if (!req.session.pendingReferralCode) {
+      req.session.pendingReferralCode = ref.toUpperCase();
+      req.session.referralCapturedAt = Date.now();
+    }
+  }
+  next();
+});
+
 // ── Rate limiter — max 10 login attempts per 15 min per IP ───────────────────
 
 const loginLimiter = rateLimit({
@@ -545,7 +559,13 @@ const TURNSTILE_SITE_KEY = process.env['TURNSTILE_SITE_KEY'] || '1x0000000000000
 
 app.get('/', (req, res) => {
   if (req.session?.userId) return res.redirect('/dashboard');
-  res.render('landing', { blocks: salesBlocks });
+  // Om ?ref= sparats i sessionen, skicka referrer-namnet till landing så vi kan visa banner
+  let referrerName = null;
+  if (req.session.pendingReferralCode) {
+    const referrer = findUserByReferralCode(req.session.pendingReferralCode);
+    if (referrer) referrerName = referrer.username;
+  }
+  res.render('landing', { blocks: salesBlocks, referrerName });
 });
 
 // ── Login ─────────────────────────────────────────────────────────────────────
@@ -555,11 +575,17 @@ app.get('/login', (req, res) => {
   const expiredMsg = req.query.expired === '1'
     ? 'Din session har gått ut — logga in igen med ditt nya lösenord.'
     : null;
+  let referrerName = null;
+  if (req.session.pendingReferralCode) {
+    const referrer = findUserByReferralCode(req.session.pendingReferralCode);
+    if (referrer) referrerName = referrer.username;
+  }
   res.render('login', {
     error:            expiredMsg,
     registerError:    null,
     success:          null,
     turnstileSiteKey: TURNSTILE_SITE_KEY,
+    referrerName,
   });
 });
 
@@ -642,6 +668,22 @@ app.post('/register', registerLimiter, async (req, res) => {
   if (!result.ok)
     return res.render('login', { error: null, success: null, turnstileSiteKey: TURNSTILE_SITE_KEY,
       registerError: result.error });
+
+  // ── Referral-spårning: om sessionen har en pending ref, associera nu ──────
+  try {
+    const pendingRef = req.session.pendingReferralCode;
+    if (pendingRef && result.userId) {
+      const referrer = findUserByReferralCode(pendingRef);
+      if (referrer && referrer.id !== result.userId) {
+        setReferrerForUser(result.userId, referrer.id);
+      }
+      // Rensa oavsett — koden är förbrukad
+      delete req.session.pendingReferralCode;
+      delete req.session.referralCapturedAt;
+    }
+  } catch (refErr) {
+    console.error('Referral attribution error:', refErr.message);
+  }
 
   // ── Welcome email ──────────────────────────────────────────────────────────
   const baseUrl = process.env['APP_URL'] || 'https://manapp-production.up.railway.app';
@@ -1805,12 +1847,21 @@ app.post('/loggbok/:id/delete', requireLogin, verifyCsrf, (req, res) => {
 
 app.get('/installningar', requireLogin, (req, res) => {
   const prefs = getUserPrefsObj(req.session.userId);
+  // Referral-kod: lazy-generera om den inte finns
+  const referralCode = getOrCreateReferralCode(req.session.userId);
+  const referralStats = getReferralStats(req.session.userId);
+  const baseUrl = process.env.APP_URL || `${req.protocol}://${req.get('host')}`;
+  const referralUrl = referralCode ? `${baseUrl}/?ref=${referralCode}` : null;
+
   res.render('installningar', {
     username: req.session.username,
     role:     req.session.role,
     prefs,
     csrfToken: generateCsrfToken(req),
     saved:    req.query.saved === '1',
+    referralCode,
+    referralUrl,
+    referralStats,
   });
 });
 

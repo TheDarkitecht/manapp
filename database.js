@@ -199,6 +199,11 @@ async function initDatabase() {
     "CREATE INDEX IF NOT EXISTS idx_actions_user_cat        ON user_actions(user_id, category)",
     "CREATE INDEX IF NOT EXISTS idx_challenges_user_date    ON daily_challenges(user_id, date DESC)",
     "CREATE INDEX IF NOT EXISTS idx_pro_calls_user          ON pro_call_analyses(user_id, created_at DESC)",
+    // Referral system
+    "ALTER TABLE users ADD COLUMN referral_code TEXT",
+    "ALTER TABLE users ADD COLUMN referrer_id   INTEGER",
+    "CREATE UNIQUE INDEX IF NOT EXISTS idx_users_referral_code ON users(referral_code) WHERE referral_code IS NOT NULL",
+    "CREATE INDEX IF NOT EXISTS idx_users_referrer_id          ON users(referrer_id)",
   ];
   migrations.forEach(sql => { try { db.run(sql); } catch (_) {} });
 
@@ -288,8 +293,13 @@ function createUser(username, email, password) {
      VALUES (?, ?, ?, 'free', 1, datetime('now'), datetime('now'))`,
     [username.trim(), email.trim().toLowerCase(), hash]
   );
+  // Hämta nyss skapat ID
+  const s = db.prepare('SELECT last_insert_rowid() AS id');
+  s.step();
+  const { id } = s.getAsObject();
+  s.free();
   saveDb();
-  return { ok: true };
+  return { ok: true, userId: id };
 }
 
 // ── Admin queries ─────────────────────────────────────────────────────────────
@@ -768,6 +778,84 @@ function updateUserPassword(userId, newPassword) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
+// REFERRAL SYSTEM — compounding growth
+// ═══════════════════════════════════════════════════════════════════════════════
+
+function generateReferralCode() {
+  // 6-tecken base-36 kod, alla versaler + siffror, ingen 0/O/I/1 (förvirrande)
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let code = '';
+  for (let i = 0; i < 6; i++) {
+    code += chars[Math.floor(Math.random() * chars.length)];
+  }
+  return code;
+}
+
+/**
+ * Hämta eller skapa referral-kod för användaren. Kallas lazy — först när användaren
+ * faktiskt öppnar /installningar eller är intresserad av att dela.
+ */
+function getOrCreateReferralCode(userId) {
+  const s = db.prepare('SELECT referral_code FROM users WHERE id = ?');
+  s.bind([userId]);
+  if (s.step()) {
+    const row = s.getAsObject();
+    s.free();
+    if (row.referral_code) return row.referral_code;
+  } else {
+    s.free();
+    return null;
+  }
+
+  // Generera ny, säkerställ unik
+  for (let attempt = 0; attempt < 10; attempt++) {
+    const code = generateReferralCode();
+    try {
+      db.run('UPDATE users SET referral_code = ? WHERE id = ?', [code, userId]);
+      saveDb();
+      return code;
+    } catch (_) {
+      // Collision — försök igen
+    }
+  }
+  return null;
+}
+
+function findUserByReferralCode(code) {
+  if (!code) return null;
+  const s = db.prepare('SELECT * FROM users WHERE referral_code = ?');
+  s.bind([code]);
+  if (s.step()) { const u = s.getAsObject(); s.free(); return u; }
+  s.free();
+  return null;
+}
+
+function setReferrerForUser(userId, referrerId) {
+  // Endast sätt om användaren ännu inte har en referrer (förhindra fusk)
+  db.run(`
+    UPDATE users SET referrer_id = ?
+    WHERE id = ? AND referrer_id IS NULL AND id != ?
+  `, [referrerId, userId, referrerId]);
+  saveDb();
+}
+
+/**
+ * Hämta statistik om en användares referrals.
+ * Returnerar: totalReferrals, paidReferrals (premium/pro), totalMonthsEarned.
+ */
+function getReferralStats(userId) {
+  const allRefs = rowsQuery(`
+    SELECT id, username, role, created_at FROM users WHERE referrer_id = ? ORDER BY created_at DESC
+  `, [userId]);
+  const paid = allRefs.filter(r => r.role === 'premium' || r.role === 'pro' || r.role === 'admin');
+  return {
+    total: allRefs.length,
+    paid: paid.length,
+    referrals: allRefs.slice(0, 20), // visa senaste 20
+  };
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
 // PRO-TIER: call-upload-analyser + usage tracking
 // ═══════════════════════════════════════════════════════════════════════════════
 
@@ -1042,4 +1130,6 @@ module.exports = {
   getProCallAnalysesForUser, countProCallAnalysesThisMonth,
   canProUserUploadCall, deleteProCallAnalysis,
   PRO_CALL_LIMIT_PER_MONTH,
+  // Referral
+  getOrCreateReferralCode, findUserByReferralCode, setReferrerForUser, getReferralStats,
 };

@@ -67,6 +67,75 @@
       </div>
     </form>
 
+    <!-- ═══════════════════════════════════════════════════════════════════
+         REFERRAL — dela med kollegor & vänner
+    ═══════════════════════════════════════════════════════════════════ -->
+    <% if (referralCode) { %>
+    <div class="settings-section" style="margin-top:2rem;background:linear-gradient(145deg, rgba(251,191,36,0.06), rgba(245,158,11,0.02));border-color:rgba(251,191,36,0.25);">
+      <h2>🎁 Bjud in kollegor</h2>
+      <p class="settings-desc">Dela din länk. När någon registrerar sig via din länk och blir Premium/Pro får du <strong>1 månad gratis</strong> på din prenumeration.</p>
+
+      <div style="padding:1rem;background:rgba(0,0,0,0.25);border-radius:10px;margin-bottom:1rem;display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap;">
+        <code id="referralLink" style="flex:1;color:#fde68a;font-family:monospace;font-size:0.85rem;word-break:break-all;min-width:200px;"><%= referralUrl %></code>
+        <button type="button" onclick="copyReferral()" id="copyRefBtn" style="padding:0.5rem 0.85rem;background:linear-gradient(135deg,#fbbf24,#f59e0b);color:#0f172a;border:none;border-radius:8px;font-weight:700;cursor:pointer;font-size:0.85rem;">📋 Kopiera</button>
+      </div>
+
+      <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:1rem;">
+        <a href="https://www.linkedin.com/sharing/share-offsite/?url=<%= encodeURIComponent(referralUrl) %>" target="_blank" rel="noopener" style="padding:0.5rem 1rem;background:rgba(99,102,241,0.1);color:#a5b4fc;text-decoration:none;border-radius:8px;font-size:0.85rem;border:1px solid rgba(99,102,241,0.25);">💼 LinkedIn</a>
+        <a href="mailto:?subject=Kolla%20in%20Joakim%20Jaksens%20S%C3%A4ljutbildning&body=Tjena!%20Jag%20har%20testat%20den%20h%C3%A4r%20och%20den%20%C3%A4r%20riktigt%20bra:%20<%= encodeURIComponent(referralUrl) %>" style="padding:0.5rem 1rem;background:rgba(99,102,241,0.1);color:#a5b4fc;text-decoration:none;border-radius:8px;font-size:0.85rem;border:1px solid rgba(99,102,241,0.25);">✉️ E-post</a>
+        <a href="https://wa.me/?text=<%= encodeURIComponent('Kolla in Joakim Jaksens Säljutbildning: ' + referralUrl) %>" target="_blank" rel="noopener" style="padding:0.5rem 1rem;background:rgba(16,185,129,0.1);color:#34d399;text-decoration:none;border-radius:8px;font-size:0.85rem;border:1px solid rgba(16,185,129,0.25);">💬 WhatsApp</a>
+      </div>
+
+      <div style="padding:1rem;background:rgba(255,255,255,0.03);border-radius:10px;">
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:0.75rem;">
+          <div style="text-align:center;">
+            <div style="font-size:1.75rem;font-weight:800;color:#f1f5f9;"><%= referralStats.total %></div>
+            <div style="font-size:0.75rem;color:#94a3b8;text-transform:uppercase;letter-spacing:0.05em;">Inbjudna</div>
+          </div>
+          <div style="text-align:center;">
+            <div style="font-size:1.75rem;font-weight:800;color:#fbbf24;"><%= referralStats.paid %></div>
+            <div style="font-size:0.75rem;color:#94a3b8;text-transform:uppercase;letter-spacing:0.05em;">Betalande</div>
+          </div>
+          <div style="text-align:center;">
+            <div style="font-size:1.75rem;font-weight:800;color:#34d399;"><%= referralStats.paid %></div>
+            <div style="font-size:0.75rem;color:#94a3b8;text-transform:uppercase;letter-spacing:0.05em;">Mån. gratis</div>
+          </div>
+        </div>
+
+        <% if (referralStats.referrals && referralStats.referrals.length) { %>
+          <div style="margin-top:1.25rem;padding-top:1rem;border-top:1px solid rgba(255,255,255,0.06);">
+            <p style="margin:0 0 0.5rem;color:#94a3b8;font-size:0.8rem;text-transform:uppercase;letter-spacing:0.05em;">Inbjudna</p>
+            <% referralStats.referrals.forEach(function(r) { %>
+              <div style="display:flex;justify-content:space-between;padding:0.4rem 0;font-size:0.85rem;color:#cbd5e1;">
+                <span><%= r.username %></span>
+                <span style="color:<%= r.role === 'premium' || r.role === 'pro' || r.role === 'admin' ? '#34d399' : '#64748b' %>;">
+                  <%= r.role === 'pro' ? '⚡ Pro' : r.role === 'premium' ? '✓ Premium' : r.role === 'admin' ? 'Admin' : 'Gratis' %>
+                </span>
+              </div>
+            <% }); %>
+          </div>
+        <% } %>
+      </div>
+
+      <div class="settings-hint" style="margin-top:1rem;">
+        <strong>Hur fungerar det?</strong> Dela din länk på LinkedIn, i mejl eller via WhatsApp. När någon registrerar sig via din länk och blir betalande kund → jag (Joakim) tillgodoräknar dig 1 månad gratis vid nästa fakturering. Ingen trixande, bara äkta uppskattning för att hjälpa andra säljare.
+      </div>
+    </div>
+    <% } %>
+
+    <script>
+      function copyReferral() {
+        const link = document.getElementById('referralLink').textContent.trim();
+        const btn = document.getElementById('copyRefBtn');
+        if (navigator.clipboard) {
+          navigator.clipboard.writeText(link).then(() => {
+            btn.textContent = '✓ Kopierat';
+            setTimeout(() => { btn.textContent = '📋 Kopiera'; }, 2000);
+          });
+        }
+      }
+    </script>
+
   </main>
 
 </body>

@@ -78,6 +78,9 @@
           🎙️ Samtalsanalys<% if (role !== 'pro' && role !== 'admin') { %> 🔒<% } %>
         </a>
         <a href="/ordbok" class="sidebar-link">📖 Säljordboken</a>
+        <% if (role === 'premium' || role === 'pro' || role === 'admin') { %>
+          <a href="/installningar#referral" class="sidebar-link">🎁 Bjud in & tjäna</a>
+        <% } %>
         <a href="/installningar" class="sidebar-link">⚙️ Inställningar</a>
         <% if (role === 'free') { %>
           <a href="/upgrade" class="sidebar-link sidebar-link-upgrade">⭐ Uppgradera till Premium</a>
