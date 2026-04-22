@@ -155,6 +155,22 @@ async function initDatabase() {
     )
   `);
 
+  // Pro-tier: call-upload analyser
+  db.run(`
+    CREATE TABLE IF NOT EXISTS pro_call_analyses (
+      id             INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id        INTEGER NOT NULL,
+      title          TEXT,
+      duration_sec   INTEGER,
+      transcript     TEXT,
+      analysis       TEXT,
+      status         TEXT NOT NULL DEFAULT 'pending',
+      error_message  TEXT,
+      created_at     TEXT NOT NULL DEFAULT (datetime('now')),
+      FOREIGN KEY (user_id) REFERENCES users(id)
+    )
+  `);
+
   // Migration: add new columns if they don't exist yet.
   // SQLite doesn't support "ADD COLUMN IF NOT EXISTS" so we catch errors.
   const migrations = [
@@ -182,6 +198,7 @@ async function initDatabase() {
     "CREATE INDEX IF NOT EXISTS idx_actions_user_date       ON user_actions(user_id, created_at DESC)",
     "CREATE INDEX IF NOT EXISTS idx_actions_user_cat        ON user_actions(user_id, category)",
     "CREATE INDEX IF NOT EXISTS idx_challenges_user_date    ON daily_challenges(user_id, date DESC)",
+    "CREATE INDEX IF NOT EXISTS idx_pro_calls_user          ON pro_call_analyses(user_id, created_at DESC)",
   ];
   migrations.forEach(sql => { try { db.run(sql); } catch (_) {} });
 
@@ -751,6 +768,83 @@ function updateUserPassword(userId, newPassword) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
+// PRO-TIER: call-upload-analyser + usage tracking
+// ═══════════════════════════════════════════════════════════════════════════════
+
+function createProCallAnalysis(userId, { title, duration_sec, status = 'pending' }) {
+  db.run(
+    'INSERT INTO pro_call_analyses (user_id, title, duration_sec, status) VALUES (?, ?, ?, ?)',
+    [userId, title || null, duration_sec || null, status]
+  );
+  // Hämta ID för den nya raden
+  const s = db.prepare('SELECT last_insert_rowid() AS id');
+  s.step();
+  const { id } = s.getAsObject();
+  s.free();
+  saveDb();
+  return id;
+}
+
+function updateProCallAnalysis(id, updates) {
+  const fields = [];
+  const values = [];
+  for (const [key, val] of Object.entries(updates)) {
+    if (['transcript', 'analysis', 'status', 'error_message', 'duration_sec', 'title'].includes(key)) {
+      fields.push(`${key} = ?`);
+      values.push(val);
+    }
+  }
+  if (!fields.length) return;
+  values.push(id);
+  db.run(`UPDATE pro_call_analyses SET ${fields.join(', ')} WHERE id = ?`, values);
+  saveDb();
+}
+
+function getProCallAnalysis(userId, analysisId) {
+  const s = db.prepare('SELECT * FROM pro_call_analyses WHERE id = ? AND user_id = ?');
+  s.bind([analysisId, userId]);
+  if (s.step()) { const r = s.getAsObject(); s.free(); return r; }
+  s.free();
+  return null;
+}
+
+function getProCallAnalysesForUser(userId, limit) {
+  const lim = parseInt(limit) || 50;
+  const s = db.prepare('SELECT id, title, duration_sec, status, created_at FROM pro_call_analyses WHERE user_id = ? ORDER BY created_at DESC LIMIT ?');
+  s.bind([userId, lim]);
+  const rows = [];
+  while (s.step()) rows.push(s.getAsObject());
+  s.free();
+  return rows;
+}
+
+function countProCallAnalysesThisMonth(userId) {
+  // Räkna uppladdningar senaste 30 dagar (rullande fönster — enkelt och rättvist)
+  const s = db.prepare(`
+    SELECT COUNT(*) AS n FROM pro_call_analyses
+    WHERE user_id = ? AND created_at > datetime('now', '-30 days')
+      AND status != 'failed'
+  `);
+  s.bind([userId]);
+  s.step();
+  const { n } = s.getAsObject();
+  s.free();
+  return n;
+}
+
+const PRO_CALL_LIMIT_PER_MONTH = 15;
+
+function canProUserUploadCall(userId) {
+  const count = countProCallAnalysesThisMonth(userId);
+  return { allowed: count < PRO_CALL_LIMIT_PER_MONTH, used: count, limit: PRO_CALL_LIMIT_PER_MONTH };
+}
+
+function deleteProCallAnalysis(userId, analysisId) {
+  db.run('DELETE FROM pro_call_analyses WHERE id = ? AND user_id = ?', [analysisId, userId]);
+  saveDb();
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
 // ADMIN ANALYTICS — aggregerade queries för content-insights
 // ═══════════════════════════════════════════════════════════════════════════════
 
@@ -943,4 +1037,9 @@ module.exports = {
   getAllUsersWithEmail,
   // Admin analytics
   getAdminAnalytics,
+  // Pro-tier
+  createProCallAnalysis, updateProCallAnalysis, getProCallAnalysis,
+  getProCallAnalysesForUser, countProCallAnalysesThisMonth,
+  canProUserUploadCall, deleteProCallAnalysis,
+  PRO_CALL_LIMIT_PER_MONTH,
 };

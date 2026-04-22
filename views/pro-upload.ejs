@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Ladda upp samtal — Pro</title>
+  <meta name="robots" content="noindex" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎙️</text></svg>" />
+  <link rel="stylesheet" href="/style.css" />
+  <link rel="stylesheet" href="/gamification.css" />
+  <link rel="stylesheet" href="/pro.css" />
+</head>
+<body class="block-page pro-page">
+
+  <a href="#main-content" class="skip-to-main">Hoppa till innehåll</a>
+
+  <nav class="learn-nav">
+    <a href="/pro" class="learn-nav-back">← Samtalsanalys</a>
+    <span class="learn-nav-title">🎙️ Ladda upp samtal</span>
+    <span class="learn-nav-user"><%= username %></span>
+  </nav>
+
+  <main id="main-content" class="pro-wrap">
+
+    <div class="pro-upload-card">
+      <div class="pro-hero-badge">⚡ PRO</div>
+      <h1>Ladda upp ett samtal</h1>
+      <p style="color:#94a3b8;margin:0 0 1.5rem;">Jocke transkriberar och analyserar — får tillbaka konkret feedback inom ca 30 sekunder.</p>
+
+      <% if (typeof error !== 'undefined' && error) { %>
+        <div class="pro-error">⚠️ <%= error %></div>
+      <% } %>
+
+      <form method="POST" action="/pro/samtal/ny" enctype="multipart/form-data" id="uploadForm">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+
+        <label class="pro-upload-zone" id="dropZone">
+          <input type="file" name="audio" id="fileInput" accept="audio/*" required />
+          <div class="puz-icon">🎙️</div>
+          <div class="puz-label" id="puzLabel">Dra hit din ljudfil eller klicka för att välja</div>
+          <div class="puz-hint">mp3, m4a, wav, webm · max 60 min · max 100 MB</div>
+        </label>
+
+        <label class="pro-field">
+          <span>Titel (valfritt)</span>
+          <input type="text" name="title" maxlength="120" placeholder="T.ex. 'Cold call med CFO på X Industri'" />
+        </label>
+
+        <label class="pro-consent">
+          <input type="checkbox" name="consent" required />
+          <span>
+            <strong>Jag bekräftar att jag har samtycke</strong> att analysera detta samtal.
+            (Svensk lag kräver att minst en part i samtalet samtyckt till inspelningen — om du var med och spelade in är det du.)
+            Ljudfilen raderas efter transkribering, endast text sparas på ditt konto.
+          </span>
+        </label>
+
+        <div class="pro-usage-inline">
+          <span><strong><%= usage.limit - usage.used %></strong> uppladdningar kvar denna månad</span>
+        </div>
+
+        <button type="submit" id="submitBtn" class="pro-cta-btn">🎙️ Transkribera + Analysera</button>
+
+        <div id="progress" style="display:none;margin-top:1.5rem;">
+          <div class="pro-progress-bar"><div class="pro-progress-fill"></div></div>
+          <p class="pro-progress-text" id="progressText">Laddar upp...</p>
+          <p style="color:#64748b;font-size:0.85rem;margin-top:0.5rem;">Detta tar 30–90 sekunder beroende på samtalets längd. Lämna inte sidan.</p>
+        </div>
+      </form>
+    </div>
+
+    <div class="pro-upload-tips">
+      <h3>💡 Tips för bästa resultat</h3>
+      <ul>
+        <li><strong>Spela in i mobilens röstminne eller via Zoom/Teams</strong> — bäst kvalitet.</li>
+        <li><strong>Säg tydligt "Säljare:" och "Kund:" ibland</strong> om du kan — hjälper AI:n att hålla reda på vem som sa vad.</li>
+        <li><strong>Ha som mål att analysera "tuffa samtal"</strong> — där du själv känner att något inte riktigt fungerade. Det är där feedbacken gör mest nytta.</li>
+        <li><strong>Kör över tid</strong> — 3 analyser per vecka slår 15 på en dag. Mönster ser ut annorlunda över tid.</li>
+      </ul>
+    </div>
+
+  </main>
+
+  <script>
+    (function(){
+      const input = document.getElementById('fileInput');
+      const label = document.getElementById('puzLabel');
+      const form = document.getElementById('uploadForm');
+      const submitBtn = document.getElementById('submitBtn');
+      const progress = document.getElementById('progress');
+      const progressText = document.getElementById('progressText');
+      const dropZone = document.getElementById('dropZone');
+
+      // Fil vald
+      input.addEventListener('change', () => {
+        if (input.files.length) {
+          const f = input.files[0];
+          const sizeMB = (f.size / (1024 * 1024)).toFixed(1);
+          label.textContent = `✓ ${f.name} (${sizeMB} MB)`;
+          label.style.color = '#34d399';
+        }
+      });
+
+      // Drag-and-drop
+      ['dragenter', 'dragover'].forEach(ev => {
+        dropZone.addEventListener(ev, e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+      });
+      ['dragleave', 'drop'].forEach(ev => {
+        dropZone.addEventListener(ev, e => { e.preventDefault(); dropZone.classList.remove('drag-over'); });
+      });
+      dropZone.addEventListener('drop', e => {
+        if (e.dataTransfer.files.length) {
+          input.files = e.dataTransfer.files;
+          input.dispatchEvent(new Event('change'));
+        }
+      });
+
+      // Submit → visa progress
+      form.addEventListener('submit', () => {
+        submitBtn.disabled = true;
+        submitBtn.textContent = '⏳ Bearbetar...';
+        progress.style.display = 'block';
+        let step = 0;
+        const steps = ['Laddar upp ljudfil...', 'Transkriberar samtalet...', 'Analyserar med Jocke...', 'Nästan klart...'];
+        progressText.textContent = steps[0];
+        setInterval(() => {
+          step = (step + 1) % steps.length;
+          progressText.textContent = steps[step];
+        }, 8000);
+      });
+    })();
+  </script>
+
+</body>
+</html>

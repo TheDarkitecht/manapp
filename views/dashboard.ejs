@@ -74,6 +74,9 @@
         <a href="/sok" class="sidebar-link">🔍 Sök innehåll</a>
         <a href="/mina-framsteg" class="sidebar-link">📈 Mina framsteg</a>
         <a href="/loggbok" class="sidebar-link">📓 Loggboken</a>
+        <a href="/pro" class="sidebar-link <%= (role === 'pro' || role === 'admin') ? 'sidebar-link-pro' : '' %>">
+          🎙️ Samtalsanalys<% if (role !== 'pro' && role !== 'admin') { %> 🔒<% } %>
+        </a>
         <a href="/ordbok" class="sidebar-link">📖 Säljordboken</a>
         <a href="/installningar" class="sidebar-link">⚙️ Inställningar</a>
         <% if (role === 'free') { %>

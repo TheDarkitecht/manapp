@@ -94,23 +94,24 @@
         </div>
       </div>
 
-      <!-- Right — checkout card -->
+      <!-- Right — 2 checkout cards (Premium + Pro) -->
       <div class="up-checkout-col">
         <div class="up-checkout-card">
           <div class="up-checkout-badge">Mest populär</div>
+          <div style="font-size:0.8rem;letter-spacing:0.1em;text-transform:uppercase;color:#a5b4fc;font-weight:700;margin-bottom:0.4rem;">Premium</div>
           <div class="up-checkout-price">
             <span class="up-price-amount">199 kr</span>
             <span class="up-price-period">/mån</span>
           </div>
-          <p class="up-price-sub">Avsluta när som helst</p>
+          <p class="up-price-sub">Alla 20 block + AI-träning</p>
 
           <ul class="up-checkout-list">
             <li>✅ Alla 20 block</li>
-            <li>✅ AI-assistenten Jocke</li>
-            <li>✅ Teori, video & prov per block</li>
-            <li>✅ Progressspårning</li>
-            <li>✅ Säljordboken</li>
-            <li>✅ Nya block inkluderade</li>
+            <li>✅ AI-rollspel med Jocke (40+ scenarier)</li>
+            <li>✅ Veckans uppdrag + reflektion</li>
+            <li>✅ Nivå-system + skill-radar</li>
+            <li>✅ Delbara LinkedIn-bevis</li>
+            <li>✅ Säljordboken (100+ termer)</li>
           </ul>
 
           <% if (typeof error !== 'undefined' && error) { %>
@@ -119,19 +120,47 @@
 
           <form method="POST" action="/upgrade/checkout" onsubmit="checkoutLoading(this)">
             <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
-            <button type="submit" class="up-checkout-btn">
-              Kom igång nu →
-            </button>
+            <input type="hidden" name="tier" value="premium" />
+            <button type="submit" class="up-checkout-btn">Kom igång med Premium →</button>
           </form>
 
           <div class="up-trust-row">
-            <span>🔒 Säker betalning via Stripe</span>
+            <span>🔒 Säker betalning</span>
             <span>↩️ Avsluta när som helst</span>
           </div>
+        </div>
 
-          <p class="up-guarantee">
-            Inte nöjd? Kontakta oss inom 7 dagar — vi löser det.
-          </p>
+        <!-- Pro-tier-kort — guld-accent -->
+        <div class="up-checkout-card" style="background:linear-gradient(145deg, rgba(251,191,36,0.08), rgba(245,158,11,0.03));border-color:rgba(251,191,36,0.35);margin-top:1rem;position:relative;">
+          <div class="up-checkout-badge" style="background:linear-gradient(135deg,#fbbf24,#f59e0b);color:#0f172a;">⚡ För seriösa säljare</div>
+          <div style="font-size:0.8rem;letter-spacing:0.1em;text-transform:uppercase;color:#fbbf24;font-weight:700;margin-bottom:0.4rem;">Pro</div>
+          <div class="up-checkout-price">
+            <span class="up-price-amount">599 kr</span>
+            <span class="up-price-period">/mån</span>
+          </div>
+          <p class="up-price-sub" style="color:#fde68a;">Allt i Premium — PLUS feedback på dina verkliga samtal</p>
+
+          <ul class="up-checkout-list">
+            <li>🎙️ <strong>Call-upload + AI-feedback</strong> (15/mån, 60 min/samtal)</li>
+            <li>🎯 Avancerade rollspel — obegränsat</li>
+            <li>⚡ Prioriterad Jocke (djupare analys)</li>
+            <li>✅ Allt i Premium</li>
+          </ul>
+
+          <form method="POST" action="/upgrade/checkout" onsubmit="checkoutLoading(this)">
+            <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+            <input type="hidden" name="tier" value="pro" />
+            <button type="submit" class="up-checkout-btn" style="background:linear-gradient(135deg,#fbbf24,#f59e0b);color:#0f172a;">Gå Pro →</button>
+          </form>
+
+          <p class="up-guarantee" style="color:#fbbf24;">Detta är vad som skiljer "lära sig teori" från "bli bättre på riktigt".</p>
+        </div>
+
+        <!-- Företag -->
+        <div style="margin-top:1.5rem;padding:1.25rem;background:rgba(255,255,255,0.03);border:1px dashed rgba(255,255,255,0.15);border-radius:12px;text-align:center;">
+          <div style="font-size:0.75rem;letter-spacing:0.1em;text-transform:uppercase;color:#94a3b8;font-weight:700;margin-bottom:0.4rem;">🏢 Företag</div>
+          <p style="color:#cbd5e1;margin:0 0 0.75rem;font-size:0.9rem;">Hela säljteamet? Workshops? Custom content?</p>
+          <a href="/foretag" style="color:#a5b4fc;text-decoration:none;font-weight:600;font-size:0.9rem;">Skräddarsytt upplägg — kontakta oss →</a>
         </div>
 
         <!-- Free vs Premium mini-compare -->

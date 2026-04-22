@@ -24,9 +24,47 @@ const {
   getDailyChallenge, saveDailyChallenge, completeDailyChallenge,
   getAllUsersWithEmail,
   getAdminAnalytics,
+  createProCallAnalysis, updateProCallAnalysis, getProCallAnalysis,
+  getProCallAnalysesForUser, canProUserUploadCall, deleteProCallAnalysis,
+  PRO_CALL_LIMIT_PER_MONTH,
 } = require('./database');
 const gamification = require('./gamification');
 const emails = require('./emails');
+const proAnalysis = require('./proCallAnalysis');
+const multer = require('multer');
+
+// Multer för Pro call-upload: in-memory (files raderas efter transkribering), max 100 MB
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 100 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    const allowed = ['audio/mpeg', 'audio/mp3', 'audio/mp4', 'audio/wav', 'audio/x-wav', 'audio/webm', 'audio/m4a', 'audio/x-m4a', 'audio/aac', 'audio/ogg', 'audio/flac'];
+    if (allowed.includes(file.mimetype) || /\.(mp3|m4a|wav|webm|aac|ogg|flac|mp4)$/i.test(file.originalname)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Endast ljudfiler stöds (mp3, m4a, wav, webm, aac, ogg, flac).'));
+    }
+  },
+});
+
+// ── Role helpers ─────────────────────────────────────────────────────────────
+// Rollhierarki: free < premium < pro < admin
+// - 'premium' ger tillgång till alla block + AI-rollspel + gamification
+// - 'pro' ger ALLT i premium + call-upload-analyser + advanced scenarios + prio Jocke
+// - 'admin' ger allt (inkl. admin-dashboard)
+
+function isPremiumOrHigher(role) {
+  return role === 'premium' || role === 'pro' || role === 'admin';
+}
+
+function isProOrHigher(role) {
+  return role === 'pro' || role === 'admin';
+}
+
+// Jocke-svar: Pro-användare får längre/bättre svar
+function jockeMaxTokens(role) {
+  return isProOrHigher(role) ? 900 : 500;
+}
 
 // ── Gamification helpers ─────────────────────────────────────────────────────
 
@@ -159,8 +197,9 @@ app.post('/webhook', express.raw({ type: 'application/json' }), async (req, res)
   if (event.type === 'checkout.session.completed') {
     const sess   = event.data.object;
     const userId = parseInt(sess.metadata?.userId);
+    const tier   = sess.metadata?.tier === 'pro' ? 'pro' : 'premium';
     if (userId) {
-      setUserRole(userId, 'premium');
+      setUserRole(userId, tier);
       // Store Stripe customer ID for future webhook lookups
       if (sess.customer) setStripeCustomerId(userId, sess.customer);
       console.log(`✅ User ${userId} upgraded to premium`);
@@ -204,14 +243,19 @@ app.post('/webhook', express.raw({ type: 'application/json' }), async (req, res)
         // Don't revoke premium yet — keep access until subscription.deleted
       }
     }
-    // If subscription is re-activated
+    // If subscription is re-activated — behåll aktuell tier om möjligt via price-id
     if (sub.status === 'active') {
       let userId = parseInt(sub.metadata?.userId);
       if (!userId && sub.customer) {
         const u = findUserByStripeCustomerId(sub.customer);
         if (u) userId = u.id;
       }
-      if (userId) setUserRole(userId, 'premium');
+      if (userId) {
+        // Bestäm tier från subscriptionens price-id om det finns
+        const priceId = sub.items?.data?.[0]?.price?.id;
+        const tier = (priceId && priceId === process.env.STRIPE_PRICE_ID_PRO) ? 'pro' : 'premium';
+        setUserRole(userId, tier);
+      }
     }
   }
 
@@ -848,7 +892,7 @@ app.get('/learn/:id', requireLogin, (req, res) => {
   if (!block) return res.redirect('/learn');
 
   const isPremium  = !FREE_BLOCK_IDS.includes(block.id);
-  const hasAccess  = req.session.role === 'premium' || req.session.role === 'admin';
+  const hasAccess  = isPremiumOrHigher(req.session.role);
   const isTeaser   = isPremium && !hasAccess;
 
   const progress   = getBlockProgress(req.session.userId);
@@ -891,7 +935,7 @@ function resolveBlock(req, res, opts = {}) {
   const block = salesBlocks.find(b => b.id === req.params.id);
   if (!block) { res.redirect('/learn'); return null; }
   const isPremiumBlock = !FREE_BLOCK_IDS.includes(block.id);
-  const isPremiumUser  = req.session.role === 'premium' || req.session.role === 'admin';
+  const isPremiumUser  = isPremiumOrHigher(req.session.role);
   // Block-level access: teaser rule (free blocks are open to all)
   if (isPremiumBlock && !isPremiumUser) { res.redirect('/learn/' + block.id); return null; }
   // Feature-level: roleplay uses AI — always requires premium
@@ -1051,7 +1095,7 @@ app.post('/quiz-result', requireLogin, quizLimiter, verifyCsrf, (req, res) => {
   const block = salesBlocks.find(b => b.id === blockId);
   if (!block) return res.json({ ok: false });
   // Allow: free blocks (accessible to all) OR premium/admin users
-  const hasAccess = FREE_BLOCK_IDS.includes(block.id) || req.session.role === 'premium' || req.session.role === 'admin';
+  const hasAccess = FREE_BLOCK_IDS.includes(block.id) || isPremiumOrHigher(req.session.role);
   if (!hasAccess) return res.json({ ok: false });
   saveQuizResult(req.session.userId, blockId, scoreNum, totalNum);
   res.json({ ok: true });
@@ -1811,7 +1855,7 @@ app.post('/admin/users/:id/role', requireLogin, requireAdmin, verifyCsrf, (req, 
   // Prevent admins from demoting themselves (would lose admin access mid-session)
   if (targetId === req.session.userId) return res.redirect('/admin');
   const { role } = req.body;
-  if (['free', 'premium', 'admin'].includes(role)) {
+  if (['free', 'premium', 'pro', 'admin'].includes(role)) {
     setUserRole(targetId, role);
   }
   res.redirect('/admin');
@@ -1892,7 +1936,7 @@ app.get('/admin/export/users.csv', requireLogin, requireAdmin, (req, res) => {
 
 app.get('/upgrade', requireLogin, (req, res) => {
   // Already premium → send home
-  if (req.session.role === 'premium' || req.session.role === 'admin') {
+  if (isPremiumOrHigher(req.session.role)) {
     return res.redirect('/dashboard');
   }
   res.render('upgrade', {
@@ -1903,8 +1947,24 @@ app.get('/upgrade', requireLogin, (req, res) => {
 });
 
 app.post('/upgrade/checkout', requireLogin, verifyCsrf, async (req, res) => {
-  if (req.session.role === 'premium' || req.session.role === 'admin') {
-    return res.redirect('/dashboard');
+  const currentRole = req.session.role;
+  const targetTier = req.body.tier === 'pro' ? 'pro' : 'premium';
+
+  // Hindra duplicerad checkout
+  if (targetTier === 'premium' && isPremiumOrHigher(currentRole)) return res.redirect('/dashboard');
+  if (targetTier === 'pro' && isProOrHigher(currentRole)) return res.redirect('/dashboard');
+
+  const priceId = targetTier === 'pro'
+    ? process.env.STRIPE_PRICE_ID_PRO
+    : process.env.STRIPE_PRICE_ID;
+
+  if (!priceId) {
+    return res.render('upgrade', {
+      username:  req.session.username,
+      role:      req.session.role,
+      csrfToken: generateCsrfToken(req),
+      error:     `${targetTier === 'pro' ? 'Pro' : 'Premium'}-prissättning är inte konfigurerad. Kontakta support.`,
+    });
   }
 
   const user    = findUserByUsername(req.session.username);
@@ -1916,13 +1976,14 @@ app.post('/upgrade/checkout', requireLogin, verifyCsrf, async (req, res) => {
       mode:                 'subscription',
       customer_email:       user.email || undefined,
       line_items: [{
-        price:    process.env.STRIPE_PRICE_ID,
+        price:    priceId,
         quantity: 1,
       }],
       success_url: `${baseUrl}/upgrade/success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url:  `${baseUrl}/upgrade`,
       metadata: {
         userId: String(req.session.userId),
+        tier:   targetTier,
       },
     });
     res.redirect(303, session.url);
@@ -1946,11 +2007,169 @@ app.get('/upgrade/success', requireLogin, (req, res) => {
   res.render('upgrade-success', { username: req.session.username });
 });
 
+// ═══════════════════════════════════════════════════════════════════════════════
+// PRO-TIER: Samtalsanalys (Groq Whisper + AI-feedback)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// Gatekeeper: endast Pro + admin får access
+function requirePro(req, res, next) {
+  if (!isProOrHigher(req.session.role)) {
+    return res.redirect('/pro'); // landar på paywall/info-sidan
+  }
+  next();
+}
+
+// Landningssida — visas oavsett role (info + paywall om inte Pro)
+app.get('/pro', requireLogin, (req, res) => {
+  const isPro = isProOrHigher(req.session.role);
+  const usage = isPro ? canProUserUploadCall(req.session.userId) : null;
+  const history = isPro ? getProCallAnalysesForUser(req.session.userId, 20) : [];
+  res.render('pro-landing', {
+    username: req.session.username,
+    role:     req.session.role,
+    isPro,
+    usage,
+    history,
+    csrfToken: generateCsrfToken(req),
+  });
+});
+
+// Upload-form
+app.get('/pro/samtal/ny', requireLogin, requirePro, (req, res) => {
+  const usage = canProUserUploadCall(req.session.userId);
+  res.render('pro-upload', {
+    username: req.session.username,
+    role:     req.session.role,
+    usage,
+    csrfToken: generateCsrfToken(req),
+  });
+});
+
+// POST: hantera uppladdning + transkribering + analys
+app.post('/pro/samtal/ny', requireLogin, requirePro, verifyCsrf, upload.single('audio'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).render('pro-upload', {
+        username: req.session.username,
+        role: req.session.role,
+        usage: canProUserUploadCall(req.session.userId),
+        csrfToken: generateCsrfToken(req),
+        error: 'Ingen fil vald.',
+      });
+    }
+
+    const cap = canProUserUploadCall(req.session.userId);
+    if (!cap.allowed) {
+      return res.status(429).render('pro-upload', {
+        username: req.session.username,
+        role: req.session.role,
+        usage: cap,
+        csrfToken: generateCsrfToken(req),
+        error: `Du har nått månadsgränsen (${cap.used}/${cap.limit}). Nästa reset: om ~30 dagar (rullande).`,
+      });
+    }
+
+    const consent = req.body.consent === 'on';
+    if (!consent) {
+      return res.status(400).render('pro-upload', {
+        username: req.session.username,
+        role: req.session.role,
+        usage: cap,
+        csrfToken: generateCsrfToken(req),
+        error: 'Du måste bekräfta att du har samtycke att analysera samtalet.',
+      });
+    }
+
+    const title = (req.body.title || req.file.originalname || 'Samtal').slice(0, 120);
+
+    // Skapa DB-rad med status 'pending'
+    const analysisId = createProCallAnalysis(req.session.userId, {
+      title,
+      status: 'transcribing',
+    });
+
+    // Kör transkribering + analys INLINE (synkront) — framtida: köa + polla
+    try {
+      const transcription = await proAnalysis.transcribeAudio(
+        req.file.buffer,
+        req.file.originalname,
+        process.env.GROQ_API_KEY
+      );
+
+      updateProCallAnalysis(analysisId, {
+        transcript: transcription.text,
+        duration_sec: transcription.duration ? Math.round(transcription.duration) : null,
+        status: 'analyzing',
+      });
+
+      const analysis = await proAnalysis.analyzeCall(
+        transcription.text,
+        process.env.GROQ_API_KEY,
+        { userTitle: title }
+      );
+
+      updateProCallAnalysis(analysisId, {
+        analysis,
+        status: 'done',
+      });
+
+      res.redirect(`/pro/samtal/${analysisId}`);
+    } catch (procErr) {
+      console.error('Pro analysis processing error:', procErr.message);
+      updateProCallAnalysis(analysisId, {
+        status: 'failed',
+        error_message: procErr.message.slice(0, 500),
+      });
+      res.redirect(`/pro/samtal/${analysisId}`);
+    }
+  } catch (err) {
+    console.error('Pro upload error:', err.message);
+    const usage = canProUserUploadCall(req.session.userId);
+    res.status(500).render('pro-upload', {
+      username: req.session.username,
+      role: req.session.role,
+      usage,
+      csrfToken: generateCsrfToken(req),
+      error: 'Något gick fel vid uppladdning: ' + err.message,
+    });
+  }
+});
+
+// Visa enskild analys
+app.get('/pro/samtal/:id', requireLogin, requirePro, (req, res) => {
+  const analysisId = parseInt(req.params.id);
+  if (!analysisId) return res.redirect('/pro');
+  const analysis = getProCallAnalysis(req.session.userId, analysisId);
+  if (!analysis) return res.redirect('/pro');
+  res.render('pro-analysis', {
+    username: req.session.username,
+    role:     req.session.role,
+    analysis,
+    csrfToken: generateCsrfToken(req),
+  });
+});
+
+// Radera analys
+app.post('/pro/samtal/:id/delete', requireLogin, requirePro, verifyCsrf, (req, res) => {
+  const analysisId = parseInt(req.params.id);
+  if (analysisId) deleteProCallAnalysis(req.session.userId, analysisId);
+  res.redirect('/pro');
+});
+
+// ── Företag-sida — enkel kontakta-oss ────────────────────────────────────────
+
+app.get('/foretag', (req, res) => {
+  res.render('foretag', {
+    username: req.session?.username || null,
+    role:     req.session?.role || null,
+  });
+});
+
 // ── Chat ──────────────────────────────────────────────────────────────────────
 
 app.post('/chat', requireLogin, chatLimiter, verifyCsrf, async (req, res) => {
   // Jocke is a premium feature — block API access for free users
-  if (req.session.role !== 'premium' && req.session.role !== 'admin') {
+  if (!isPremiumOrHigher(req.session.role)) {
     return res.status(403).json({ error: 'Jocke är tillgänglig för Premium-användare.' });
   }
   const { messages } = req.body;
@@ -1971,7 +2190,7 @@ app.post('/chat', requireLogin, chatLimiter, verifyCsrf, async (req, res) => {
     const completion = await openai.chat.completions.create({
       model: 'llama-3.3-70b-versatile',
       messages: [{ role: 'system', content: JOCKE_SYSTEM_PROMPT }, ...sanitized],
-      max_tokens: 500,
+      max_tokens: jockeMaxTokens(req.session.role), // Pro får 900, Premium 500
     });
     const reply = completion.choices?.[0]?.message?.content || 'Inget svar mottogs.';
     res.json({ reply });
@@ -1984,7 +2203,7 @@ app.post('/chat', requireLogin, chatLimiter, verifyCsrf, async (req, res) => {
 // ── Block-context chat — Jocke coach med blockets teori laddad ──────────────
 
 app.post('/chat/block', requireLogin, chatLimiter, verifyCsrf, async (req, res) => {
-  if (req.session.role !== 'premium' && req.session.role !== 'admin') {
+  if (!isPremiumOrHigher(req.session.role)) {
     return res.status(403).json({ error: 'Jocke är tillgänglig för Premium-användare.' });
   }
 
@@ -2034,7 +2253,7 @@ REGLER:
     const completion = await openai.chat.completions.create({
       model: 'llama-3.3-70b-versatile',
       messages: [{ role: 'system', content: blockChatSystemPrompt }, ...sanitized],
-      max_tokens: 500,
+      max_tokens: jockeMaxTokens(req.session.role),
     });
     const reply = completion.choices?.[0]?.message?.content || 'Inget svar mottogs.';
     res.json({ reply });
@@ -2051,7 +2270,7 @@ När användaren skriver "[KLAR]" eller "[FEEDBACK]" ska du bryta rollspelet och
 `;
 
 app.post('/chat/roleplay', requireLogin, chatLimiter, verifyCsrf, async (req, res) => {
-  if (req.session.role !== 'premium' && req.session.role !== 'admin') {
+  if (!isPremiumOrHigher(req.session.role)) {
     return res.status(403).json({ error: 'Rollspel är tillgängligt för Premium-användare.' });
   }
 
@@ -2104,7 +2323,7 @@ ${ROLEPLAY_COACH_INSTRUCTION}
     const completion = await openai.chat.completions.create({
       model: 'llama-3.3-70b-versatile',
       messages: [{ role: 'system', content: roleplaySystemPrompt }, ...sanitized],
-      max_tokens: 500,
+      max_tokens: jockeMaxTokens(req.session.role),
     });
     const reply = completion.choices?.[0]?.message?.content || 'Inget svar mottogs.';
     res.json({ reply });
