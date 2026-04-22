@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>🎯 Uppdrag: <%= block.title %> — Joakim Jaksen</title>
+  <meta name="robots" content="noindex" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎯</text></svg>" />
+  <link rel="stylesheet" href="/style.css" />
+  <link rel="stylesheet" href="/journey.css" />
+</head>
+<body class="block-page">
+
+  <a href="#main-content" class="skip-to-main">Hoppa till innehåll</a>
+
+  <nav class="learn-nav">
+    <a href="/learn/<%= block.id %>" class="learn-nav-back">← Tillbaka till blocket</a>
+    <span class="learn-nav-title">🎯 Veckans uppdrag</span>
+    <span class="learn-nav-user"><%= username %></span>
+  </nav>
+
+  <main id="main-content" class="uppdrag-wrap">
+
+    <div class="uppdrag-header">
+      <div class="uppdrag-eyebrow">Steg 3 av 4: Gör</div>
+      <h1>🎯 <%= block.mission ? block.mission.title : 'Uppdrag' %></h1>
+      <p class="uppdrag-sub">Det är här teorin blir skicklighet. Läsning lär dig konceptet. Träning lär dig tekniken. <strong>Verkliga samtal lär dig hantverket.</strong></p>
+    </div>
+
+    <% if (block.mission) { %>
+      <% if (mission && mission.completed_at) { %>
+
+        <!-- UPPDRAG KLART -->
+        <div class="uppdrag-card uppdrag-card-done">
+          <div class="uppdrag-done-badge">✓ Uppdrag slutfört</div>
+          <h2>Bra jobbat — du gjorde det</h2>
+          <p class="uppdrag-date">Slutfört: <%= new Date(mission.completed_at).toLocaleDateString('sv-SE') %></p>
+          <% if (mission.reflection) { %>
+            <div class="uppdrag-reflection-view">
+              <strong>Din reflektion:</strong>
+              <p><%= mission.reflection %></p>
+            </div>
+          <% } %>
+        </div>
+
+      <% } else if (mission && mission.started_at) { %>
+
+        <!-- UPPDRAG AKTIVT -->
+        <div class="uppdrag-card uppdrag-card-active">
+          <div class="uppdrag-status">🔥 Aktivt sedan <%= new Date(mission.started_at).toLocaleDateString('sv-SE') %></div>
+
+          <h2><%= block.mission.description %></h2>
+
+          <% if (block.mission.steps && block.mission.steps.length) { %>
+            <h3>Så gör du:</h3>
+            <ol class="uppdrag-steps">
+              <% block.mission.steps.forEach(function(s){ %><li><%= s %></li><% }); %>
+            </ol>
+          <% } %>
+
+          <% if (block.mission.trigger) { %>
+            <div class="uppdrag-trigger">
+              <strong>🎯 Triggern:</strong> <%= block.mission.trigger %>
+            </div>
+          <% } %>
+
+          <% if (block.mission.successMarker) { %>
+            <div class="uppdrag-success">
+              <strong>✓ Du vet att det fungerade när:</strong> <%= block.mission.successMarker %>
+            </div>
+          <% } %>
+
+          <% if (block.mission.weeklyGoal) { %>
+            <form method="POST" action="/learn/<%= block.id %>/uppdrag/progress" class="uppdrag-progress-form">
+              <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+              <label>Progress: <strong><%= mission.progress %>/<%= block.mission.weeklyGoal %></strong></label>
+              <div class="uppdrag-progress-bar"><div style="width:<%= Math.round((mission.progress / block.mission.weeklyGoal) * 100) %>%"></div></div>
+              <div class="uppdrag-progress-btns">
+                <% for (var i = 0; i <= block.mission.weeklyGoal; i++) { %>
+                  <button type="submit" name="progress" value="<%= i %>" class="uppdrag-progress-btn <%= mission.progress === i ? 'active' : '' %>"><%= i %></button>
+                <% } %>
+              </div>
+            </form>
+          <% } %>
+
+          <form method="POST" action="/learn/<%= block.id %>/uppdrag/klar" class="uppdrag-complete-form">
+            <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+            <h3>🏁 Slutför uppdraget med en kort reflektion</h3>
+            <p class="uppdrag-reflect-hint">Skriv 2–4 meningar: Vad gjorde du? Vad hände? Vad lärde du?</p>
+            <textarea name="reflection" rows="5" maxlength="3000" placeholder="T.ex. 'Jag testade förvirrad ton på 3 kunder. Två öppnade direkt — Anna berättade att bindningen gick ut om 2 månader. Den tredje stängde ner. Jag lär mig att tekniken fungerar bäst när kunden är vag men inte i försvar.'"></textarea>
+            <button type="submit" class="rp-btn-complete">✓ Markera som slutfört</button>
+          </form>
+        </div>
+
+      <% } else { %>
+
+        <!-- UPPDRAG EJ STARTAT -->
+        <div class="uppdrag-card">
+          <h2><%= block.mission.description %></h2>
+
+          <% if (block.mission.steps && block.mission.steps.length) { %>
+            <h3>Vad du kommer göra:</h3>
+            <ol class="uppdrag-steps">
+              <% block.mission.steps.forEach(function(s){ %><li><%= s %></li><% }); %>
+            </ol>
+          <% } %>
+
+          <% if (block.mission.trigger) { %>
+            <div class="uppdrag-trigger">
+              <strong>🎯 Triggern:</strong> <%= block.mission.trigger %>
+            </div>
+          <% } %>
+
+          <% if (block.mission.weeklyGoal) { %>
+            <div class="uppdrag-goal-pill">🎯 Mål: <%= block.mission.weeklyGoal %> gånger denna vecka</div>
+          <% } %>
+
+          <form method="POST" action="/learn/<%= block.id %>/uppdrag/start" class="uppdrag-start-form">
+            <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+            <button type="submit" class="rp-btn-primary">🚀 Aktivera uppdraget</button>
+            <span class="uppdrag-start-hint">Starta klockan nu. Håll det i fokus hela veckan.</span>
+          </form>
+        </div>
+
+      <% } %>
+
+    <% } else { %>
+      <p>Inget uppdrag för detta block ännu.</p>
+    <% } %>
+
+    <div class="snabb-cta-row">
+      <a href="/learn/<%= block.id %>" class="jc-btn jc-btn-ghost">← Tillbaka</a>
+      <% if (mission && mission.completed_at && !journey.reflectionDone && block.reflections && block.reflections.length) { %>
+        <a href="/learn/<%= block.id %>/reflektion" class="jc-btn">💭 Nästa: Reflektera över blocket →</a>
+      <% } %>
+    </div>
+
+  </main>
+
+</body>
+</html>

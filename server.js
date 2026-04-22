@@ -15,9 +15,73 @@ const {
   getNotesByUserId, createNote, deleteNote,
   getBlockProgress, saveQuizResult, getCompletedBlockCount,
   createResetToken, findValidResetToken, deleteResetToken, updateUserPassword,
+  saveReflection, getReflectionsForBlock,
+  recordRoleplayCompletion, getRoleplaysForBlock,
+  startMission, updateMissionProgress, completeMission, getMissionForBlock,
+  getJourneyStatus, getUserLearningState,
+  logUserAction, getUserActions, deleteUserAction, getActionsToday,
+  getUserPreferences, setUserPreferences,
+  getDailyChallenge, saveDailyChallenge, completeDailyChallenge,
+  getAllUsersWithEmail,
 } = require('./database');
+const gamification = require('./gamification');
+const emails = require('./emails');
+
+// ── Gamification helpers ─────────────────────────────────────────────────────
+
+/**
+ * Beräkna användarens fulla stats (XP, nivå, streak, radar, etc).
+ * Samlar data från alla event-källor. Cachas inte — alltid färsk.
+ */
+function computeStatsForUser(userId) {
+  const progressArr = [];
+  const pS = (function() { const s = require('./database').getBlockProgress(userId); return s; })();
+  Object.values(pS).forEach(p => progressArr.push(p));
+  const reflections = require('./database').getAllReflectionsForUser(userId);
+  const roleplays   = require('./database').getAllRoleplaysForUser(userId);
+  const missions    = require('./database').getAllMissionsForUser(userId);
+  const actions     = require('./database').getUserActions(userId, 1000);
+  return gamification.computeUserStats({
+    progress: progressArr,
+    reflections, roleplays, missions, actions,
+    blocks: salesBlocks,
+  });
+}
+
+function getUserPrefsObj(userId) {
+  return gamification.parsePreferences(getUserPreferences(userId));
+}
+
+function saveUserPrefsObj(userId, prefs) {
+  setUserPreferences(userId, gamification.serializePreferences(prefs));
+}
+
+/**
+ * Kolla om användaren precis nivå-upp'at jämfört med senast ses.
+ * Returnerar { leveledUp, newLevel } om ja.
+ */
+function checkLevelUp(userId, stats) {
+  const prefs = getUserPrefsObj(userId);
+  const currentLevelId = stats.level.current.id;
+  if (currentLevelId > (prefs.last_seen_level || 1)) {
+    return { leveledUp: true, newLevel: stats.level.current };
+  }
+  return { leveledUp: false };
+}
+
+function markLevelSeen(userId, levelId) {
+  const prefs = getUserPrefsObj(userId);
+  prefs.last_seen_level = levelId;
+  saveUserPrefsObj(userId, prefs);
+}
+
+function isGamificationEnabled(userId) {
+  if (!userId) return false;
+  return getUserPrefsObj(userId).gamification_enabled !== false;
+}
 const salesBlocks   = require('./salesContent');
 const glossaryTerms = require('./glossary');
+const { generateRecommendations, generateBlockCoachHint, suggestNextBlock } = require('./recommendations');
 
 const app    = express();
 const PORT   = process.env.PORT || 3000;
@@ -26,8 +90,8 @@ const resend = process.env['RESEND_API_KEY'] ? new Resend(process.env['RESEND_AP
 // Set RESEND_FROM to a verified Resend sender, e.g. "Joakim Jaksen <noreply@joakimjaksen.se>"
 const RESEND_FROM = process.env['RESEND_FROM'] || 'Joakim Jaksen <onboarding@resend.dev>';
 
-// Block 1 is free; 2–16 require premium (teaser shown for locked blocks)
-const FREE_BLOCK_IDS = ['forsta-intrycket'];
+// Block 1 (Inledning) and Block 2 (Första intrycket) are free; 3–20 require premium (teaser shown for locked blocks)
+const FREE_BLOCK_IDS = ['inledning', 'forsta-intrycket'];
 
 const openai = new OpenAI({
   apiKey:  process.env.GROQ_API_KEY,
@@ -50,22 +114,26 @@ SAKER DU ÄR BRA PÅ:
 - Förklara säljteorier och ramverk (SPIN, BANT, FAB, BATNA m.fl.).
 
 BLOCKEN DU KÄNNER TILL (Joakim Jaksens Säljutbildning):
-1. Inledning & Första Intrycket — De 7 första sekunderna, Mehrabians regel, öppna samtal rätt.
-2. Behovsanalys & Lyssnandets Konst — SPIN-selling, öppna frågor, aktiv lyssning.
-3. Prospektering & Leadsgenerering — ICP, cold outreach, social selling.
-4. Invändningshantering — Feel-felt-found, aikidometoden, vanliga invändningar.
-5. Produktkunskap & Värdepresentation — FAB, skillnaden mellan features och värde.
-6. Avslutstekniker — Assumptive close, urgency, trial close.
-7. Uppföljning & CRM — Systemtänk, timing, multi-touch.
-8. Telefonförsäljning — Röst, tempo, öppning, gatekeeper.
-9. Förhandling & Prisets Psykologi — BATNA, anchoring, value-based pricing.
-10. LinkedIn & Social Selling — Profil, outreach, content.
-11. Videosamtal & Digital Närvaro — Miljö, kroppsspråk, tech.
-12. E-post & Skriftlig Kommunikation — Subject lines, struktur, ton.
-13. Personligt Varumärke & Trovärdighet — Positionering, expertis, synlighet.
-14. Tidshantering & Prioritering för Säljare — Pareto i sälj, fokusblock.
-15. Mental Styrka & Resiliens — Rädsla för avslag, mindset, återhämtning.
-16. Säljledarskap & Teamutveckling — Coacha säljare, KPI:er, teamkultur.
+1. Inledning — Vad sälj egentligen är, retorik 2500 år, varför säljare alltid behövs.
+2. Första Intrycket — De 7 första sekunderna, Mehrabians regel, öppna samtal rätt.
+3. Tonfall & Psykologisk Påverkan — 9 strategiska tonfall (nyfiken, förvirrad, lekfull m.fl.), 10 psy-ops-tekniker (framing, anchoring, labeling, mirroring, foot-in-the-door m.fl.).
+4. Prospektering — ICP, cold outreach, pipeline.
+5. Behovsanalys — SPIN-selling, öppna frågor, aktiv lyssning.
+6. Presentation & Erbjudande — FAB, skillnaden mellan features och värde.
+7. Invändningshantering — Feel-felt-found, LAER, fem typer av invändningar.
+8. Avslutstekniker — Assumptive close, urgency, trial close.
+9. Uppföljning — Timing, multi-touch, 80% av affärer kräver 5+ kontakter.
+10. Mål & Motivation — System slår vilja, OKR-tänkande, momentum.
+11. LinkedIn & Sociala Medier — Profil, outreach, social selling.
+12. Videosamtal & Digital Försäljning — Miljö, kroppsspråk, tech.
+13. E-post & Skriftlig Kommunikation — Subject lines, struktur, ton.
+14. Förhandling — BATNA, anchoring, value-based pricing, värde istället för pris.
+15. Personligt Varumärke — Positionering, expertis, synlighet.
+16. Träning & Hälsa — Sömn, energi, kost, fysisk prestation.
+17. Tidshantering — 80/20, time blocking, eat the frog, Eisenhower.
+18. Mental Styrka & Resiliens — Stoicism, reframing, visualisering, flow.
+19. AI som Säljverktyg — Prompt engineering, agentic AI, etik, EU AI Act.
+20. Rekommenderad Läsning — Kurerad boklista (Voss, Cialdini, Clear, Kahneman m.fl.).
 
 REGLER:
 - Du är en AI-assistent. Om någon direkt frågar om du är en AI, robot eller språkmodell — bekräfta ärligt att du är det. Behåll ändå personan "Jocke" och din coachingstil. Du behöver inte frivilligt ta upp det, men ljug aldrig om det om du tillfrågas. (Krav enligt EU AI Act Art. 52.)
@@ -353,7 +421,7 @@ function buildWelcomeEmail(username, baseUrl) {
     </table>
 
     <p style="color:#475569;font-size:13px;line-height:1.6;margin:0 0 8px;">
-      När du är redo för mer — uppgradera till Premium och lås upp alla 16 block, AI-coachen Jocke och videogenomgångarna.
+      När du är redo för mer — uppgradera till Premium och lås upp alla 20 block, AI-coachen Jocke och videogenomgångarna.
     </p>
 
     <p style="margin:24px 0 0;color:#475569;font-size:13px;">Med sälj,<br><strong style="color:#64748b;">Joakim Jaksen</strong></p>
@@ -648,6 +716,50 @@ app.get('/dashboard', requireLogin, (req, res) => {
   const progress    = getBlockProgress(req.session.userId);
   const completed   = getCompletedBlockCount(req.session.userId);
   const deleteError = req.query.deleteError === '1';
+
+  // Personaliserad pedagogik: 2–3 kort baserat på användarens learning state
+  const learningState   = getUserLearningState(req.session.userId);
+  const recommendations = generateRecommendations(
+    learningState, salesBlocks, FREE_BLOCK_IDS, req.session.role
+  );
+
+  // Gamification — beräkna stats, kolla level-up, generera dagens challenge
+  const gamEnabled = isGamificationEnabled(req.session.userId);
+  let stats = null, levelUp = null, dailyChallenge = null, challengeCompleted = false;
+
+  if (gamEnabled) {
+    stats = computeStatsForUser(req.session.userId);
+    const lu = checkLevelUp(req.session.userId, stats);
+    if (lu.leveledUp) {
+      levelUp = gamification.getLevelUpMessage(lu.newLevel);
+      levelUp.levelId = lu.newLevel.id;
+      levelUp.levelName = lu.newLevel.name;
+    }
+
+    // Dagens challenge
+    const today = new Date().toISOString().slice(0, 10);
+    let row = getDailyChallenge(req.session.userId, today);
+    if (!row) {
+      const chal = gamification.selectDailyChallenge({ actions: getUserActions(req.session.userId, 50) }, today);
+      saveDailyChallenge(req.session.userId, today, chal);
+      row = getDailyChallenge(req.session.userId, today);
+    }
+    if (row) {
+      try {
+        dailyChallenge = JSON.parse(row.challenge_data);
+        challengeCompleted = !!row.completed_at;
+        // Säkerhet: kolla igen om den är uppfylld nu (race-säkert)
+        if (!challengeCompleted) {
+          const todayActions = getActionsToday(req.session.userId);
+          if (gamification.isChallengeCompleted(dailyChallenge, todayActions)) {
+            completeDailyChallenge(req.session.userId, today);
+            challengeCompleted = true;
+          }
+        }
+      } catch (_) {}
+    }
+  }
+
   res.render('dashboard', {
     username:   req.session.username,
     role:       req.session.role,
@@ -658,6 +770,13 @@ app.get('/dashboard', requireLogin, (req, res) => {
     deleteError,
     blocks:       salesBlocks,
     freeBlockIds: FREE_BLOCK_IDS,
+    recommendations,
+    // Gamification
+    gamEnabled,
+    stats,
+    levelUp,
+    dailyChallenge,
+    challengeCompleted,
     csrfToken:    generateCsrfToken(req),
   });
 });
@@ -680,12 +799,37 @@ app.post('/notes/:id/delete', requireLogin, noteDeleteLimiter, verifyCsrf, (req,
 
 app.get('/learn', requireLogin, (req, res) => {
   const progress = getBlockProgress(req.session.userId);
+
+  // Beräkna mastery-status per block (för att särskilja läst / prov / bemästrat)
+  const learningState = getUserLearningState(req.session.userId);
+  const blockStatus = {};
+  salesBlocks.forEach(b => {
+    const prog = learningState.progressByBlock[b.id];
+    const hasRoleplays   = !!(learningState.roleplaysByBlock[b.id] && learningState.roleplaysByBlock[b.id].length);
+    const hasMissionDone = !!(learningState.missionByBlock[b.id] && learningState.missionByBlock[b.id].completed_at);
+    const hasReflections = !!(learningState.reflectionsByBlock[b.id] && learningState.reflectionsByBlock[b.id].length);
+    const theoryDone     = !!(prog && prog.completed);
+    const stepsDone = [theoryDone, hasRoleplays, hasMissionDone, hasReflections].filter(Boolean).length;
+    let status = 'untouched';
+    if (stepsDone === 4) status = 'mastered';
+    else if (theoryDone && stepsDone >= 2) status = 'advanced';
+    else if (theoryDone) status = 'quiz_done';
+    else if (stepsDone > 0 || (prog && (prog.quiz_score !== null))) status = 'in_progress';
+    blockStatus[b.id] = {
+      status,
+      stepsDone,
+      quizScore: prog ? prog.quiz_score : null,
+      quizTotal: prog ? prog.quiz_total : null,
+    };
+  });
+
   res.render('learn', {
     username:     req.session.username,
     role:         req.session.role,
     blocks:       salesBlocks,
     freeBlockIds: FREE_BLOCK_IDS,
     progress,
+    blockStatus,
   });
 });
 
@@ -704,6 +848,18 @@ app.get('/learn/:id', requireLogin, (req, res) => {
   const wordCount  = (block.theory || '').replace(/<[^>]+>/g, ' ').split(/\s+/).filter(Boolean).length;
   const readTime   = Math.max(1, Math.round(wordCount / 200));
 
+  // 4-step journey status (only for users with access)
+  const journey = hasAccess || FREE_BLOCK_IDS.includes(block.id)
+    ? getJourneyStatus(req.session.userId, block.id)
+    : null;
+
+  // Subtil coach-hint baserat på användarens historia i blocket
+  let coachHint = null;
+  if (journey) {
+    const learningState = getUserLearningState(req.session.userId);
+    coachHint = generateBlockCoachHint(learningState, block.id, block);
+  }
+
   res.render('block', {
     username:     req.session.username,
     role:         req.session.role,
@@ -713,8 +869,162 @@ app.get('/learn/:id', requireLogin, (req, res) => {
     isTeaser,
     blockProg,
     readTime,
+    journey,
+    coachHint,
     csrfToken:    generateCsrfToken(req),
   });
+});
+
+// ── 4-step journey sub-views ─────────────────────────────────────────────────
+
+function resolveBlock(req, res, opts = {}) {
+  const block = salesBlocks.find(b => b.id === req.params.id);
+  if (!block) { res.redirect('/learn'); return null; }
+  const isPremiumBlock = !FREE_BLOCK_IDS.includes(block.id);
+  const isPremiumUser  = req.session.role === 'premium' || req.session.role === 'admin';
+  // Block-level access: teaser rule (free blocks are open to all)
+  if (isPremiumBlock && !isPremiumUser) { res.redirect('/learn/' + block.id); return null; }
+  // Feature-level: roleplay uses AI — always requires premium
+  if (opts.requiresPremium && !isPremiumUser) { res.redirect('/upgrade'); return null; }
+  return block;
+}
+
+// Snabbversion — 2-min TL;DR (fritt tillgänglig för alla med block-access)
+app.get('/learn/:id/snabb', requireLogin, (req, res) => {
+  const block = resolveBlock(req, res);
+  if (!block) return;
+  const journey = getJourneyStatus(req.session.userId, block.id);
+  res.render('block-snabb', {
+    username: req.session.username,
+    role:     req.session.role,
+    block,
+    journey,
+  });
+});
+
+// Öva — lista av rollspel (Steg 2) — AI-funktion, kräver premium
+app.get('/learn/:id/ova', requireLogin, (req, res) => {
+  const block = resolveBlock(req, res, { requiresPremium: true });
+  if (!block) return;
+  const journey  = getJourneyStatus(req.session.userId, block.id);
+  const history  = getRoleplaysForBlock(req.session.userId, block.id);
+  const completedIds = new Set(history.map(h => h.roleplay_id));
+  res.render('block-ova', {
+    username: req.session.username,
+    role:     req.session.role,
+    block,
+    journey,
+    completedIds,
+  });
+});
+
+// Öva — enskilt rollspel-chat (Jocke som kund) — AI, premium
+app.get('/learn/:id/ova/:rpid', requireLogin, (req, res) => {
+  const block = resolveBlock(req, res, { requiresPremium: true });
+  if (!block) return;
+  const rp = (block.roleplays || []).find(r => r.id === req.params.rpid);
+  if (!rp) return res.redirect('/learn/' + block.id + '/ova');
+  res.render('block-ova-chat', {
+    username: req.session.username,
+    role:     req.session.role,
+    block,
+    roleplay: rp,
+    csrfToken: generateCsrfToken(req),
+  });
+});
+
+// Uppdrag — fältmission (Steg 3)
+app.get('/learn/:id/uppdrag', requireLogin, (req, res) => {
+  const block = resolveBlock(req, res);
+  if (!block) return;
+  const journey = getJourneyStatus(req.session.userId, block.id);
+  const mission = getMissionForBlock(req.session.userId, block.id);
+  res.render('block-uppdrag', {
+    username: req.session.username,
+    role:     req.session.role,
+    block,
+    journey,
+    mission,
+    csrfToken: generateCsrfToken(req),
+  });
+});
+
+// Reflektion (Steg 4)
+app.get('/learn/:id/reflektion', requireLogin, (req, res) => {
+  const block = resolveBlock(req, res);
+  if (!block) return;
+  const journey = getJourneyStatus(req.session.userId, block.id);
+  const reflections = getReflectionsForBlock(req.session.userId, block.id);
+
+  // Smart "nästa block"-förslag om hela 4-stegs-resan är klar
+  let nextSuggestion = null;
+  if (journey.fullyMastered) {
+    const learningState = getUserLearningState(req.session.userId);
+    nextSuggestion = suggestNextBlock(
+      learningState, salesBlocks, block.id, FREE_BLOCK_IDS, req.session.role
+    );
+  }
+
+  res.render('block-reflektion', {
+    username: req.session.username,
+    role:     req.session.role,
+    block,
+    journey,
+    reflections,
+    nextSuggestion,
+    csrfToken: generateCsrfToken(req),
+  });
+});
+
+// ── Mission actions ──────────────────────────────────────────────────────────
+
+app.post('/learn/:id/uppdrag/start', requireLogin, verifyCsrf, (req, res) => {
+  const block = resolveBlock(req, res);
+  if (!block) return;
+  startMission(req.session.userId, block.id);
+  res.redirect('/learn/' + block.id + '/uppdrag');
+});
+
+app.post('/learn/:id/uppdrag/progress', requireLogin, verifyCsrf, (req, res) => {
+  const block = resolveBlock(req, res);
+  if (!block) return;
+  const p = Math.max(0, Math.min(99, parseInt(req.body.progress) || 0));
+  updateMissionProgress(req.session.userId, block.id, p);
+  res.redirect('/learn/' + block.id + '/uppdrag');
+});
+
+app.post('/learn/:id/uppdrag/klar', requireLogin, verifyCsrf, (req, res) => {
+  const block = resolveBlock(req, res);
+  if (!block) return;
+  const reflection = (req.body.reflection || '').slice(0, 4000);
+  completeMission(req.session.userId, block.id, reflection);
+  res.redirect('/learn/' + block.id + '/uppdrag');
+});
+
+// ── Reflection save ──────────────────────────────────────────────────────────
+
+app.post('/learn/:id/reflektion/spara', requireLogin, verifyCsrf, (req, res) => {
+  const block = resolveBlock(req, res);
+  if (!block) return;
+  const promptIdx = parseInt(req.body.promptIdx);
+  const response  = (req.body.response || '').trim().slice(0, 4000);
+  if (isNaN(promptIdx) || !response) {
+    return res.redirect('/learn/' + block.id + '/reflektion');
+  }
+  saveReflection(req.session.userId, block.id, promptIdx, response);
+  res.redirect('/learn/' + block.id + '/reflektion');
+});
+
+// ── Roleplay completion ──────────────────────────────────────────────────────
+
+app.post('/learn/:id/ova/:rpid/klar', requireLogin, verifyCsrf, (req, res) => {
+  const block = resolveBlock(req, res);
+  if (!block) return;
+  const rp = (block.roleplays || []).find(r => r.id === req.params.rpid);
+  if (!rp) return res.redirect('/learn/' + block.id + '/ova');
+  const turnCount = parseInt(req.body.turnCount) || 0;
+  recordRoleplayCompletion(req.session.userId, block.id, rp.id, turnCount);
+  res.redirect('/learn/' + block.id + '/ova');
 });
 
 // ── Quiz result — save score to DB ───────────────────────────────────────────
@@ -734,6 +1044,558 @@ app.post('/quiz-result', requireLogin, quizLimiter, verifyCsrf, (req, res) => {
   const hasAccess = FREE_BLOCK_IDS.includes(block.id) || req.session.role === 'premium' || req.session.role === 'admin';
   if (!hasAccess) return res.json({ ok: false });
   saveQuizResult(req.session.userId, blockId, scoreNum, totalNum);
+  res.json({ ok: true });
+});
+
+// ── Retention: cron digest + unsubscribe ───────────────────────────────────
+
+/**
+ * Huvudsakligt cron-endpoint. Anropas av Railway Cron (eller liknande) varje söndag.
+ * Kan även anropas manuellt av admin. Skyddas via CRON_SECRET.
+ *
+ * Accepterar: ?key=<CRON_SECRET>&dry=1 för dry-run (ingen sändning)
+ *
+ * Bearbetar alla users:
+ *  - Digest: alla aktiva + opt-in:ade, max 1/6 dagar
+ *  - Re-engagement: 14+ dagar inaktiva (ersätter digest för dem)
+ */
+app.get('/cron/digest', async (req, res) => {
+  const cronSecret = process.env.CRON_SECRET;
+  if (!cronSecret || req.query.key !== cronSecret) {
+    return res.status(403).json({ ok: false, error: 'Invalid cron key' });
+  }
+  const dryRun = req.query.dry === '1';
+  const baseUrl = process.env.APP_URL || `${req.protocol}://${req.get('host')}`;
+
+  const allUsers = getAllUsersWithEmail();
+  const report = { total: allUsers.length, sent: 0, reengagement: 0, skipped: 0, failed: 0, errors: [] };
+
+  for (const user of allUsers) {
+    try {
+      const prefs = gamification.parsePreferences(getUserPreferences(user.id));
+      const stats = computeStatsForUser(user.id);
+      const state = getUserLearningState(user.id);
+
+      // Kolla re-engagement först (tar prio över digest)
+      const daysInactive = emails.isReengagementEligible(user, prefs, state.lastActivity);
+      if (daysInactive) {
+        const unsubToken = emails.createUnsubscribeToken(user.id);
+        const unsubUrl = `${baseUrl}/unsubscribe/${unsubToken}`;
+        const lastBlockId = state.lastActivity ? (() => {
+          // Hitta senaste blocket användaren rört vid
+          const allBlockActivity = [];
+          Object.values(state.progressByBlock).forEach(p => { if (p.completed_at) allBlockActivity.push({ id: p.block_id, ts: new Date(p.completed_at).getTime() }); });
+          Object.values(state.missionByBlock).forEach(m => { const ts = new Date(m.completed_at || m.started_at).getTime(); if (!isNaN(ts)) allBlockActivity.push({ id: m.block_id, ts }); });
+          Object.values(state.roleplaysByBlock).forEach(arr => arr.forEach(r => { allBlockActivity.push({ id: r.block_id, ts: new Date(r.completed_at).getTime() }); }));
+          Object.values(state.reflectionsByBlock).forEach(arr => arr.forEach(r => { allBlockActivity.push({ id: r.block_id, ts: new Date(r.created_at).getTime() }); }));
+          if (!allBlockActivity.length) return null;
+          allBlockActivity.sort((a, b) => b.ts - a.ts);
+          return allBlockActivity[0].id;
+        })() : null;
+        const lastBlock = lastBlockId ? salesBlocks.find(b => b.id === lastBlockId) : null;
+
+        const mail = emails.buildReengagement({
+          username: user.username,
+          daysInactive,
+          stats,
+          lastBlockTitle: lastBlock ? lastBlock.title : null,
+          lastBlockId,
+          baseUrl,
+          unsubscribeUrl: unsubUrl,
+        });
+
+        if (!dryRun) {
+          if (!resend) throw new Error('Resend not configured');
+          await resend.emails.send({
+            from: RESEND_FROM,
+            to: user.email,
+            subject: mail.subject,
+            html: mail.html,
+            text: mail.text,
+            headers: { 'List-Unsubscribe': `<${unsubUrl}>` },
+          });
+          prefs.last_reengagement_sent_at = new Date().toISOString();
+          setUserPreferences(user.id, gamification.serializePreferences(prefs));
+        }
+        report.reengagement++;
+        continue;
+      }
+
+      // Vanlig digest
+      if (!emails.isDigestEligible(user, prefs)) {
+        report.skipped++;
+        continue;
+      }
+
+      // Beräkna veckans diff (XP + blocks touched senaste 7 dagar)
+      const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+      const recentActivity = new Set();
+      const addIfRecent = (ts, blockId) => {
+        if (!ts || !blockId) return;
+        if (new Date(ts).getTime() >= weekAgo) recentActivity.add(blockId);
+      };
+      Object.values(state.progressByBlock).forEach(p => addIfRecent(p.completed_at, p.block_id));
+      Object.values(state.missionByBlock).forEach(m => { addIfRecent(m.started_at, m.block_id); addIfRecent(m.completed_at, m.block_id); });
+      Object.values(state.roleplaysByBlock).forEach(arr => arr.forEach(r => addIfRecent(r.completed_at, r.block_id)));
+      Object.values(state.reflectionsByBlock).forEach(arr => arr.forEach(r => addIfRecent(r.created_at, r.block_id)));
+      const blocksTouched = recentActivity.size;
+
+      // Dagens/veckans challenge
+      const today = new Date().toISOString().slice(0, 10);
+      const challengeRow = getDailyChallenge(user.id, today);
+      let dailyChallenge = null;
+      if (challengeRow) {
+        try { dailyChallenge = JSON.parse(challengeRow.challenge_data); } catch (_) {}
+      } else {
+        dailyChallenge = gamification.selectDailyChallenge({ actions: getUserActions(user.id, 50) }, today);
+      }
+
+      const unsubToken = emails.createUnsubscribeToken(user.id);
+      const unsubUrl = `${baseUrl}/unsubscribe/${unsubToken}`;
+      const mail = emails.buildWeeklyDigest({
+        username: user.username,
+        stats,
+        weekData: { blocksTouched, xpGained: 0 }, // xpGained svårt utan historik — skippat för nu
+        baseUrl,
+        unsubscribeUrl: unsubUrl,
+        dailyChallenge,
+      });
+
+      if (!dryRun) {
+        if (!resend) throw new Error('Resend not configured');
+        await resend.emails.send({
+          from: RESEND_FROM,
+          to: user.email,
+          subject: mail.subject,
+          html: mail.html,
+          text: mail.text,
+          headers: { 'List-Unsubscribe': `<${unsubUrl}>` },
+        });
+        prefs.last_digest_sent_at = new Date().toISOString();
+        setUserPreferences(user.id, gamification.serializePreferences(prefs));
+      }
+      report.sent++;
+    } catch (err) {
+      report.failed++;
+      report.errors.push({ userId: user.id, error: err.message });
+      console.error('Digest error for user', user.id, err.message);
+    }
+  }
+
+  res.json({ ok: true, dryRun, ...report });
+});
+
+/**
+ * Unsubscribe-endpoint. Token-baserat, kräver ingen inloggning.
+ */
+app.get('/unsubscribe/:token', (req, res) => {
+  const userId = emails.verifyUnsubscribeToken(req.params.token);
+  if (!userId) {
+    return res.status(400).send(`
+      <!DOCTYPE html><html lang="sv"><head><meta charset="UTF-8"><title>Ogiltig länk</title>
+      <style>body{font-family:system-ui;background:#0f172a;color:#cbd5e1;padding:2rem;text-align:center;}
+      .w{max-width:480px;margin:3rem auto;padding:2rem;background:#1e293b;border-radius:12px;}</style></head>
+      <body><div class="w"><h1>Ogiltig länk</h1><p>Denna avprenumerationslänk är ogiltig eller har gått ut.</p>
+      <p><a href="/installningar" style="color:#a5b4fc;">Öppna inställningarna</a> för att hantera mejl-preferenser där.</p></div></body></html>
+    `);
+  }
+
+  const prefs = gamification.parsePreferences(getUserPreferences(userId));
+  prefs.email_retention = false;
+  setUserPreferences(userId, gamification.serializePreferences(prefs));
+
+  res.send(`
+    <!DOCTYPE html><html lang="sv"><head><meta charset="UTF-8"><title>Avprenumererad</title>
+    <style>body{font-family:system-ui;background:#0f172a;color:#cbd5e1;padding:2rem;text-align:center;margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;}
+    .w{max-width:480px;padding:2.5rem;background:linear-gradient(145deg,#1e293b,#0f172a);border:1px solid rgba(16,185,129,0.3);border-radius:16px;}
+    h1{color:#34d399;margin:0 0 0.75rem;} p{line-height:1.6;color:#94a3b8;}
+    a{color:#a5b4fc;text-decoration:none;display:inline-block;margin-top:1rem;padding:0.6rem 1.2rem;background:rgba(99,102,241,0.15);border-radius:8px;}</style></head>
+    <body><div class="w"><h1>✓ Avprenumererad</h1>
+    <p>Du kommer inte längre få retention-mejl från Joakim Jaksens Säljutbildning.</p>
+    <p style="font-size:0.9rem;color:#64748b;">Du får fortfarande kontohantering (lösenordsreset, kvitton). Inga marknadsföringsmejl.</p>
+    <a href="/installningar">Ändra i inställningarna</a></div></body></html>
+  `);
+});
+
+// ── /mina-framsteg/bevis/:level — shareable nivå-bevis ─────────────────────
+
+// Hjälpare: kolla om användaren har uppnått en viss nivå
+function hasAchievedLevel(userId, levelId) {
+  const stats = computeStatsForUser(userId);
+  return stats.level.current.id >= levelId;
+}
+
+// Rendera en bild-som-html-version av beviset (för visning + screenshot)
+app.get('/mina-framsteg/bevis/:level', requireLogin, (req, res) => {
+  const levelId = parseInt(req.params.level);
+  if (!levelId || levelId < 2 || levelId > 5) return res.redirect('/mina-framsteg');
+  if (!hasAchievedLevel(req.session.userId, levelId)) return res.redirect('/mina-framsteg');
+
+  const level = gamification.LEVELS.find(l => l.id === levelId);
+  if (!level) return res.redirect('/mina-framsteg');
+
+  const stats = computeStatsForUser(req.session.userId);
+
+  res.render('bevis', {
+    username: req.session.username,
+    level,
+    stats,
+    date: new Date().toLocaleDateString('sv-SE', { year: 'numeric', month: 'long', day: 'numeric' }),
+  });
+});
+
+// SVG-download-endpoint för certifikatet
+app.get('/mina-framsteg/bevis/:level.svg', requireLogin, (req, res) => {
+  const levelId = parseInt(req.params.level);
+  if (!levelId || levelId < 2 || levelId > 5) return res.redirect('/mina-framsteg');
+  if (!hasAchievedLevel(req.session.userId, levelId)) return res.redirect('/mina-framsteg');
+
+  const level = gamification.LEVELS.find(l => l.id === levelId);
+  if (!level) return res.redirect('/mina-framsteg');
+
+  const stats = computeStatsForUser(req.session.userId);
+  const name = req.session.username || 'Säljare';
+  const date = new Date().toLocaleDateString('sv-SE', { year: 'numeric', month: 'long', day: 'numeric' });
+
+  // Escape XML special chars
+  const esc = s => String(s || '')
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&apos;');
+
+  // Gradient per nivå
+  const gradients = {
+    2: { c1: '#6366f1', c2: '#8b5cf6', accent: '#a5b4fc' }, // Operator — indigo/violet
+    3: { c1: '#10b981', c2: '#059669', accent: '#34d399' }, // Closer — emerald
+    4: { c1: '#f59e0b', c2: '#d97706', accent: '#fbbf24' }, // Elite — amber/gold
+    5: { c1: '#ec4899', c2: '#8b5cf6', accent: '#f9a8d4' }, // Apex — pink/violet (top-tier)
+  };
+  const g = gradients[levelId] || gradients[2];
+
+  // 1200x630 — perfect LinkedIn/Twitter preview ratio
+  const svg = `<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0f172a"/>
+      <stop offset="100%" stop-color="#020617"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="${g.c1}"/>
+      <stop offset="100%" stop-color="${g.c2}"/>
+    </linearGradient>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="6" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+  <rect width="1200" height="630" fill="url(#bg)"/>
+  <rect x="30" y="30" width="1140" height="570" fill="none" stroke="url(#accent)" stroke-width="2" rx="20" opacity="0.5"/>
+  <rect x="50" y="50" width="1100" height="530" fill="rgba(255,255,255,0.02)" rx="16"/>
+
+  <!-- Top accent line -->
+  <line x1="100" y1="90" x2="300" y2="90" stroke="url(#accent)" stroke-width="3" stroke-linecap="round"/>
+  <text x="100" y="130" fill="${g.accent}" font-family="Arial, sans-serif" font-size="20" font-weight="700" letter-spacing="4">JOAKIM JAKSENS SÄLJUTBILDNING</text>
+  <text x="100" y="165" fill="#94a3b8" font-family="Arial, sans-serif" font-size="18" letter-spacing="2">BEVIS PÅ UPPNÅDD NIVÅ</text>
+
+  <!-- Main level name -->
+  <text x="100" y="300" fill="url(#accent)" font-family="Arial, sans-serif" font-size="120" font-weight="800" filter="url(#glow)">${esc(level.name)}</text>
+
+  <!-- Divider -->
+  <line x1="100" y1="330" x2="400" y2="330" stroke="url(#accent)" stroke-width="2" stroke-linecap="round" opacity="0.8"/>
+
+  <!-- Level number + XP -->
+  <text x="100" y="380" fill="#cbd5e1" font-family="Arial, sans-serif" font-size="22">Nivå ${level.id} av 5  ·  ${stats.xp} XP  ·  ${stats.totalBlocksMastered}/20 block bemästrade</text>
+
+  <!-- Signalizes -->
+  <text x="100" y="440" fill="#e2e8f0" font-family="Arial, sans-serif" font-size="20" font-style="italic">
+    <tspan x="100" dy="0">${esc(level.signalizes).length > 90 ? esc(level.signalizes).slice(0, 90).replace(/(.{90}\s)/, '$1\n').split('\n').map((line, i) => `<tspan x="100" dy="${i === 0 ? 0 : 28}">${line}</tspan>`).join('') : esc(level.signalizes)}</tspan>
+  </text>
+
+  <!-- Recipient -->
+  <text x="100" y="520" fill="#64748b" font-family="Arial, sans-serif" font-size="16" letter-spacing="2">BEVIS FÖR</text>
+  <text x="100" y="560" fill="#f1f5f9" font-family="Arial, sans-serif" font-size="36" font-weight="700">${esc(name)}</text>
+
+  <!-- Date — right side -->
+  <text x="1100" y="520" fill="#64748b" font-family="Arial, sans-serif" font-size="16" letter-spacing="2" text-anchor="end">UPPNÅDD</text>
+  <text x="1100" y="560" fill="#f1f5f9" font-family="Arial, sans-serif" font-size="22" text-anchor="end">${esc(date)}</text>
+
+  <!-- Signature-ish branding -->
+  <text x="1100" y="130" fill="#94a3b8" font-family="Arial, sans-serif" font-size="14" text-anchor="end">joakimjaksen.se</text>
+</svg>`;
+
+  if (req.query.download === '1') {
+    const filename = `bevis-${level.name.toLowerCase()}-${req.session.username}.svg`.replace(/[^a-z0-9.-]/gi, '_');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+  }
+  res.setHeader('Content-Type', 'image/svg+xml; charset=utf-8');
+  res.send(svg);
+});
+
+// ── /sok — globalsök över block + glossary ──────────────────────────────────
+
+function stripHtml(s) { return (s || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim(); }
+
+function highlightMatch(text, query) {
+  if (!query) return text;
+  const pattern = new RegExp('(' + query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')', 'gi');
+  return text.replace(pattern, '<mark>$1</mark>');
+}
+
+function extractSnippet(text, query, maxLen = 180) {
+  const plain = stripHtml(text);
+  const lower = plain.toLowerCase();
+  const q = query.toLowerCase();
+  const idx = lower.indexOf(q);
+  if (idx === -1) return plain.slice(0, maxLen) + (plain.length > maxLen ? '…' : '');
+  const start = Math.max(0, idx - 60);
+  const end = Math.min(plain.length, idx + q.length + 100);
+  let snippet = plain.slice(start, end);
+  if (start > 0) snippet = '… ' + snippet;
+  if (end < plain.length) snippet += ' …';
+  return snippet;
+}
+
+app.get('/sok', requireLogin, (req, res) => {
+  const query = (req.query.q || '').trim().slice(0, 100);
+  let blockResults = [];
+  let glossaryResults = [];
+
+  if (query.length >= 2) {
+    const q = query.toLowerCase();
+
+    // Sök i block — titel, subtitel, teori (stripped), teaser
+    blockResults = salesBlocks.map((b, i) => {
+      const title      = b.title.toLowerCase();
+      const subtitle   = (b.subtitle || '').toLowerCase();
+      const theory     = stripHtml(b.theory || '').toLowerCase();
+      const teaser     = stripHtml(b.teaser || '').toLowerCase();
+
+      // Scoring: title match = 10, subtitle = 5, teaser = 3, theory = 1
+      let score = 0;
+      if (title.includes(q))    score += 10;
+      if (subtitle.includes(q)) score += 5;
+      if (teaser.includes(q))   score += 3;
+      if (theory.includes(q))   score += 1;
+
+      // Sök även i quiz, roleplays, mission
+      const quizHit = (b.quiz || []).some(q2 => q2.q.toLowerCase().includes(q));
+      if (quizHit) score += 2;
+      const rpHit = (b.roleplays || []).some(r => (r.title + ' ' + r.goal + ' ' + r.scenario).toLowerCase().includes(q));
+      if (rpHit) score += 2;
+      const missionHit = b.mission && (b.mission.title + ' ' + b.mission.description).toLowerCase().includes(q);
+      if (missionHit) score += 2;
+
+      if (score === 0) return null;
+      return {
+        block: b,
+        index: i + 1,
+        score,
+        snippet: extractSnippet(b.theory, query),
+        hits: {
+          title: title.includes(q),
+          subtitle: subtitle.includes(q),
+          theory: theory.includes(q),
+          quiz: quizHit,
+          roleplay: rpHit,
+          mission: missionHit,
+        },
+      };
+    }).filter(Boolean).sort((a, b) => b.score - a.score);
+
+    // Sök i glossary
+    glossaryResults = glossaryTerms.filter(t =>
+      t.term.toLowerCase().includes(q) ||
+      t.definition.toLowerCase().includes(q) ||
+      (t.category || '').toLowerCase().includes(q)
+    ).sort((a, b) => {
+      const aName = a.term.toLowerCase().indexOf(q) === 0 ? 0 : 1;
+      const bName = b.term.toLowerCase().indexOf(q) === 0 ? 0 : 1;
+      return aName - bName;
+    });
+  }
+
+  res.render('sok', {
+    username: req.session.username,
+    role:     req.session.role,
+    query,
+    blockResults,
+    glossaryResults,
+    highlightMatch,
+  });
+});
+
+// ── /mina-framsteg — full progression-sida ────────────────────────────────
+
+app.get('/mina-framsteg', requireLogin, (req, res) => {
+  const stats = computeStatsForUser(req.session.userId);
+  const state = getUserLearningState(req.session.userId);
+  const actions = getUserActions(req.session.userId, 500);
+  const prefs = getUserPrefsObj(req.session.userId);
+
+  // Bygg 90-dagars aktivitets-heatmap
+  const heatmap = [];
+  const today = new Date();
+  // Samla alla datum med aktivitet
+  const activityDates = new Set();
+  const addDate = (ts) => {
+    if (!ts) return;
+    const d = new Date(ts);
+    if (!isNaN(d)) activityDates.add(d.toISOString().slice(0, 10));
+  };
+  actions.forEach(a => addDate(a.created_at));
+  Object.values(state.progressByBlock).forEach(p => addDate(p.completed_at));
+  Object.values(state.missionByBlock).forEach(m => { addDate(m.started_at); addDate(m.completed_at); });
+  Object.values(state.roleplaysByBlock).forEach(arr => arr.forEach(r => addDate(r.completed_at)));
+  Object.values(state.reflectionsByBlock).forEach(arr => arr.forEach(r => addDate(r.created_at)));
+
+  for (let i = 89; i >= 0; i--) {
+    const d = new Date(today);
+    d.setDate(d.getDate() - i);
+    const key = d.toISOString().slice(0, 10);
+    heatmap.push({
+      date: key,
+      active: activityDates.has(key),
+      isToday: i === 0,
+      weekday: d.getDay(), // 0 = Sunday
+    });
+  }
+
+  // Block-status per block (samma som learn-page)
+  const blockStatus = {};
+  salesBlocks.forEach(b => {
+    const prog = state.progressByBlock[b.id];
+    const hasRoleplays   = !!(state.roleplaysByBlock[b.id] && state.roleplaysByBlock[b.id].length);
+    const hasMissionDone = !!(state.missionByBlock[b.id] && state.missionByBlock[b.id].completed_at);
+    const hasReflections = !!(state.reflectionsByBlock[b.id] && state.reflectionsByBlock[b.id].length);
+    const theoryDone     = !!(prog && prog.completed);
+    const stepsDone = [theoryDone, hasRoleplays, hasMissionDone, hasReflections].filter(Boolean).length;
+    blockStatus[b.id] = { stepsDone, theoryDone, hasRoleplays, hasMissionDone, hasReflections };
+  });
+
+  // Action-fördelning per kategori (för "personliga rekord")
+  const actionsByCategory = {};
+  actions.forEach(a => {
+    actionsByCategory[a.category] = (actionsByCategory[a.category] || 0) + (a.count || 1);
+  });
+
+  res.render('mina-framsteg', {
+    username: req.session.username,
+    role:     req.session.role,
+    stats,
+    blocks:   salesBlocks,
+    blockStatus,
+    heatmap,
+    actions:  actions.slice(0, 20), // senaste 20
+    actionsByCategory,
+    categories: gamification.ACTION_CATEGORIES,
+    prefs,
+    csrfToken: generateCsrfToken(req),
+  });
+});
+
+// ── Loggboken (user_actions) — logga verkliga säljhandlingar ────────────────
+
+app.get('/loggbok', requireLogin, (req, res) => {
+  const actions = getUserActions(req.session.userId, 200);
+  const stats   = computeStatsForUser(req.session.userId);
+  const prefs   = getUserPrefsObj(req.session.userId);
+  res.render('loggbok', {
+    username: req.session.username,
+    role:     req.session.role,
+    actions,
+    stats,
+    prefs,
+    categories: gamification.ACTION_CATEGORIES,
+    blocks:     salesBlocks,
+    csrfToken:  generateCsrfToken(req),
+    saved:      req.query.saved === '1',
+  });
+});
+
+app.post('/loggbok', requireLogin, verifyCsrf, (req, res) => {
+  const { category, count, note, block_id } = req.body;
+  const cat = gamification.ACTION_CATEGORIES.find(c => c.id === category);
+  if (!cat) return res.redirect('/loggbok');
+  const cleanCount = cat.needsCount ? Math.max(1, Math.min(999, parseInt(count) || 1)) : 1;
+  const cleanNote  = (note || '').trim().slice(0, 500);
+  const cleanBlock = block_id && salesBlocks.find(b => b.id === block_id) ? block_id : null;
+
+  // Snapshot FÖRE — för att beräkna diff
+  const gamEnabled = isGamificationEnabled(req.session.userId);
+  const statsBefore = gamEnabled ? computeStatsForUser(req.session.userId) : null;
+
+  logUserAction(req.session.userId, cat.id, cleanCount, cleanNote, cleanBlock);
+
+  // Kolla om dagens challenge uppfylldes av denna action
+  const today = new Date().toISOString().slice(0, 10);
+  const challengeRow = getDailyChallenge(req.session.userId, today);
+  let challengeCompleted = false;
+  if (challengeRow && !challengeRow.completed_at) {
+    try {
+      const challenge = JSON.parse(challengeRow.challenge_data);
+      const todayActions = getActionsToday(req.session.userId);
+      if (gamification.isChallengeCompleted(challenge, todayActions)) {
+        completeDailyChallenge(req.session.userId, today);
+        challengeCompleted = true;
+      }
+    } catch (_) {}
+  }
+
+  // Beräkna XP-diff för toast
+  if (gamEnabled && statsBefore) {
+    const statsAfter = computeStatsForUser(req.session.userId);
+    const xpGained = statsAfter.xp - statsBefore.xp;
+    const leveledUp = statsAfter.level.current.id > statsBefore.level.current.id;
+    const progressPct = statsAfter.level.next ? Math.round(statsAfter.level.progress * 100) : 100;
+    const toast = {
+      xpGained,
+      leveledUp,
+      newLevelName: leveledUp ? statsAfter.level.current.name : null,
+      nextLevelName: statsAfter.level.next ? statsAfter.level.next.name : null,
+      progressPct,
+      category: cat.name,
+      icon: cat.icon,
+      challengeCompleted,
+    };
+    // Kort-lived cookie (10 sek) som toast läser och raderar
+    res.cookie('flashToast', JSON.stringify(toast), { maxAge: 10000, httpOnly: false, sameSite: 'lax' });
+  }
+
+  res.redirect('/loggbok?saved=1');
+});
+
+app.post('/loggbok/:id/delete', requireLogin, verifyCsrf, (req, res) => {
+  const actionId = parseInt(req.params.id);
+  if (actionId) deleteUserAction(req.session.userId, actionId);
+  res.redirect('/loggbok');
+});
+
+// ── Inställningar (gamification ON/OFF m.m.) ─────────────────────────────────
+
+app.get('/installningar', requireLogin, (req, res) => {
+  const prefs = getUserPrefsObj(req.session.userId);
+  res.render('installningar', {
+    username: req.session.username,
+    role:     req.session.role,
+    prefs,
+    csrfToken: generateCsrfToken(req),
+    saved:    req.query.saved === '1',
+  });
+});
+
+app.post('/installningar', requireLogin, verifyCsrf, (req, res) => {
+  const prefs = getUserPrefsObj(req.session.userId);
+  prefs.gamification_enabled = req.body.gamification_enabled === 'on';
+  prefs.email_retention      = req.body.email_retention === 'on';
+  saveUserPrefsObj(req.session.userId, prefs);
+  res.redirect('/installningar?saved=1');
+});
+
+// ── Level-up bekräftelse (markera som sedd) ─────────────────────────────────
+
+app.post('/niva/sedd', requireLogin, verifyCsrf, (req, res) => {
+  const levelId = parseInt(req.body.levelId);
+  if (levelId) markLevelSeen(req.session.userId, levelId);
   res.json({ ok: true });
 });
 
@@ -948,6 +1810,139 @@ app.post('/chat', requireLogin, chatLimiter, verifyCsrf, async (req, res) => {
     res.json({ reply });
   } catch (err) {
     console.error('Groq error:', err.message);
+    res.status(500).json({ error: 'Kunde inte nå assistenten just nu.' });
+  }
+});
+
+// ── Block-context chat — Jocke coach med blockets teori laddad ──────────────
+
+app.post('/chat/block', requireLogin, chatLimiter, verifyCsrf, async (req, res) => {
+  if (req.session.role !== 'premium' && req.session.role !== 'admin') {
+    return res.status(403).json({ error: 'Jocke är tillgänglig för Premium-användare.' });
+  }
+
+  const { blockId, messages } = req.body;
+  const block = salesBlocks.find(b => b.id === blockId);
+  if (!block) return res.status(400).json({ error: 'Ogiltigt block.' });
+
+  if (!Array.isArray(messages) || messages.length === 0)
+    return res.status(400).json({ error: 'Invalid format.' });
+
+  const validRoles = new Set(['user', 'assistant']);
+  const sanitized = messages
+    .slice(-20)
+    .filter(m => m && typeof m === 'object' && validRoles.has(m.role) && typeof m.content === 'string')
+    .map(m => ({ role: m.role, content: m.content.slice(0, 2000) }));
+
+  if (sanitized.length === 0) return res.status(400).json({ error: 'Invalid format.' });
+
+  // Strippa HTML från theory för context (max 4000 tecken för att hålla prompt kort)
+  const theoryText = (block.theory || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 4000);
+
+  const blockChatSystemPrompt = `
+Du är Jocke — säljcoachen på Joakim Jaksens plattform. Användaren läser just nu "${block.title}" och har frågor.
+
+KOMMUNIKATIONSSTIL:
+- Direkt, skarp, kortfattad. Inga onödiga ord.
+- Svenska om användaren skriver på svenska.
+- Konkreta exempel, scripts, formuleringar — inte akademisk teori.
+
+BLOCKET ANVÄNDAREN ÄR I:
+Titel: ${block.title}
+Tema: ${block.subtitle}
+
+KUNSKAP FRÅN BLOCKET:
+${theoryText}
+
+REGLER:
+- Fokusera på det blocket handlar om. Om frågan handlar om annat block — besvara kort och hänvisa dit.
+- Ge praktiska exempel och fraser som kan användas i riktiga kundsamtal.
+- Om en fråga redan besvaras i teorin — citera eller peka på avsnittet, och ge ett kompletterande perspektiv.
+- Kortfattat. 2–4 stycken per svar. Ingen babbel.
+- Om användaren frågar om du är AI — bekräfta ärligt (EU AI Act).
+- Rekommendera gärna Jockes 4-stegs-resa (Läs → Öva → Gör → Reflektera) när det passar.
+`;
+
+  try {
+    const completion = await openai.chat.completions.create({
+      model: 'llama-3.3-70b-versatile',
+      messages: [{ role: 'system', content: blockChatSystemPrompt }, ...sanitized],
+      max_tokens: 500,
+    });
+    const reply = completion.choices?.[0]?.message?.content || 'Inget svar mottogs.';
+    res.json({ reply });
+  } catch (err) {
+    console.error('Groq block-chat error:', err.message);
+    res.status(500).json({ error: 'Kunde inte nå assistenten just nu.' });
+  }
+});
+
+// ── Roleplay chat — Jocke plays a customer persona ───────────────────────────
+
+const ROLEPLAY_COACH_INSTRUCTION = `
+När användaren skriver "[KLAR]" eller "[FEEDBACK]" ska du bryta rollspelet och ge 2–4 konkreta feedback-punkter på vad säljaren gjorde bra och vad som kan förbättras. Var direkt, specifik och användbar — som Joakim Jaksen själv. Efter feedbacken, säg: "Vill du köra igen eller markera övningen som klar?"
+`;
+
+app.post('/chat/roleplay', requireLogin, chatLimiter, verifyCsrf, async (req, res) => {
+  if (req.session.role !== 'premium' && req.session.role !== 'admin') {
+    return res.status(403).json({ error: 'Rollspel är tillgängligt för Premium-användare.' });
+  }
+
+  const { blockId, roleplayId, messages } = req.body;
+  const block = salesBlocks.find(b => b.id === blockId);
+  if (!block) return res.status(400).json({ error: 'Ogiltigt block.' });
+  const rp = (block.roleplays || []).find(r => r.id === roleplayId);
+  if (!rp) return res.status(400).json({ error: 'Ogiltigt rollspel.' });
+
+  if (!Array.isArray(messages) || messages.length === 0)
+    return res.status(400).json({ error: 'Invalid format.' });
+
+  const validRoles = new Set(['user', 'assistant']);
+  const sanitized = messages
+    .slice(-20)
+    .filter(m => m && typeof m === 'object' && validRoles.has(m.role) && typeof m.content === 'string')
+    .map(m => ({ role: m.role, content: m.content.slice(0, 2000) }));
+
+  if (sanitized.length === 0)
+    return res.status(400).json({ error: 'Invalid format.' });
+
+  // Compose scenario-specific system prompt (Jocke plays a customer, not the coach)
+  const roleplaySystemPrompt = `
+Du är en AI som hjälper säljare träna. Just nu spelar du INTE Jocke-säljcoachen — du spelar en KUND eller motpart i ett rollspel. Stanna kvar i rollen tills säljaren skriver "[KLAR]" eller "[FEEDBACK]".
+
+ROLLSPELSSCENARIO:
+Block: ${block.title}
+Situation: ${rp.scenario}
+
+DIN ROLL (agera naturligt, realistiskt, inte överspelat):
+${rp.customerPersona}
+
+DITT MÅL SOM "MOTPART":
+${rp.difficulty === 'Svår' ? 'Var utmanande och testa säljaren hårt — som en tuff verklig kund.' : rp.difficulty === 'Medel' ? 'Var realistisk — ge inte upp info för lätt men öppna upp om säljaren frågar rätt.' : 'Var mottaglig — svara naturligt, ge säljaren chans att öva tekniken.'}
+
+VIKTIGT:
+- Håll dig i rollen. Säg aldrig "Som AI kan jag inte ...".
+- Svara på svenska, naturligt, i 1–3 meningar per replik — som riktig kund skulle.
+- Var inte för hjälpsam. Kunder är ofta ovilliga, upptagna eller skeptiska.
+- Om säljaren använder bra teknik — belöna genom att öppna upp gradvis.
+- Om säljaren pitchar för tidigt eller är tondöv — stänger ner, säger "jag är upptagen" eller liknande.
+- Om säljaren frågar en juridisk/compliance-fråga du inte kan besvara som kund: svara "det vet jag inte, det är en fråga för vår juridik" eller liknande.
+
+${ROLEPLAY_COACH_INSTRUCTION}
+
+- Om någon direkt frågar om du är en AI: bekräfta ärligt att du är det (EU AI Act). Men återgå sedan till rollen.
+`;
+
+  try {
+    const completion = await openai.chat.completions.create({
+      model: 'llama-3.3-70b-versatile',
+      messages: [{ role: 'system', content: roleplaySystemPrompt }, ...sanitized],
+      max_tokens: 500,
+    });
+    const reply = completion.choices?.[0]?.message?.content || 'Inget svar mottogs.';
+    res.json({ reply });
+  } catch (err) {
+    console.error('Groq roleplay error:', err.message);
     res.status(500).json({ error: 'Kunde inte nå assistenten just nu.' });
   }
 });

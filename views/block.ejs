@@ -8,6 +8,9 @@
   <meta name="robots" content="noindex" />
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎯</text></svg>" />
   <link rel="stylesheet" href="/style.css" />
+  <link rel="stylesheet" href="/journey.css" />
+  <link rel="stylesheet" href="/recommendations.css" />
+  <link rel="stylesheet" href="/gamification.css" />
 </head>
 <body class="block-page">
 
@@ -41,13 +44,294 @@
     </div>
     <% if (isTeaser) { %>
       <div class="block-hero-lock-badge">🔒 Premium</div>
+    <% } else if (journey && journey.fullyMastered) { %>
+      <div class="block-hero-done-badge">🏆 Bemästrad</div>
     <% } else if (blockProg && blockProg.completed) { %>
-      <div class="block-hero-done-badge">✓ Avklarad</div>
+      <div class="block-hero-done-badge">✓ Prov klart</div>
     <% } %>
   </div>
 
-  <!-- Tabs -->
+  <!-- ════════════ FRÅGA JOCKE — floating button + overlay ════════════ -->
+  <% if (!isTeaser && (role === 'premium' || role === 'admin')) { %>
+  <button class="ask-jocke-fab" type="button" onclick="openAskJocke()" aria-label="Fråga Jocke om detta block">
+    <span>💬</span>
+    <span class="ajf-label">Fråga Jocke</span>
+  </button>
+
+  <div class="ask-jocke-overlay" id="askJockeOverlay" role="dialog" aria-labelledby="ajTitle" aria-modal="true" hidden>
+    <div class="ask-jocke-panel">
+      <header class="aj-header">
+        <div>
+          <div class="aj-eyebrow">💬 Jocke om</div>
+          <h2 id="ajTitle"><%= block.title %></h2>
+        </div>
+        <button type="button" class="aj-close" onclick="closeAskJocke()" aria-label="Stäng">✕</button>
+      </header>
+      <div class="aj-chat" id="ajChat">
+        <div class="aj-msg aj-msg-jocke">
+          <strong>Jocke:</strong>
+          <p>Du är i blocket "<%= block.title %>". Fråga mig vad som helst — exempel, förtydliganden, tillämpning i ditt fall. Jag har teorin framför mig.</p>
+        </div>
+      </div>
+      <form id="ajForm" class="aj-form" autocomplete="off">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+        <textarea id="ajInput" placeholder="T.ex. 'Ge mig 3 exempel på förvirrad ton i B2B-samtal'" rows="2" maxlength="1200" required></textarea>
+        <button type="submit" class="aj-send">Skicka</button>
+      </form>
+      <div class="aj-quick">
+        <button type="button" onclick="ajQuick('Ge 3 konkreta exempel på den viktigaste tekniken i detta block')">🎯 Ge exempel</button>
+        <button type="button" onclick="ajQuick('Sammanfatta detta block i 3 bullets')">📝 Sammanfatta</button>
+        <button type="button" onclick="ajQuick('Hur tillämpar jag detta i mitt nästa kundsamtal?')">🚀 Tillämpning</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (function(){
+      const overlay = document.getElementById('askJockeOverlay');
+      const chat    = document.getElementById('ajChat');
+      const form    = document.getElementById('ajForm');
+      const input   = document.getElementById('ajInput');
+      const csrf    = <%- JSON.stringify(csrfToken) %>;
+      const blockId = <%- JSON.stringify(block.id) %>;
+      const messages = [];
+      let sending = false;
+
+      window.openAskJocke = () => {
+        overlay.hidden = false;
+        document.body.style.overflow = 'hidden';
+        setTimeout(() => input.focus(), 80);
+      };
+      window.closeAskJocke = () => {
+        overlay.hidden = true;
+        document.body.style.overflow = '';
+      };
+      overlay.addEventListener('click', e => { if (e.target === overlay) closeAskJocke(); });
+      document.addEventListener('keydown', e => { if (e.key === 'Escape' && !overlay.hidden) closeAskJocke(); });
+
+      function escapeHtml(s){ return s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+      function render(role, text) {
+        const div = document.createElement('div');
+        div.className = 'aj-msg aj-msg-' + (role === 'user' ? 'you' : 'jocke');
+        const strong = document.createElement('strong');
+        strong.textContent = role === 'user' ? 'Du:' : 'Jocke:';
+        const p = document.createElement('p');
+        p.innerHTML = escapeHtml(text).replace(/\n/g, '<br>');
+        div.appendChild(strong); div.appendChild(p);
+        chat.appendChild(div);
+        chat.scrollTop = chat.scrollHeight;
+      }
+
+      function renderTyping() {
+        const div = document.createElement('div');
+        div.id = 'ajTyping';
+        div.className = 'aj-msg aj-msg-jocke rp-typing';
+        div.innerHTML = '<strong>Jocke:</strong><p><span></span><span></span><span></span></p>';
+        chat.appendChild(div);
+        chat.scrollTop = chat.scrollHeight;
+      }
+      function removeTyping() { const t = document.getElementById('ajTyping'); if (t) t.remove(); }
+
+      async function send(text) {
+        if (sending || !text || !text.trim()) return;
+        sending = true;
+        const clean = text.trim();
+        messages.push({ role: 'user', content: clean });
+        render('user', clean);
+        input.value = '';
+        renderTyping();
+        try {
+          const res = await fetch('/chat/block', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrf },
+            body: JSON.stringify({ blockId, messages })
+          });
+          removeTyping();
+          if (!res.ok) {
+            const err = await res.json().catch(() => ({}));
+            render('assistant', '⚠️ ' + (err.error || 'Fel uppstod.'));
+            return;
+          }
+          const data = await res.json();
+          const reply = data.reply || 'Inget svar.';
+          messages.push({ role: 'assistant', content: reply });
+          render('assistant', reply);
+        } catch (e) {
+          removeTyping();
+          render('assistant', '⚠️ Kunde inte nå servern.');
+        } finally {
+          sending = false;
+        }
+      }
+
+      window.ajQuick = (text) => send(text);
+
+      form.addEventListener('submit', e => { e.preventDefault(); send(input.value); });
+      input.addEventListener('keydown', e => {
+        if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); form.requestSubmit(); }
+      });
+    })();
+  </script>
+  <% } %>
+
   <main id="main-content">
+
+  <!-- Subtil coach-hint — visas bara om systemet har något relevant att säga -->
+  <% if (!isTeaser && typeof coachHint !== 'undefined' && coachHint) { %>
+    <div class="coach-hint coach-hint-<%= coachHint.tone %>" role="status">
+      <span class="ch-icon"><%= coachHint.icon %></span>
+      <span class="ch-msg"><%= coachHint.message %></span>
+      <button class="ch-dismiss" type="button" onclick="this.parentElement.style.display='none'" aria-label="Dölj">✕</button>
+    </div>
+  <% } %>
+
+  <!-- ════════════ 4-STEGS-RESAN: LÄR → ÖVA → GÖR → REFLEKTERA ════════════ -->
+  <% if (!isTeaser && journey) { %>
+  <div class="journey-hub" role="region" aria-label="Din lärande-resa">
+    <div class="journey-header">
+      <span class="journey-eyebrow">Din resa genom blocket</span>
+      <span class="journey-progress-label"><%= journey.stepsCompleted %>/4 steg klara</span>
+    </div>
+
+    <div class="journey-steps">
+      <div class="journey-step <%= journey.theoryDone ? 'js-done' : 'js-current' %>">
+        <div class="js-bubble">
+          <% if (journey.theoryDone) { %>✓<% } else { %>📖<% } %>
+        </div>
+        <div class="js-label"><strong>Läs</strong><span>Teorin</span></div>
+      </div>
+      <div class="journey-connector <%= journey.theoryDone ? 'jc-done' : '' %>"></div>
+      <div class="journey-step <%= journey.roleplayDone ? 'js-done' : (journey.theoryDone ? 'js-current' : '') %>">
+        <div class="js-bubble">
+          <% if (journey.roleplayDone) { %>✓<% } else { %>🎭<% } %>
+        </div>
+        <div class="js-label"><strong>Öva</strong><span>Med Jocke</span></div>
+      </div>
+      <div class="journey-connector <%= journey.roleplayDone ? 'jc-done' : '' %>"></div>
+      <div class="journey-step <%= journey.missionDone ? 'js-done' : (journey.roleplayDone ? 'js-current' : '') %>">
+        <div class="js-bubble">
+          <% if (journey.missionDone) { %>✓<% } else { %>🎯<% } %>
+        </div>
+        <div class="js-label"><strong>Gör</strong><span>Uppdrag</span></div>
+      </div>
+      <div class="journey-connector <%= journey.missionDone ? 'jc-done' : '' %>"></div>
+      <div class="journey-step <%= journey.reflectionDone ? 'js-done' : (journey.missionDone ? 'js-current' : '') %>">
+        <div class="js-bubble">
+          <% if (journey.reflectionDone) { %>✓<% } else { %>💭<% } %>
+        </div>
+        <div class="js-label"><strong>Reflektera</strong><span>Stäng cirkeln</span></div>
+      </div>
+    </div>
+
+    <!-- Personaliserad "Nästa steg"-CTA -->
+    <div class="journey-cta-card">
+      <% if (!journey.theoryDone) { %>
+        <div class="jc-title">Börja här: <strong>Läs teorin</strong></div>
+        <div class="jc-desc">~<%= readTime %> min. Få grunden innan du tränar.</div>
+        <a href="#tab-theory" class="jc-btn" onclick="showTab('theory', document.getElementById('tab-btn-theory')); return false;">📖 Börja läsa</a>
+        <a href="/learn/<%= block.id %>/snabb" class="jc-btn jc-btn-ghost">⚡ Ta snabbversionen (2 min)</a>
+      <% } else if (!journey.roleplayDone && block.roleplays && block.roleplays.length) { %>
+        <div class="jc-title">Nästa: <strong>Öva med Jocke</strong></div>
+        <div class="jc-desc"><%= block.roleplays.length %> scenarier där du tränar teknikerna i tryggt läge. Jocke spelar kunden.</div>
+        <a href="/learn/<%= block.id %>/ova" class="jc-btn">🎭 Öppna träningsläget</a>
+      <% } else if (!journey.missionDone && block.mission) { %>
+        <div class="jc-title">Nästa: <strong>Veckans uppdrag</strong></div>
+        <div class="jc-desc"><%= block.mission.title %></div>
+        <a href="/learn/<%= block.id %>/uppdrag" class="jc-btn">🎯 Se uppdraget</a>
+      <% } else if (!journey.reflectionDone && block.reflections && block.reflections.length) { %>
+        <div class="jc-title">Nästa: <strong>Reflektion</strong></div>
+        <div class="jc-desc">Vad tar du med dig? 5 min journaling som låser in lärandet.</div>
+        <a href="/learn/<%= block.id %>/reflektion" class="jc-btn">💭 Reflektera</a>
+      <% } else if (journey.fullyMastered) { %>
+        <div class="jc-title">🏆 <strong>Blocket är bemästrat.</strong></div>
+        <div class="jc-desc">Alla 4 steg gjorda. Du kan alltid återvända — men nästa block väntar.</div>
+        <a href="/learn" class="jc-btn">📚 Välj nästa block</a>
+      <% } %>
+    </div>
+
+    <!-- Alla steg tillgängliga (inte blockerade) -->
+    <div class="journey-all">
+      <a href="#tab-theory" onclick="showTab('theory', document.getElementById('tab-btn-theory')); return false;" class="ja-link">📖 Teori</a>
+      <a href="/learn/<%= block.id %>/snabb" class="ja-link">⚡ Snabbversion</a>
+      <% if (block.roleplays && block.roleplays.length) { %>
+        <a href="/learn/<%= block.id %>/ova" class="ja-link">🎭 Öva<% if (journey.roleplayCount) { %> <span class="ja-count">(<%= journey.roleplayCount %>)</span><% } %></a>
+      <% } %>
+      <% if (block.mission) { %>
+        <a href="/learn/<%= block.id %>/uppdrag" class="ja-link">🎯 Uppdrag<% if (journey.missionStarted && !journey.missionDone) { %> <span class="ja-tag">Pågår</span><% } %></a>
+      <% } %>
+      <% if (block.reflections && block.reflections.length) { %>
+        <a href="/learn/<%= block.id %>/reflektion" class="ja-link">💭 Reflektion<% if (journey.reflectionCount) { %> <span class="ja-count">(<%= journey.reflectionCount %>)</span><% } %></a>
+      <% } %>
+    </div>
+  </div>
+  <% } %>
+
+  <!-- Goal-modal vid första besöket (bara om inga steg gjorda än) -->
+  <% if (!isTeaser && journey && journey.stepsCompleted === 0) { %>
+  <div class="goal-modal-backdrop" id="goalModal" role="dialog" aria-labelledby="goalTitle" aria-modal="true">
+    <div class="goal-modal">
+      <button class="goal-close" onclick="closeGoalModal()" aria-label="Stäng">✕</button>
+      <h2 id="goalTitle">Hur vill du jobba med det här blocket idag?</h2>
+      <p class="goal-sub">Alla 4 steg behövs för verkligt lärande — men du väljer var du börjar.</p>
+      <div class="goal-options">
+        <a href="#tab-theory" onclick="closeGoalModal(); showTab('theory', document.getElementById('tab-btn-theory')); return false;" class="goal-option">
+          <div class="go-icon">📚</div>
+          <div class="go-text">
+            <strong>Lär</strong>
+            <span>Ge mig teorin först</span>
+          </div>
+        </a>
+        <% if (block.roleplays && block.roleplays.length) { %>
+        <a href="/learn/<%= block.id %>/ova" onclick="closeGoalModal();" class="goal-option">
+          <div class="go-icon">🎭</div>
+          <div class="go-text">
+            <strong>Öva</strong>
+            <span>Jag vill träna direkt med Jocke</span>
+          </div>
+        </a>
+        <% } %>
+        <% if (block.mission) { %>
+        <a href="/learn/<%= block.id %>/uppdrag" onclick="closeGoalModal();" class="goal-option">
+          <div class="go-icon">🎯</div>
+          <div class="go-text">
+            <strong>Handla</strong>
+            <span>Ge mig ett konkret uppdrag för veckan</span>
+          </div>
+        </a>
+        <% } %>
+        <% if (block.quickVersion) { %>
+        <a href="/learn/<%= block.id %>/snabb" onclick="closeGoalModal();" class="goal-option">
+          <div class="go-icon">⚡</div>
+          <div class="go-text">
+            <strong>Snabbversion</strong>
+            <span>2 min — jag har bråttom</span>
+          </div>
+        </a>
+        <% } %>
+      </div>
+      <button class="goal-skip" onclick="closeGoalModal()">Visa allt istället →</button>
+    </div>
+  </div>
+  <script>
+    (function(){
+      var key = 'goal-seen-<%= block.id %>';
+      try {
+        if (localStorage.getItem(key)) {
+          var m = document.getElementById('goalModal');
+          if (m) m.style.display = 'none';
+        }
+      } catch(e) {}
+    })();
+    function closeGoalModal() {
+      try { localStorage.setItem('goal-seen-<%= block.id %>', '1'); } catch(e) {}
+      var m = document.getElementById('goalModal');
+      if (m) m.style.display = 'none';
+    }
+  </script>
+  <% } %>
+
+  <!-- Tabs -->
   <div class="tabs-wrapper">
     <div class="tabs" role="tablist" aria-label="Block <%= block.title %>">
       <button class="tab active" id="tab-btn-theory" data-tab="theory" onclick="showTab('theory', this)" role="tab" aria-selected="true" aria-controls="tab-theory" tabindex="0">📖 Teori</button>
@@ -120,19 +404,28 @@
 
       <!-- VIDEO -->
       <div id="tab-video" class="tab-content" role="tabpanel" aria-labelledby="tab-btn-video">
-        <div class="video-wrapper">
-          <div class="video-label">Rekommenderad video om <strong><%= block.title %></strong></div>
-          <div class="video-embed">
-            <iframe
-              src="https://www.youtube.com/embed/<%= block.youtubeId %>?rel=0&modestbranding=1"
-              title="<%= block.title %>"
-              frameborder="0"
-              loading="lazy"
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-              allowfullscreen
-            ></iframe>
+        <% if (block.youtubeId) { %>
+          <div class="video-wrapper">
+            <div class="video-label">Videogenomgång: <strong><%= block.title %></strong></div>
+            <div class="video-embed">
+              <iframe
+                src="https://www.youtube.com/embed/<%= block.youtubeId %>?rel=0&modestbranding=1"
+                title="<%= block.title %>"
+                frameborder="0"
+                loading="lazy"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowfullscreen
+              ></iframe>
+            </div>
           </div>
-        </div>
+        <% } else { %>
+          <div class="video-coming-soon">
+            <div class="video-coming-icon">🎬</div>
+            <h3>Video kommer snart</h3>
+            <p>Joakim spelar in videogenomgången för <strong><%= block.title %></strong> just nu. Vi lägger upp den så fort den är klar.</p>
+            <p class="video-coming-sub">Under tiden — läs teorin och kör provet. Allt väsentligt finns där.</p>
+          </div>
+        <% } %>
       </div>
 
       <!-- QUIZ -->

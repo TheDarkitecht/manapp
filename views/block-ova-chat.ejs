@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>🎭 <%= roleplay.title %> — Joakim Jaksen</title>
+  <meta name="robots" content="noindex" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎯</text></svg>" />
+  <link rel="stylesheet" href="/style.css" />
+  <link rel="stylesheet" href="/journey.css" />
+</head>
+<body class="block-page">
+
+  <a href="#main-content" class="skip-to-main">Hoppa till innehåll</a>
+
+  <nav class="learn-nav">
+    <a href="/learn/<%= block.id %>/ova" class="learn-nav-back">← Alla rollspel</a>
+    <span class="learn-nav-title">🎭 <%= roleplay.title %></span>
+    <span class="learn-nav-user"><%= username %></span>
+  </nav>
+
+  <main id="main-content" class="rp-wrap">
+
+    <!-- Scenario briefing -->
+    <div class="rp-brief">
+      <div class="rp-brief-header">
+        <span class="rp-brief-icon"><%= roleplay.icon || '🎭' %></span>
+        <div>
+          <div class="rp-brief-eyebrow">Scenario · <span class="ova-difficulty difficulty-<%= (roleplay.difficulty||'').toLowerCase().replace(/[^a-z]/g,'') %>"><%= roleplay.difficulty %></span></div>
+          <h2><%= roleplay.title %></h2>
+        </div>
+      </div>
+      <div class="rp-brief-body">
+        <div class="rp-brief-block">
+          <strong>📋 Situationen:</strong>
+          <p><%= roleplay.scenario %></p>
+        </div>
+        <div class="rp-brief-block">
+          <strong>🎯 Ditt mål:</strong>
+          <p><%= roleplay.goal %></p>
+        </div>
+        <% if (roleplay.successCriteria && roleplay.successCriteria.length) { %>
+          <div class="rp-brief-block">
+            <strong>✓ För att lyckas:</strong>
+            <ul>
+              <% roleplay.successCriteria.forEach(function(c){ %><li><%= c %></li><% }); %>
+            </ul>
+          </div>
+        <% } %>
+        <div class="rp-brief-tip">💡 Skriv <code>[KLAR]</code> när du är klar — Jocke bryter rollen och ger feedback.</div>
+      </div>
+    </div>
+
+    <!-- Chat area -->
+    <div class="rp-chat" id="rpChat">
+      <div class="rp-msg rp-msg-system">
+        <strong>🎬 Scenario aktivt</strong>
+        <p><%= roleplay.customerPersona ? 'Jocke spelar nu motparten. Öppna samtalet.' : 'Börja när du är redo.' %></p>
+      </div>
+      <% if (roleplay.openingLine) { %>
+        <div class="rp-msg rp-msg-customer">
+          <strong>Kund:</strong>
+          <p><%= roleplay.openingLine %></p>
+        </div>
+      <% } %>
+    </div>
+
+    <!-- Turn-räknare + progress-indikator -->
+    <div class="rp-turns" id="rpTurnsBar">
+      <div class="rp-turns-label">
+        <span id="rpTurnsText">Replikrunda 0</span>
+        <span class="rp-turns-tip" id="rpTurnsTip">— rekommenderas: minst 6–10 för meningsfull övning</span>
+      </div>
+      <div class="rp-turns-bar">
+        <div class="rp-turns-fill" id="rpTurnsFill" style="width: 0%"></div>
+      </div>
+    </div>
+
+    <!-- Smart [KLAR]-prompt (visas efter 8+ turns) -->
+    <div class="rp-ready" id="rpReadyPrompt" style="display:none;">
+      <span>🎯 Nu har du en ordentlig runda. Vill du be Jocke om feedback och avsluta?</span>
+      <button type="button" class="rp-btn-ghost" onclick="sendMessage('[KLAR]')">Be om feedback & avsluta</button>
+    </div>
+
+    <!-- Input -->
+    <form id="rpForm" class="rp-form" autocomplete="off">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+      <textarea id="rpInput" placeholder="Skriv vad du säger till kunden..." rows="2" maxlength="1800" required></textarea>
+      <div class="rp-form-actions">
+        <button type="button" class="rp-btn-ghost" onclick="sendMessage('[FEEDBACK]')">Be Jocke om feedback</button>
+        <button type="submit" class="rp-btn-primary">Skicka →</button>
+      </div>
+    </form>
+
+    <!-- Mark as done -->
+    <form method="POST" action="/learn/<%= block.id %>/ova/<%= roleplay.id %>/klar" class="rp-done-form">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+      <input type="hidden" name="turnCount" id="rpTurnCount" value="0" />
+      <button type="submit" class="rp-btn-complete">✓ Markera rollspelet som klart</button>
+      <span class="rp-done-hint" id="rpDoneHint">Vi rekommenderar 5+ turns och feedback-runda innan du markerar klart.</span>
+    </form>
+
+  </main>
+
+  <script>
+    (function(){
+      const blockId = <%- JSON.stringify(block.id) %>;
+      const rpId    = <%- JSON.stringify(roleplay.id) %>;
+      const csrf    = <%- JSON.stringify(csrfToken) %>;
+
+      const chat = document.getElementById('rpChat');
+      const form = document.getElementById('rpForm');
+      const input = document.getElementById('rpInput');
+      const turnCounter = document.getElementById('rpTurnCount');
+
+      const messages = [];
+      <% if (roleplay.openingLine) { %>
+        messages.push({ role: 'assistant', content: <%- JSON.stringify(roleplay.openingLine) %> });
+      <% } %>
+      let turns = 0;
+
+      function escapeHtml(s){ return s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+      function render(role, content, isFeedback) {
+        const div = document.createElement('div');
+        div.className = 'rp-msg ' + (role === 'user' ? 'rp-msg-you' : (isFeedback ? 'rp-msg-feedback' : 'rp-msg-customer'));
+        const strong = document.createElement('strong');
+        strong.textContent = role === 'user' ? 'Du:' : (isFeedback ? '🎯 Jockes feedback:' : 'Kund:');
+        const p = document.createElement('p');
+        p.innerHTML = escapeHtml(content).replace(/\n/g, '<br>');
+        div.appendChild(strong);
+        div.appendChild(p);
+        chat.appendChild(div);
+        chat.scrollTop = chat.scrollHeight;
+      }
+
+      function renderTyping() {
+        const div = document.createElement('div');
+        div.id = 'rpTyping';
+        div.className = 'rp-msg rp-msg-customer rp-typing';
+        div.innerHTML = '<strong>Kund:</strong><p><span></span><span></span><span></span></p>';
+        chat.appendChild(div);
+        chat.scrollTop = chat.scrollHeight;
+      }
+      function removeTyping() {
+        const t = document.getElementById('rpTyping');
+        if (t) t.remove();
+      }
+
+      const turnsText = document.getElementById('rpTurnsText');
+      const turnsFill = document.getElementById('rpTurnsFill');
+      const turnsTip  = document.getElementById('rpTurnsTip');
+      const readyPrompt = document.getElementById('rpReadyPrompt');
+      const doneHint = document.getElementById('rpDoneHint');
+
+      function updateTurnsUI() {
+        if (turnsText) turnsText.textContent = 'Replikrunda ' + turns;
+        const target = 10; // 100% = 10 turns
+        const pct = Math.min(100, Math.round((turns / target) * 100));
+        if (turnsFill) turnsFill.style.width = pct + '%';
+        // Tips-text per nivå
+        if (turnsTip) {
+          if (turns === 0) {
+            turnsTip.textContent = '— rekommenderas: minst 6–10 för meningsfull övning';
+          } else if (turns < 3) {
+            turnsTip.textContent = '— du är igång, fortsätt';
+          } else if (turns < 6) {
+            turnsTip.textContent = '— bra djup, testa olika tekniker';
+          } else if (turns < 10) {
+            turnsTip.textContent = '— riktig träningsrunda 👌';
+          } else {
+            turnsTip.textContent = '— djup träning, dags för feedback?';
+          }
+        }
+        // Visa KLAR-prompt efter 8 turns
+        if (readyPrompt) readyPrompt.style.display = turns >= 8 ? 'flex' : 'none';
+        // Hint på done-knappen
+        if (doneHint) {
+          if (turns >= 5) doneHint.textContent = 'Du har en ordentlig runda. Kör gärna feedback först.';
+          else doneHint.textContent = 'Vi rekommenderar 5+ turns och feedback-runda innan du markerar klart.';
+        }
+      }
+
+      async function sendMessage(text) {
+        if (!text || !text.trim()) return;
+        text = text.trim();
+        messages.push({ role: 'user', content: text });
+        render('user', text);
+        input.value = '';
+        turns++;
+        turnCounter.value = turns;
+        updateTurnsUI();
+        renderTyping();
+
+        const isFeedback = text === '[KLAR]' || text === '[FEEDBACK]';
+
+        try {
+          const res = await fetch('/chat/roleplay', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrf },
+            body: JSON.stringify({ blockId, roleplayId: rpId, messages })
+          });
+          removeTyping();
+          if (!res.ok) {
+            const err = await res.json().catch(() => ({}));
+            render('assistant', '⚠️ ' + (err.error || 'Fel uppstod. Försök igen.'), true);
+            return;
+          }
+          const data = await res.json();
+          const reply = data.reply || 'Inget svar.';
+          messages.push({ role: 'assistant', content: reply });
+          render('assistant', reply, isFeedback);
+        } catch (e) {
+          removeTyping();
+          render('assistant', '⚠️ Kunde inte nå servern.', true);
+        }
+      }
+
+      window.sendMessage = sendMessage;
+
+      form.addEventListener('submit', function(e){
+        e.preventDefault();
+        sendMessage(input.value);
+      });
+
+      // Submit on Enter (without Shift)
+      input.addEventListener('keydown', function(e){
+        if (e.key === 'Enter' && !e.shiftKey) {
+          e.preventDefault();
+          form.requestSubmit();
+        }
+      });
+    })();
+  </script>
+
+</body>
+</html>
