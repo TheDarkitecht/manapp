@@ -21,8 +21,11 @@
   <main id="main-content">
   <div class="admin-wrap">
 
-    <div style="margin-bottom:1.5rem;">
-      <a href="/admin/analytics" style="display:inline-block;padding:0.5rem 1rem;background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;text-decoration:none;border-radius:8px;font-weight:600;font-size:0.9rem;">📊 Öppna Analytics-dashboard →</a>
+    <div style="margin-bottom:1.5rem;display:flex;gap:0.5rem;flex-wrap:wrap;">
+      <a href="/admin/analytics" style="padding:0.5rem 1rem;background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;text-decoration:none;border-radius:8px;font-weight:600;font-size:0.9rem;">📊 Analytics-dashboard</a>
+      <a href="/admin/test-digest?dry=1" target="_blank" style="padding:0.5rem 1rem;background:rgba(99,102,241,0.15);color:#a5b4fc;text-decoration:none;border-radius:8px;font-weight:600;font-size:0.9rem;border:1px solid rgba(99,102,241,0.3);">👁️ Förhandsgranska veckodigest</a>
+      <a href="/admin/test-digest?type=reengagement&dry=1" target="_blank" style="padding:0.5rem 1rem;background:rgba(245,158,11,0.12);color:#fbbf24;text-decoration:none;border-radius:8px;font-weight:600;font-size:0.9rem;border:1px solid rgba(245,158,11,0.3);">👁️ Förhandsgranska re-engagement</a>
+      <a href="/admin/test-digest" onclick="return confirm('Skickar ett riktigt test-mejl till ditt admin-konto. Fortsätta?');" style="padding:0.5rem 1rem;background:rgba(16,185,129,0.12);color:#34d399;text-decoration:none;border-radius:8px;font-weight:600;font-size:0.9rem;border:1px solid rgba(16,185,129,0.3);">📧 Skicka test-digest</a>
     </div>
 
     <!-- Stats -->

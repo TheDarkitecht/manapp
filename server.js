@@ -1196,6 +1196,97 @@ app.get('/cron/digest', async (req, res) => {
 });
 
 /**
+ * Admin-endpoint: skicka test-digest till inloggad admin själv.
+ * Bypass CRON_SECRET eftersom vi är inloggad admin — säker route.
+ */
+app.get('/admin/test-digest', requireLogin, requireAdmin, async (req, res) => {
+  const mode = req.query.type === 'reengagement' ? 'reengagement' : 'digest';
+  const dryRun = req.query.dry === '1';
+  const baseUrl = process.env.APP_URL || `${req.protocol}://${req.get('host')}`;
+  const user = findUserById(req.session.userId);
+  if (!user || !user.email) {
+    return res.status(400).send('<pre>Admin-kontot saknar registrerad e-post. Sätt en i /account först.</pre>');
+  }
+
+  try {
+    const prefs = gamification.parsePreferences(getUserPreferences(user.id));
+    const stats = computeStatsForUser(user.id);
+    const state = getUserLearningState(user.id);
+    const unsubToken = emails.createUnsubscribeToken(user.id);
+    const unsubUrl = `${baseUrl}/unsubscribe/${unsubToken}`;
+
+    let mail;
+    if (mode === 'reengagement') {
+      mail = emails.buildReengagement({
+        username: user.username,
+        daysInactive: 14,
+        stats,
+        lastBlockTitle: 'Tonfall & Psykologisk Påverkan',
+        lastBlockId: 'tonfall',
+        baseUrl,
+        unsubscribeUrl: unsubUrl,
+      });
+    } else {
+      const today = new Date().toISOString().slice(0, 10);
+      const challengeRow = getDailyChallenge(user.id, today);
+      let dailyChallenge = null;
+      if (challengeRow) { try { dailyChallenge = JSON.parse(challengeRow.challenge_data); } catch (_) {} }
+      else dailyChallenge = gamification.selectDailyChallenge({ actions: getUserActions(user.id, 50) }, today);
+
+      mail = emails.buildWeeklyDigest({
+        username: user.username,
+        stats,
+        weekData: { blocksTouched: 3, xpGained: 0 },
+        baseUrl,
+        unsubscribeUrl: unsubUrl,
+        dailyChallenge,
+      });
+    }
+
+    if (dryRun) {
+      // Rendera mejlet direkt i browsern för preview
+      res.send(`
+        <div style="background:#0f172a;padding:1rem;color:#94a3b8;font-family:system-ui;">
+          <p><strong>DRY RUN — inget skickat.</strong> Detta skulle mailas till: ${user.email}</p>
+          <p><strong>Subject:</strong> ${mail.subject}</p>
+          <p><strong>Type:</strong> ${mode}</p>
+          <hr style="border-color:rgba(255,255,255,0.1);">
+        </div>
+        ${mail.html}
+      `);
+      return;
+    }
+
+    if (!resend) {
+      return res.status(500).send('<pre>Resend not configured (RESEND_API_KEY saknas)</pre>');
+    }
+
+    await resend.emails.send({
+      from: RESEND_FROM,
+      to: user.email,
+      subject: `[TEST] ${mail.subject}`,
+      html: mail.html,
+      text: mail.text,
+      headers: { 'List-Unsubscribe': `<${unsubUrl}>` },
+    });
+
+    res.send(`
+      <div style="background:#0f172a;padding:2rem;color:#f1f5f9;font-family:system-ui;text-align:center;min-height:100vh;box-sizing:border-box;">
+        <div style="max-width:480px;margin:3rem auto;padding:2rem;background:#1e293b;border:1px solid rgba(16,185,129,0.3);border-radius:12px;">
+          <h1 style="color:#34d399;">✓ Test-mejl skickat</h1>
+          <p>Mejlet skickades till <strong>${user.email}</strong></p>
+          <p style="color:#94a3b8;font-size:0.9rem;">Typ: ${mode}. Ämne: "${mail.subject}"</p>
+          <p><a href="/admin" style="color:#a5b4fc;">← Tillbaka till Admin</a></p>
+        </div>
+      </div>
+    `);
+  } catch (err) {
+    console.error('Test digest error:', err);
+    res.status(500).send(`<pre style="color:#ef4444;padding:2rem;">Error: ${err.message}</pre>`);
+  }
+});
+
+/**
  * Unsubscribe-endpoint. Token-baserat, kräver ingen inloggning.
  */
 app.get('/unsubscribe/:token', (req, res) => {
