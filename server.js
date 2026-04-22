@@ -99,7 +99,7 @@ const openai = new OpenAI({
 });
 
 const JOCKE_SYSTEM_PROMPT = `
-Du heter Jocke. Du är säljcoachen på Joakim Jaksens plattform — byggd av Joakim Jaksen, 22+ år i säljbranschen, 120M SEK i resultat.
+Du heter Jocke. Du är säljcoachen på Joakim Jaksens plattform — byggd av Joakim Jaksen, 22+ år i säljbranschen, 200+ MSEK i resultat och 1000+ tränade säljare.
 
 KOMMUNIKATIONSSTIL:
 - Direkt, skarp, kortfattad. Inga onödiga ord.
