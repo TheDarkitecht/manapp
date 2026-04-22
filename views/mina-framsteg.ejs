@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mina framsteg — Joakim Jaksen</title>
+  <meta name="robots" content="noindex" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>" />
+  <link rel="stylesheet" href="/style.css" />
+  <link rel="stylesheet" href="/gamification.css" />
+  <link rel="stylesheet" href="/recommendations.css" />
+  <link rel="stylesheet" href="/bevis.css" />
+</head>
+<body class="block-page">
+
+  <a href="#main-content" class="skip-to-main">Hoppa till innehåll</a>
+
+  <nav class="learn-nav">
+    <a href="/dashboard" class="learn-nav-back">← Dashboard</a>
+    <span class="learn-nav-title">📈 Mina framsteg</span>
+    <span class="learn-nav-user"><%= username %></span>
+  </nav>
+
+  <main id="main-content" class="progress-wrap">
+
+    <% if (stats.xp === 0 && stats.totalActionsLogged === 0) { %>
+      <div class="empty-state" style="margin-bottom:2rem;">
+        <div class="empty-state-icon">📈</div>
+        <h3>Här växer din resa fram — så snart du börjar</h3>
+        <p>Den här sidan visar dina framsteg över tid: nivå, streak, skill-radar, aktivitetsheatmap och alla dina loggade handlingar. Kom tillbaka hit när du kört ett block eller loggat en handling — då ser du resan bygga sig.</p>
+        <div style="display:flex;gap:0.5rem;justify-content:center;flex-wrap:wrap;">
+          <a href="/learn/inledning" class="jc-btn">📖 Börja med Block 1</a>
+          <a href="/loggbok" class="jc-btn jc-btn-ghost">📓 Logga en handling</a>
+        </div>
+      </div>
+    <% } %>
+
+    <!-- Hero — nivå + total progress -->
+    <div class="progress-hero">
+      <div class="ph-level-badge">
+        <div class="ph-level-name"><%= stats.level.current.name %></div>
+        <div class="ph-level-num">Nivå <%= stats.level.current.id %>/5</div>
+      </div>
+      <div class="ph-level-body">
+        <h1>Din utveckling</h1>
+        <p class="ph-signal"><%= stats.level.current.signalizes %></p>
+        <% if (stats.level.next) { %>
+          <div class="ph-progress">
+            <div class="ph-progress-bar">
+              <div class="ph-progress-fill" style="width: <%= Math.round(stats.level.progress * 100) %>%;"></div>
+            </div>
+            <div class="ph-progress-meta">
+              <span><strong><%= stats.xp %> XP</strong></span>
+              <span><%= stats.level.xpToNext %> XP till <%= stats.level.next.name %></span>
+            </div>
+          </div>
+        <% } else { %>
+          <div class="ph-maxed"><strong><%= stats.xp %> XP</strong> · Toppnivå uppnådd 🏆</div>
+        <% } %>
+      </div>
+    </div>
+
+    <!-- Topp-stats -->
+    <section class="progress-topstats">
+      <div class="pt-stat">
+        <div class="pt-val">🔥 <%= stats.streak.current %></div>
+        <div class="pt-lab">dagar i rad</div>
+        <% if (stats.streak.longest > stats.streak.current) { %>
+          <div class="pt-sub">bäst: <%= stats.streak.longest %> dagar</div>
+        <% } %>
+      </div>
+      <div class="pt-stat">
+        <div class="pt-val"><%= stats.totalBlocksMastered %> / <%= blocks.length %></div>
+        <div class="pt-lab">bemästrade block</div>
+      </div>
+      <div class="pt-stat">
+        <div class="pt-val"><%= stats.totalRoleplays %></div>
+        <div class="pt-lab">rollspel gjorda</div>
+      </div>
+      <div class="pt-stat">
+        <div class="pt-val"><%= stats.totalReflections %></div>
+        <div class="pt-lab">reflektioner skrivna</div>
+      </div>
+      <div class="pt-stat">
+        <div class="pt-val"><%= stats.totalActionsLogged %></div>
+        <div class="pt-lab">actions loggade</div>
+      </div>
+      <div class="pt-stat">
+        <div class="pt-val"><%= stats.totalActionsThisWeek %></div>
+        <div class="pt-lab">denna vecka</div>
+      </div>
+    </section>
+
+    <!-- Dina bevis — delbara certifikat per uppnådd nivå -->
+    <section class="progress-section">
+      <h2>🏆 Dina bevis</h2>
+      <p class="ps-sub">Delbara certifikat för varje nivå du når. Ladda ner som bild och posta på LinkedIn.</p>
+      <div class="achievements-row">
+        <% [2,3,4,5].forEach(function(lvlId) { %>
+          <% const unlocked = stats.level.current.id >= lvlId; %>
+          <% const lvlName = ['','','Operator','Closer','Elite','Apex'][lvlId]; %>
+          <% if (unlocked) { %>
+            <a href="/mina-framsteg/bevis/<%= lvlId %>" class="achievement-card ach-unlocked">
+              <div class="ach-icon">🏆</div>
+              <div class="ach-name"><%= lvlName %></div>
+              <div class="ach-sub">Visa bevis →</div>
+            </a>
+          <% } else { %>
+            <div class="achievement-card ach-locked">
+              <div class="ach-icon">🔒</div>
+              <div class="ach-name"><%= lvlName %></div>
+              <div class="ach-sub">Ej uppnådd än</div>
+            </div>
+          <% } %>
+        <% }); %>
+      </div>
+      <% if (stats.level.current.id === 1) { %>
+        <p class="ps-sub" style="margin-top:0.5rem;">Ditt första bevis väntar vid <strong style="color:#a5b4fc;">Operator</strong>-nivån (300 XP).</p>
+      <% } %>
+    </section>
+
+    <!-- Skill-radar -->
+    <section class="progress-section">
+      <h2>🎯 Skill-radar</h2>
+      <p class="ps-sub">Procent bemästrade block per område</p>
+      <div class="perf-radar-list">
+        <% stats.radar.forEach(function(dim) { %>
+          <div class="perf-radar-item">
+            <div class="perf-radar-head">
+              <span class="perf-radar-icon"><%= dim.icon %></span>
+              <span class="perf-radar-name"><%= dim.name %></span>
+              <span class="perf-radar-score"><%= Math.round(dim.score * 100) %>%</span>
+            </div>
+            <div class="perf-radar-bar">
+              <div class="perf-radar-fill" style="width: <%= Math.round(dim.score * 100) %>%;"></div>
+            </div>
+            <div class="perf-radar-meta"><%= dim.mastered %>/<%= dim.total %> block bemästrade</div>
+          </div>
+        <% }); %>
+      </div>
+    </section>
+
+    <!-- 90-dagars aktivitets-heatmap -->
+    <section class="progress-section">
+      <h2>🗓️ Aktivitet — 90 dagar</h2>
+      <p class="ps-sub">Varje ruta = en dag. Fylld = du gjorde något i appen.</p>
+      <div class="heatmap-wrap">
+        <div class="heatmap-grid">
+          <% heatmap.forEach(function(day) { %>
+            <div class="hm-cell <%= day.active ? 'hm-active' : '' %> <%= day.isToday ? 'hm-today' : '' %>" title="<%= day.date %><%= day.active ? ' · aktiv' : '' %>"></div>
+          <% }); %>
+        </div>
+        <div class="heatmap-legend">
+          <span>för 90 dagar sen</span>
+          <span>idag →</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Alla block, detaljerat status -->
+    <section class="progress-section">
+      <h2>📚 Alla block</h2>
+      <p class="ps-sub">Status per block — vilka steg är klara.</p>
+      <div class="progress-blocks-list">
+        <% blocks.forEach(function(block, i) { %>
+          <% const bs = blockStatus[block.id] || { stepsDone: 0 }; %>
+          <% const mastered = bs.stepsDone === 4; %>
+          <a href="/learn/<%= block.id %>" class="pb-item <%= mastered ? 'pb-item-mastered' : '' %>">
+            <div class="pb-num"><%= i + 1 %></div>
+            <div class="pb-icon"><%= block.icon %></div>
+            <div class="pb-body">
+              <h3><%= block.title %></h3>
+              <div class="pb-steps">
+                <span class="pb-dot <%= bs.theoryDone ? 'pb-on' : '' %>" title="Teori">📖</span>
+                <span class="pb-dot <%= bs.hasRoleplays ? 'pb-on' : '' %>" title="Öva">🎭</span>
+                <span class="pb-dot <%= bs.hasMissionDone ? 'pb-on' : '' %>" title="Uppdrag">🎯</span>
+                <span class="pb-dot <%= bs.hasReflections ? 'pb-on' : '' %>" title="Reflektion">💭</span>
+                <span class="pb-steps-count"><%= bs.stepsDone %>/4</span>
+              </div>
+            </div>
+            <div class="pb-status">
+              <% if (mastered) { %>🏆
+              <% } else if (bs.stepsDone > 0) { %>⚡
+              <% } else { %>—<% } %>
+            </div>
+          </a>
+        <% }); %>
+      </div>
+    </section>
+
+    <!-- Actions per kategori -->
+    <% const sortedCats = Object.entries(actionsByCategory).sort((a,b) => b[1] - a[1]); %>
+    <% if (sortedCats.length) { %>
+    <section class="progress-section">
+      <h2>📊 Actions per kategori</h2>
+      <p class="ps-sub">Dina verkliga handlingar — var du gör mest.</p>
+      <div class="progress-cats-list">
+        <% sortedCats.forEach(function([catId, count]) { %>
+          <% const cat = categories.find(c => c.id === catId); %>
+          <% if (cat) { %>
+            <div class="pc-item">
+              <span class="pc-icon"><%= cat.icon %></span>
+              <span class="pc-name"><%= cat.name %></span>
+              <span class="pc-count"><%= count %></span>
+            </div>
+          <% } %>
+        <% }); %>
+      </div>
+    </section>
+    <% } %>
+
+    <!-- Senaste 20 actions -->
+    <% if (actions.length) { %>
+    <section class="progress-section">
+      <h2>📓 Senaste handlingar</h2>
+      <a href="/loggbok" class="ps-link">Se alla i Loggboken →</a>
+      <div class="lb-list">
+        <% actions.forEach(function(a) { %>
+          <% const cat = categories.find(c => c.id === a.category); %>
+          <div class="lb-item">
+            <div class="lb-item-icon"><%= cat ? cat.icon : '✨' %></div>
+            <div class="lb-item-body">
+              <div class="lb-item-title">
+                <strong><%= cat ? cat.name : a.category %></strong>
+                <% if (a.count > 1) { %><span class="lb-item-count">×<%= a.count %></span><% } %>
+              </div>
+              <% if (a.note) { %><p class="lb-item-note"><%= a.note %></p><% } %>
+              <div class="lb-item-date"><%= new Date(a.created_at).toLocaleDateString('sv-SE') %></div>
+            </div>
+          </div>
+        <% }); %>
+      </div>
+    </section>
+    <% } %>
+
+  </main>
+
+</body>
+</html>
