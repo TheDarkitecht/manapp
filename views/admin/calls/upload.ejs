@@ -102,6 +102,18 @@
       <% }); %>
     };
 
+    // Window-level drag/drop-catch: hindrar browsern från att öppna
+    // filen i ny flik om user släpper UTANFÖR dropzonen. Klassisk bugg —
+    // utan detta tolkar Chrome en drop-outside som "visa filen" och
+    // uppladdningen bryts tyst.
+    ['dragover', 'drop'].forEach(ev => {
+      window.addEventListener(ev, e => {
+        // Tillåt events i själva dropzonen eller i file-inputen
+        if (e.target.closest('#dropZone, #fileInput')) return;
+        e.preventDefault();
+      });
+    });
+
     (function(){
       const methodologySelect = document.getElementById('methodology');
       const methodologyDesc = document.getElementById('methodologyDesc');
