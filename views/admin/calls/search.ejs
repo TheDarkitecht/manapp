@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sök transkript — Samtalsintelligens</title>
+  <meta name="robots" content="noindex, nofollow" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🔎</text></svg>" />
+  <link rel="stylesheet" href="/style.css" />
+  <link rel="stylesheet" href="/call-analytics.css" />
+</head>
+<body class="learn-page ci-page">
+
+  <a href="#main-content" class="skip-to-main">Hoppa till innehåll</a>
+
+  <nav class="learn-nav">
+    <a href="/admin/calls" class="learn-nav-back">← Samtalsintelligens</a>
+    <span class="learn-nav-title">🔎 Sök transkript</span>
+    <span class="learn-nav-user"><%= username %></span>
+  </nav>
+
+  <main id="main-content" class="ci-wrap">
+
+    <form method="GET" action="/admin/calls/search" class="ci-search-form" role="search">
+      <label for="qInput" class="visually-hidden">Sökterm</label>
+      <input
+        id="qInput"
+        type="text"
+        name="q"
+        value="<%= q %>"
+        placeholder="Sök efter ord eller fras (t.ex. 'pris', 'kommer tillbaka', 'avtal')"
+        autofocus
+        minlength="2"
+        maxlength="80"
+      />
+      <button type="submit" class="ci-btn ci-btn-primary">🔎 Sök</button>
+    </form>
+
+    <% if (q && q.length >= 2) { %>
+      <p class="ci-search-meta">
+        <strong><%= results.length %></strong> träffar för <em>"<%= q %>"</em>
+        <% if (results.length >= 50) { %>(visar första 50)<% } %>
+      </p>
+
+      <% if (!results.length) { %>
+        <div class="ci-empty">
+          <p>Inga samtal innehåller "<%= q %>". Prova ett kortare eller annorlunda stavat sökord.</p>
+        </div>
+      <% } else { %>
+        <ul class="ci-search-results">
+          <% results.forEach(function(r) { %>
+            <li class="ci-search-hit">
+              <a class="ci-search-hit-title" href="/admin/calls/<%= r.job_id %>">
+                <%= r.title || r.original_name %>
+              </a>
+              <div class="ci-search-hit-meta">
+                <span class="ci-status ci-status-<%= r.status %>"><%= r.status %></span>
+                <% if (r.duration_sec) { %>
+                  <span>⏱ <%= formatDuration(r.duration_sec) %></span>
+                <% } %>
+                <span>📅 <%= (r.created_at || '').slice(0, 16) %></span>
+              </div>
+              <p class="ci-search-hit-excerpt"><%= r.excerpt %></p>
+            </li>
+          <% }); %>
+        </ul>
+      <% } %>
+    <% } else { %>
+      <div class="ci-empty">
+        <p>Skriv in minst 2 tecken för att söka över alla transkript.</p>
+        <p class="ci-hint">
+          Tips: sök efter invändningar ("för dyrt"), avslutsord ("bokar vi ett möte"),
+          eller specifika produktnamn för att hitta hur säljare hanterar dem.
+        </p>
+      </div>
+    <% } %>
+
+  </main>
+
+  <script src="/heartbeat.js" defer></script>
+</body>
+</html>

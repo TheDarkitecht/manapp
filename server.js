@@ -2959,6 +2959,13 @@ app.post('/pro/samtal/:id/delete', requireLogin, requirePro, verifyCsrf, (req, r
   res.redirect('/pro');
 });
 
+// ── CI (Conversation Intelligence) — admin-only bulk call-analytics ──────────
+// Separat från Pro-tier: skalar till 1000 samtal/dag via async DB-kö.
+// Routern ligger i routes/calls.js och tar middleware-deps via factory.
+app.use('/admin/calls', require('./routes/calls')({
+  requireLogin, requireAdmin, verifyCsrf, generateCsrfToken,
+}));
+
 // ── Företag-sida — enkel kontakta-oss ────────────────────────────────────────
 
 app.get('/foretag', (req, res) => {
@@ -3350,6 +3357,11 @@ async function startServer() {
   // och sedan var 6:e timme. Total recovery-fönster: ~18 timmar med 3 snapshots.
   setTimeout(() => rotateDbBackups(), 10_000);
   setInterval(rotateDbBackups, 6 * 60 * 60 * 1000);
+
+  // CI (Conversation Intelligence) — bulk call-analytics worker.
+  // Pollar call_jobs-tabellen efter pending uppladdningar och processar
+  // en i taget via Groq (Whisper + LLM). Admin-only i Fas 1.
+  require('./services/callQueue').start();
 
   // Graceful shutdown: flusha analytics-buffer innan processen dör.
   // Railway skickar SIGTERM vid redeploy — utan detta förloras analytics i flight.

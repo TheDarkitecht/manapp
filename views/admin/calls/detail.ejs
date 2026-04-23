@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title><%= job.title || job.original_name %> — Samtalsintelligens</title>
+  <meta name="robots" content="noindex, nofollow" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎙️</text></svg>" />
+  <link rel="stylesheet" href="/style.css" />
+  <link rel="stylesheet" href="/call-analytics.css" />
+</head>
+<body class="learn-page ci-page">
+
+  <a href="#main-content" class="skip-to-main">Hoppa till innehåll</a>
+
+  <nav class="learn-nav">
+    <a href="/admin/calls" class="learn-nav-back">← Samtalsintelligens</a>
+    <span class="learn-nav-title">🎙️ <%= job.title || job.original_name %></span>
+    <span class="learn-nav-user"><%= username %></span>
+  </nav>
+
+  <main id="main-content" class="ci-wrap">
+
+    <!-- Jobb-meta + actions -->
+    <div class="ci-detail-header">
+      <div class="ci-detail-meta">
+        <h1><%= job.title || job.original_name %></h1>
+        <div class="ci-meta-row">
+          <span class="ci-status ci-status-<%= job.status %>"><%= job.status %></span>
+          <span>📁 <%= job.original_name %></span>
+          <% if (formatFileSize(job.file_size) !== '—') { %>
+            <span>💾 <%= formatFileSize(job.file_size) %></span>
+          <% } %>
+          <% if (transcript && transcript.duration_sec) { %>
+            <span>⏱ <%= formatDuration(transcript.duration_sec) %></span>
+          <% } %>
+          <% if (transcript && transcript.word_count) { %>
+            <span>📝 <%= transcript.word_count.toLocaleString('sv-SE') %> ord</span>
+          <% } %>
+          <span>📅 <%= (job.created_at || '').slice(0, 16) %></span>
+        </div>
+      </div>
+      <div class="ci-detail-actions">
+        <% if (job.storage_key) { %>
+          <a class="ci-btn ci-btn-secondary" href="/admin/calls/audio/<%= job.id %>" target="_blank" rel="noopener">🔊 Spela upp</a>
+        <% } %>
+        <% if (job.status === 'failed') { %>
+          <form method="POST" action="/admin/calls/worker/retry/<%= job.id %>" style="display:inline;">
+            <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+            <button type="submit" class="ci-btn ci-btn-secondary">↻ Försök igen</button>
+          </form>
+        <% } %>
+        <form method="POST" action="/admin/calls/<%= job.id %>/delete" style="display:inline;"
+              onsubmit="return confirm('Radera detta samtal? Transkript, analys och ljudfil raderas permanent.');">
+          <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+          <button type="submit" class="ci-btn ci-btn-danger">🗑 Radera</button>
+        </form>
+      </div>
+    </div>
+
+    <!-- Status / fel -->
+    <% if (job.status === 'failed' && job.error) { %>
+      <div class="ci-error"><strong>Fel:</strong> <%= job.error %></div>
+    <% } else if (job.status !== 'done' && job.status !== 'failed') { %>
+      <div class="ci-warn">
+        <strong>⏳ Pågår (<%= job.status %>)…</strong>
+        Sidan laddar om var 10 sekund.
+      </div>
+      <script>setTimeout(() => window.location.reload(), 10000);</script>
+    <% } %>
+
+    <!-- Analys -->
+    <% if (analysis) { %>
+    <section class="ci-section">
+      <header class="ci-section-header">
+        <h2>🎯 Jockes feedback</h2>
+      </header>
+      <article class="ci-analysis" id="analysisContent"><%= analysis.analysis || '' %></article>
+    </section>
+    <% } %>
+
+    <!-- Transcript + Word freq -->
+    <% if (transcript) { %>
+    <div class="ci-detail-grid">
+      <section class="ci-section">
+        <header class="ci-section-header">
+          <h2>📝 Transkript</h2>
+          <button type="button" class="ci-btn ci-btn-ghost" onclick="copyTranscript()">📋 Kopiera</button>
+        </header>
+        <pre class="ci-transcript" id="transcriptText"><%= transcript.text %></pre>
+      </section>
+
+      <section class="ci-section">
+        <header class="ci-section-header">
+          <h2>🔤 Topp-ord</h2>
+        </header>
+        <% if (!wordFrequencies || !wordFrequencies.length) { %>
+          <p class="ci-empty">Inga ord-frekvenser registrerade.</p>
+        <% } else {
+             const maxCount = wordFrequencies[0].count;
+        %>
+          <ul class="ci-wordfreq">
+            <% wordFrequencies.forEach(function(w) { %>
+              <li>
+                <span class="ci-wf-word"><%= w.word %></span>
+                <span class="ci-wf-bar"><span class="ci-wf-fill" style="width: <%= Math.round((w.count / maxCount) * 100) %>%;"></span></span>
+                <span class="ci-wf-count"><%= w.count %></span>
+              </li>
+            <% }); %>
+          </ul>
+        <% } %>
+      </section>
+    </div>
+    <% } %>
+
+  </main>
+
+  <script>
+    function copyTranscript() {
+      const el = document.getElementById('transcriptText');
+      if (!el) return;
+      navigator.clipboard.writeText(el.textContent).then(() => {
+        const btn = event.currentTarget;
+        const orig = btn.textContent;
+        btn.textContent = '✓ Kopierat';
+        setTimeout(() => { btn.textContent = orig; }, 1500);
+      });
+    }
+
+    // Client-side markdown-rendering av Jockes feedback (samma mönster som pro-analysis.ejs)
+    (function(){
+      const el = document.getElementById('analysisContent');
+      if (!el) return;
+      let html = el.textContent;
+      html = html.replace(/^## (.+)$/gm, '<h2>$1</h2>');
+      html = html.replace(/^### (.+)$/gm, '<h3>$1</h3>');
+      html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+      html = html.replace(/\*(.+?)\*/g, '<em>$1</em>');
+      html = html.replace(/^\- (.+)$/gm, '<li>$1</li>');
+      html = html.replace(/(<li>[\s\S]*?<\/li>\n?)+/g, m => '<ul>' + m + '</ul>');
+      html = html.split(/\n\n+/).map(p => {
+        if (p.startsWith('<h') || p.startsWith('<ul') || p.startsWith('<li')) return p;
+        return '<p>' + p.replace(/\n/g, '<br>') + '</p>';
+      }).join('');
+      el.innerHTML = html;
+    })();
+  </script>
+
+  <script src="/heartbeat.js" defer></script>
+</body>
+</html>
