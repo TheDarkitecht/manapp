@@ -175,14 +175,18 @@ module.exports = function createCallsRouter(deps) {
     const errors  = [];
 
     for (const file of files) {
+      let jobId = null;
       try {
-        // 1. Skapa jobb (placeholder storage_key)
-        const jobId = db.createCallJob(req.session.userId, {
+        // 1. Skapa jobb som 'uploading' — worker pollar bara 'pending', så
+        //    detta håller workern borta tills storage_key är säkert satt.
+        //    Förhindrar race där worker plockar jobbet innan R2-put är klar.
+        jobId = db.createCallJob(req.session.userId, {
           batch_id:      batchId,
           original_name: file.originalname,
           file_size:     file.size,
           mime_type:     file.mimetype,
           title:         null,
+          status:        'uploading',
         });
 
         // 2. Läs buffer från disk, lagra i R2/final disk
@@ -192,11 +196,16 @@ module.exports = function createCallsRouter(deps) {
           mimeType: file.mimetype,
         });
 
-        // 3. Uppdatera jobb med storage_key
-        db.updateCallJob(jobId, { storage_key: storageKey });
+        // 3. Atomisk transition: sätt storage_key + 'pending' samtidigt.
+        //    Först nu blir jobbet synligt för workern.
+        db.updateCallJob(jobId, { storage_key: storageKey, status: 'pending' });
         created.push({ jobId, name: file.originalname });
       } catch (err) {
         console.error('[calls/upload] failed for', file.originalname, err.message);
+        // Märk jobbet som failed om det hunnit skapas, så det inte ligger kvar som 'uploading'
+        if (jobId) {
+          try { db.updateCallJob(jobId, { status: 'failed', error: err.message.slice(0, 500) }); } catch (_) {}
+        }
         errors.push({ name: file.originalname, error: err.message });
       } finally {
         // Rensa temporärfil

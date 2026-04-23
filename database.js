@@ -2115,13 +2115,18 @@ function getFunnelMetrics() {
 
 /**
  * Skapa ett nytt jobb. Returnerar jobId.
- * storage_key fylls i av worker efter att ljudfilen lagts i R2/disk.
+ * storage_key fylls i av caller efter att ljudfilen lagts i R2/disk.
+ *
+ * VIKTIGT: Status default är 'uploading' — inte 'pending'. Worker pollar
+ * bara 'pending', så genom att starta i 'uploading' undviker vi race
+ * conditions där worker hinner plocka upp jobbet INNAN storage_key är satt.
+ * Caller MÅSTE uppgradera till 'pending' efter att putAudio() lyckats.
  */
-function createCallJob(userId, { batch_id, original_name, storage_key, file_size, mime_type, title }) {
+function createCallJob(userId, { batch_id, original_name, storage_key, file_size, mime_type, title, status }) {
   db.run(
     `INSERT INTO call_jobs (user_id, batch_id, original_name, storage_key, file_size, mime_type, title, status)
-     VALUES (?, ?, ?, ?, ?, ?, ?, 'pending')`,
-    [userId, batch_id || null, original_name, storage_key || null, file_size || null, mime_type || null, title || null]
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+    [userId, batch_id || null, original_name, storage_key || null, file_size || null, mime_type || null, title || null, status || 'uploading']
   );
   const s = db.prepare('SELECT last_insert_rowid() AS id');
   s.step();
