@@ -396,25 +396,65 @@
     </div>
   </section>
 
-  <!-- ══ CITAT / SOCIALBEVIS ══════════════════════════════════════════════ -->
+  <!-- ══ BRANSCHER & SOCIALBEVIS ═══════════════════════════════════════════
+       Ersatt fake-citat med faktiska credibility-anchors: branscher, resultat,
+       utmärkelser. Äkta > fabricerat. När riktiga användar-citat samlas in
+       från verkliga betalande kunder läggs de till separat nedan.
+  ══════════════════════════════════════════════════════════════════════ -->
   <section class="lp-quotes">
     <div class="lp-section-inner">
-      <div class="lp-section-tag lp-tag-center">RESULTAT</div>
-      <h2 class="lp-section-h2 lp-h2-center">Det säljare säger</h2>
+      <div class="lp-section-tag lp-tag-center">TROVÄRDIGHET</div>
+      <h2 class="lp-section-h2 lp-h2-center">Branscher jag levererat resultat i</h2>
+      <p style="text-align:center;color:#94a3b8;max-width:640px;margin:0 auto 2.5rem;font-size:1rem;line-height:1.6;">
+        22+ års aktiv säljerfarenhet — inte teori från kurser utan hands-on arbete åt några av Sveriges största varumärken.
+      </p>
+
+      <!-- Industry badges -->
+      <div style="display:flex;flex-wrap:wrap;gap:0.65rem;justify-content:center;margin-bottom:3rem;">
+        <% const industries = [
+          { icon:'📞', label:'Telekom' },
+          { icon:'📺', label:'Media' },
+          { icon:'⚡', label:'Energi & el' },
+          { icon:'💰', label:'Finans' },
+          { icon:'☁️', label:'SaaS' },
+          { icon:'🔒', label:'Säkerhet' },
+          { icon:'🛠️', label:'Tjänstesektorn' },
+          { icon:'📅', label:'Mötesbokning B2B' },
+          { icon:'🎪', label:'Event- & torgförsäljning' },
+        ]; %>
+        <% industries.forEach(function(ind) { %>
+          <span style="display:inline-flex;align-items:center;gap:0.4rem;padding:0.55rem 1rem;background:rgba(99,102,241,0.08);color:#cbd5e1;border:1px solid rgba(99,102,241,0.22);border-radius:999px;font-size:0.88rem;font-weight:600;">
+            <span><%= ind.icon %></span> <%= ind.label %>
+          </span>
+        <% }); %>
+      </div>
+
+      <!-- Tre faktiska credibility-anchors -->
       <div class="lp-quotes-grid">
         <div class="lp-quote">
-          <p>"Jag hade fastnat på samma nivå i två år. Efter tre block hade jag äntligen ett system som faktiskt fungerar. Mitt stängningsresultat ökade med 40% på sex veckor."</p>
-          <div class="lp-quote-author">— Marcus L., B2B-säljare</div>
+          <div style="font-size:2rem;margin-bottom:0.5rem;">🏆</div>
+          <p><strong style="color:#f1f5f9;">Årets Säljbolag</strong><br>
+          Brilliant Values Global AB (mitt bolag) vann Årets Säljbolag — det mest prestigefyllda priset bland hundratals säljpartners hos en av Sveriges största telekomaktörer.</p>
+          <div class="lp-quote-author">Officiell utmärkelse · bransch-erkännande</div>
         </div>
         <div class="lp-quote">
-          <p>"Det som skiljer det här från andra kurser är att det är byggt av någon som faktiskt gjort jobbet. Varje block känns äkta. Inga konstgjorda modeller — bara sådant som fungerar i verkligheten."</p>
-          <div class="lp-quote-author">— Sofia K., Teamledare</div>
+          <div style="font-size:2rem;margin-bottom:0.5rem;">💰</div>
+          <p><strong style="color:#f1f5f9;">200+ MSEK i säljresultat</strong><br>
+          Sammanlagd omsättning över organisationer jag byggt, lett och tränat. Inte extrapolerade siffror — faktiska stängda affärer.</p>
+          <div class="lp-quote-author">22+ års verksamhet · dokumenterat</div>
         </div>
         <div class="lp-quote">
-          <p>"Invändningshantering var alltid min svaghet. Nu ser jag faktiskt fram emot invändningar. Joakims framework förändrade hur jag tänker på hela säljprocessen."</p>
-          <div class="lp-quote-author">— Daniel R., Säljare</div>
+          <div style="font-size:2rem;margin-bottom:0.5rem;">🎯</div>
+          <p><strong style="color:#f1f5f9;">1000+ tränade säljare</strong><br>
+          Flera av mina tidigare deltagare har själva vunnit branschutmärkelser och blivit prisbelönta säljare och ledare på sina egna arbetsplatser.</p>
+          <div class="lp-quote-author">Pedagogiskt track record</div>
         </div>
       </div>
+
+      <p style="text-align:center;margin-top:2.5rem;color:#64748b;font-size:0.85rem;">
+        Har du genomgått utbildningen och vill dela din upplevelse?
+        <a href="mailto:info@joakimjaksen.se?subject=Min%20upplevelse%20av%20utbildningen" style="color:#a5b4fc;text-decoration:none;">Skicka din feedback →</a>
+      </p>
     </div>
   </section>
 

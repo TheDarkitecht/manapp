@@ -71,7 +71,7 @@
           <p class="auth-error"><%= registerError %></p>
         <% } %>
 
-        <form method="POST" action="/register" class="auth-form">
+        <form method="POST" action="/register" class="auth-form" onsubmit="authLoading(this)">
           <div class="field-group">
             <label for="reg-username">Användarnamn</label>
             <input type="text" id="reg-username" name="username" placeholder="välj_ett_namn" required autocomplete="username" />

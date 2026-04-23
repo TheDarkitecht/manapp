@@ -55,4 +55,44 @@
 
   // Tick varje sekund — billigt, men duration_ms uppdateras bara var 30:e sek
   setInterval(tick, 1000);
+
+  // ── Universal loading-state för POST-forms ─────────────────────────────────
+  // När en form skickas, disable submit-knappen och visa "⏳ Väntar..."
+  // så användaren inte klickar dubbelt och vet att något händer.
+  // Skippar forms med data-no-loading (tex redan-hanterade forms).
+  function initFormLoadingStates() {
+    document.querySelectorAll('form[method="POST" i], form[method="post" i]').forEach(function (form) {
+      if (form.dataset.loadingBound) return;
+      if (form.dataset.noLoading) return;
+      form.dataset.loadingBound = '1';
+      form.addEventListener('submit', function () {
+        var btn = form.querySelector('button[type="submit"], input[type="submit"]');
+        if (!btn || btn.disabled) return;
+        // Spara original-text ifall form är ogiltigt och vi vill återställa
+        btn.dataset.origText = btn.textContent || btn.value;
+        setTimeout(function () {
+          // setTimeout 0 för att låta HTML5-validering köra först
+          if (form.checkValidity && !form.checkValidity()) return;
+          btn.disabled = true;
+          if (btn.tagName === 'BUTTON') {
+            btn.innerHTML = '<span style="display:inline-block;animation:spin 1s linear infinite;">⏳</span> Skickar…';
+          } else {
+            btn.value = '⏳ Skickar…';
+          }
+        }, 0);
+      });
+    });
+  }
+  // CSS för spinner-animation (injectas en gång)
+  if (!document.getElementById('jj-spinner-css')) {
+    var styleEl = document.createElement('style');
+    styleEl.id = 'jj-spinner-css';
+    styleEl.textContent = '@keyframes spin { to { transform: rotate(360deg); } }';
+    document.head.appendChild(styleEl);
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initFormLoadingStates);
+  } else {
+    initFormLoadingStates();
+  }
 })();
