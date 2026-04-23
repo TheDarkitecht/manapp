@@ -736,6 +736,24 @@ function getAllUsersWithEmail() {
   return rows;
 }
 
+/**
+ * Hämta användare med epost för broadcast, filtrerat på segment.
+ * segment: 'all' | 'premium' | 'pro' | 'free' | 'paid' (= premium OR pro)
+ */
+function getUsersForBroadcast(segment) {
+  let where = "email IS NOT NULL AND email != ''";
+  if (segment === 'premium')      where += " AND role = 'premium'";
+  else if (segment === 'pro')     where += " AND role = 'pro'";
+  else if (segment === 'free')    where += " AND role = 'free'";
+  else if (segment === 'paid')    where += " AND role IN ('premium', 'pro')";
+  // 'all' = ingen extra filtrering
+  const s = db.prepare(`SELECT id, username, email FROM users WHERE ${where} ORDER BY id`);
+  const rows = [];
+  while (s.step()) rows.push(s.getAsObject());
+  s.free();
+  return rows;
+}
+
 // ── Gamification: user_actions, user_preferences, daily_challenges ────────────
 
 function logUserAction(userId, category, count, note, blockId) {
@@ -1709,7 +1727,7 @@ module.exports = {
   getUserPreferences, setUserPreferences,
   getDailyChallenge, saveDailyChallenge, completeDailyChallenge,
   // Retention emails
-  getAllUsersWithEmail,
+  getAllUsersWithEmail, getUsersForBroadcast,
   // Admin analytics
   getAdminAnalytics,
   getUserAnalyticsProfile,

@@ -22,7 +22,7 @@ const {
   logUserAction, getUserActions, deleteUserAction, getActionsToday,
   getUserPreferences, setUserPreferences,
   getDailyChallenge, saveDailyChallenge, completeDailyChallenge,
-  getAllUsersWithEmail,
+  getAllUsersWithEmail, getUsersForBroadcast,
   getAdminAnalytics, getUserAnalyticsProfile, getFunnelMetrics, getUserDataExport,
   logPageView, updateLastPageViewDuration, cleanupOldPageViews, flushAnalytics,
   sessionGet, sessionSet, sessionDestroy, sessionCleanupExpired,
@@ -2246,6 +2246,97 @@ app.post('/admin/users/:id/email', requireLogin, requireAdmin, verifyCsrf, async
   }
   res.redirect('/admin');
 });
+
+// ── Admin broadcast-mejl ─────────────────────────────────────────────────────
+// Masskommunikation till valt segment (all/premium/pro/free/paid).
+// Respekterar unsubscribe-tokens: användare med emailRetention = false
+// inkluderas INTE (samma regler som retention-mejlen).
+
+const broadcastLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,  // 1h
+  max: 3,                     // max 3 broadcasts per timme
+  handler: (req, res) => res.redirect('/admin/broadcast?error=ratelimit'),
+});
+
+app.get('/admin/broadcast', requireLogin, requireAdmin, (req, res) => {
+  res.render('admin-broadcast', {
+    username: req.session.username,
+    csrfToken: generateCsrfToken(req),
+    sent: req.query.sent ? parseInt(req.query.sent) : null,
+    failed: req.query.failed ? parseInt(req.query.failed) : null,
+    error: req.query.error || null,
+  });
+});
+
+app.post('/admin/broadcast', requireLogin, requireAdmin, broadcastLimiter, verifyCsrf, async (req, res) => {
+  if (!resend) {
+    return res.redirect('/admin/broadcast?error=no_resend');
+  }
+  const segment = ['all', 'premium', 'pro', 'free', 'paid'].includes(req.body.segment) ? req.body.segment : 'all';
+  const subject = (req.body.subject || '').trim().slice(0, 200);
+  const body    = (req.body.body    || '').trim().slice(0, 20000);
+  if (!subject || !body) {
+    return res.redirect('/admin/broadcast?error=missing');
+  }
+
+  const recipients = getUsersForBroadcast(segment);
+  // Respektera email_retention-preferensen (samma regel som retention-mejlen)
+  const eligible = recipients.filter(r => {
+    const prefs = getUserPreferences(r.id);
+    return prefs.email_retention !== false; // default = opt-in
+  });
+
+  const baseUrl = process.env['APP_URL'] || `${req.protocol}://${req.get('host')}`;
+  let sent = 0, failed = 0;
+
+  // Skicka sekventiellt med kort delay för att inte trigga Resend-rate-limit
+  for (const u of eligible) {
+    try {
+      const unsubToken = emails.createUnsubscribeToken(u.id);
+      const unsubUrl   = `${baseUrl}/unsubscribe/${unsubToken}`;
+      await resend.emails.send({
+        from:    RESEND_FROM,
+        to:      u.email,
+        subject,
+        html:    buildBroadcastEmail({ username: u.username, body, unsubUrl, subject }),
+      });
+      sent++;
+      // Resend free tier = 10 emails/sec, betalad = 100. 100ms = säker marginal.
+      await new Promise(r => setTimeout(r, 100));
+    } catch (err) {
+      failed++;
+      console.error(`Broadcast failed for ${u.email}:`, err.message);
+    }
+  }
+  console.log(`📢 Broadcast klar: ${sent} skickade, ${failed} misslyckade (segment=${segment})`);
+  res.redirect(`/admin/broadcast?sent=${sent}&failed=${failed}`);
+});
+
+// Wrapper för broadcast-innehåll: vanlig HTML-email med framing + unsubscribe
+function buildBroadcastEmail({ username, body, unsubUrl, subject }) {
+  // Body får vara markdown-lättande HTML (admin skriver antingen plain eller HTML)
+  // Vi normaliserar \n till <br> om inget HTML detected
+  const isHtml = /<\/?(p|br|div|strong|em|ul|ol|li|a|h[1-6])/i.test(body);
+  const contentHtml = isHtml ? body : body.replace(/\n\n+/g, '</p><p>').replace(/\n/g, '<br>').replace(/^/, '<p>').replace(/$/, '</p>');
+
+  return `<!DOCTYPE html><html lang="sv"><head><meta charset="UTF-8"><title>${subject}</title></head>
+<body style="margin:0;padding:0;background:#f8fafc;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+  <div style="max-width:560px;margin:0 auto;padding:2rem 1.5rem;">
+    <div style="background:#fff;border-radius:12px;padding:2rem;box-shadow:0 2px 8px rgba(0,0,0,0.05);">
+      <div style="color:#6366f1;font-weight:800;margin-bottom:1.5rem;">🎯 Joakim Jaksen</div>
+      <div style="color:#0f172a;line-height:1.6;font-size:15px;">
+        <p>Hej ${username},</p>
+        ${contentHtml}
+        <p style="margin-top:1.5rem;">// Joakim</p>
+      </div>
+    </div>
+    <div style="text-align:center;color:#94a3b8;font-size:12px;margin-top:1.5rem;">
+      Du får det här för att du är registrerad på <a href="https://www.joakimjaksen.se" style="color:#94a3b8;">joakimjaksen.se</a>.
+      <br><a href="${unsubUrl}" style="color:#94a3b8;">Avprenumerera från mejl</a>
+    </div>
+  </div>
+</body></html>`;
+}
 
 // ── Admin: referral credits-översikt + markera utbetalda ─────────────────────
 

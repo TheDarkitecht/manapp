@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin — Broadcast-mejl</title>
+  <meta name="robots" content="noindex" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📢</text></svg>" />
+  <link rel="stylesheet" href="/style.css" />
+  <style>
+    .bc-wrap { max-width: 760px; margin: 0 auto; padding: 2rem 1.25rem; }
+    .bc-nav { display:flex;gap:0.75rem;margin-bottom:1.5rem;font-size:0.9rem; }
+    .bc-nav a { padding:0.5rem 1rem;background:rgba(255,255,255,0.04);color:#cbd5e1;text-decoration:none;border-radius:8px;border:1px solid rgba(255,255,255,0.08); }
+    .bc-nav a:hover { border-color:rgba(99,102,241,0.4);color:#f1f5f9; }
+    .bc-card {
+      background: linear-gradient(145deg, #1e293b, #0f172a);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 14px; padding: 2rem;
+    }
+    .bc-card h1 { color:#f1f5f9;margin:0 0 0.5rem;font-size:1.5rem; }
+    .bc-card .lead { color:#94a3b8;margin:0 0 2rem;line-height:1.6; }
+    .bc-field { margin-bottom: 1.25rem; }
+    .bc-label {
+      display: block; margin-bottom: 0.4rem;
+      color: #a5b4fc; font-size: 0.8rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.06em;
+    }
+    .bc-input, .bc-textarea, .bc-select {
+      width: 100%;
+      padding: 0.75rem 1rem;
+      background: rgba(0,0,0,0.25);
+      color: #f1f5f9;
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 10px;
+      font-size: 0.95rem;
+      font-family: inherit;
+      box-sizing: border-box;
+    }
+    .bc-input:focus, .bc-textarea:focus, .bc-select:focus {
+      outline: none; border-color: rgba(99,102,241,0.5);
+    }
+    .bc-textarea { min-height: 240px; resize: vertical; line-height: 1.6; font-family: -apple-system, 'SF Mono', Consolas, monospace; font-size: 0.88rem; }
+    .bc-hint { color:#64748b;font-size:0.78rem;margin-top:0.35rem; }
+    .bc-submit {
+      padding: 0.85rem 1.75rem;
+      background: linear-gradient(135deg,#6366f1,#8b5cf6);
+      color: #fff; border: none; border-radius: 10px;
+      font-weight: 700; font-size: 0.95rem;
+      cursor: pointer;
+    }
+    .bc-submit:hover { filter: brightness(1.1); }
+    .bc-alert {
+      padding: 1rem 1.25rem; border-radius: 10px;
+      margin-bottom: 1.5rem; font-size: 0.9rem; font-weight: 600;
+    }
+    .bc-alert-success { background: rgba(16,185,129,0.1); color:#34d399; border:1px solid rgba(16,185,129,0.25); }
+    .bc-alert-warn    { background: rgba(251,191,36,0.1); color:#fbbf24; border:1px solid rgba(251,191,36,0.25); }
+    .bc-alert-error   { background: rgba(239,68,68,0.1);  color:#f87171; border:1px solid rgba(239,68,68,0.25); }
+  </style>
+</head>
+<body class="block-page">
+
+  <main class="bc-wrap">
+
+    <div class="bc-nav">
+      <a href="/admin">← Admin</a>
+      <a href="/admin/analytics">📊 Analytics</a>
+      <a href="/admin/referral-credits">🎁 Credits</a>
+    </div>
+
+    <div class="bc-card">
+      <h1>📢 Skicka broadcast-mejl</h1>
+      <p class="lead">
+        Masskommunikation till ditt användarsegment — nya block, uppdateringar,
+        events. Respekterar opt-out: användare som avprenumererat från mejl
+        exkluderas automatiskt. Max 3 broadcasts per timme.
+      </p>
+
+      <% if (sent !== null) { %>
+        <div class="bc-alert <%= failed > 0 ? 'bc-alert-warn' : 'bc-alert-success' %>">
+          ✓ Broadcast skickad: <strong><%= sent %></strong> levererade<% if (failed > 0) { %>, <strong><%= failed %></strong> misslyckades (se server-loggen för detaljer)<% } %>.
+        </div>
+      <% } %>
+
+      <% if (error) { %>
+        <div class="bc-alert bc-alert-error">
+          <% if (error === 'ratelimit') { %>🔒 För många broadcasts senaste timmen. Vänta en stund.
+          <% } else if (error === 'missing') { %>⚠️ Ämne och meddelande krävs.
+          <% } else if (error === 'no_resend') { %>⚠️ RESEND_API_KEY är inte konfigurerad — mejl kan inte skickas.
+          <% } else { %>⚠️ Något gick fel: <%= error %>
+          <% } %>
+        </div>
+      <% } %>
+
+      <form method="POST" action="/admin/broadcast">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+
+        <div class="bc-field">
+          <label class="bc-label" for="segment">Segment</label>
+          <select name="segment" id="segment" class="bc-select">
+            <option value="all">Alla användare med e-post</option>
+            <option value="paid">⭐ Betalande (Premium + Pro)</option>
+            <option value="premium">✓ Endast Premium</option>
+            <option value="pro">⚡ Endast Pro</option>
+            <option value="free">Endast gratis-användare</option>
+          </select>
+          <div class="bc-hint">Endast användare som inte avprenumererat från mejl får meddelandet.</div>
+        </div>
+
+        <div class="bc-field">
+          <label class="bc-label" for="subject">Ämne</label>
+          <input type="text" name="subject" id="subject" class="bc-input" maxlength="200" required
+                 placeholder="Ex: Nytt block ute — Avslutsteknik" />
+          <div class="bc-hint">Max 200 tecken. Detta syns i mottagarens inkorg.</div>
+        </div>
+
+        <div class="bc-field">
+          <label class="bc-label" for="body">Meddelande</label>
+          <textarea name="body" id="body" class="bc-textarea" maxlength="20000" required
+                    placeholder="Hej!&#10;&#10;Nytt block är ute: Avslutsteknik — hela teorin + 3 nya rollspel + verkligt uppdrag.&#10;&#10;Logga in så hämtar du nästa nivå.&#10;&#10;Tryck här: https://www.joakimjaksen.se/learn/avslutsteknik"></textarea>
+          <div class="bc-hint">
+            Plain text: radbrytningar bevaras som &lt;br&gt;. HTML-tags (p, br, strong, em, a, ul, li) funkar också.
+            "Hej {username}" hanteras automatiskt — skriv inte det själv.
+          </div>
+        </div>
+
+        <button type="submit" class="bc-submit"
+                onclick="return confirm('Skicka detta mejl till valt segment? Kan inte ångras.');">
+          📤 Skicka broadcast
+        </button>
+      </form>
+    </div>
+
+    <div style="margin-top:1.5rem;padding:1rem 1.25rem;background:rgba(99,102,241,0.05);border-left:3px solid #6366f1;border-radius:6px;color:#cbd5e1;font-size:0.85rem;line-height:1.55;">
+      💡 <strong>Best practice:</strong> testa först genom att sätta dig själv som enda mottagare (skicka till segment 'admin' via att flippa din egen roll) eller genom att välja "paid"-segmentet när du bara har dig själv som Premium. Resend kan inte ta tillbaka mejl.
+    </div>
+
+  </main>
+
+  <script src="/heartbeat.js" defer></script>
+</body>
+</html>
