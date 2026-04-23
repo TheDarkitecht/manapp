@@ -10,6 +10,7 @@ const helmet    = require('helmet');
 const {
   initDatabase, cleanupExpiredTokens, rotateDbBackups, findUserByUsername, findUserByEmail, findUserById, generateUsernameFromEmail, displayName, fullName, createUser,
   getAllUsers, setUserRole, deleteUser, deleteUserAccount, getUserStats,
+  updateUserEmail, updateUserName,
   setStripeCustomerId, findUserByStripeCustomerId,
   updateLastLogin,
   getNotesByUserId, createNote, deleteNote,
@@ -2375,8 +2376,14 @@ app.get('/account', requireLogin, async (req, res) => {
     username:         req.session.username,
     role:             req.session.role,
     email:            user?.email || '',
+    firstName:        user?.first_name || '',
+    lastName:         user?.last_name  || '',
     pwError:          req.query.pwError || null,
     pwOk:             req.query.pwOk === '1',
+    emailError:       req.query.emailError || null,
+    emailOk:          req.query.emailOk === '1',
+    nameError:        req.query.nameError || null,
+    nameOk:           req.query.nameOk === '1',
     trialCancelled:   req.query.trialCancelled === '1',
     trialCancelError: req.query.trialCancelError || null,
     invoices,
@@ -2421,6 +2428,76 @@ app.post('/account/change-password', requireLogin, blockWhenImpersonating, passw
   const fresh = findUserById(user.id);
   req.session.pwVersion = fresh?.pw_version || 0;
   res.redirect('/account?pwOk=1');
+});
+
+// ── Byt e-postadress ──────────────────────────────────────────────────────────
+// Kräver password-re-confirm (skydd mot hijackad session).
+// Syncar mot Stripe-customer så fakturor fortsätter gå till rätt adress.
+app.post('/account/change-email', requireLogin, blockWhenImpersonating, passwordChangeLimiter, verifyCsrf, async (req, res) => {
+  const { currentPassword, newEmail } = req.body;
+  const user = findUserById(req.session.userId);
+
+  if (!user || !(await bcrypt.compare(currentPassword || '', user.password_hash))) {
+    return res.redirect('/account?emailError=pw');
+  }
+  if (!newEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newEmail.trim())) {
+    return res.redirect('/account?emailError=invalid');
+  }
+  if (newEmail.trim().toLowerCase() === (user.email || '').toLowerCase()) {
+    return res.redirect('/account?emailError=same');
+  }
+
+  const oldEmail = user.email;
+  const result = updateUserEmail(user.id, newEmail);
+  if (!result.ok) {
+    const code = result.error === 'E-postadressen används redan.' ? 'taken' : 'unknown';
+    return res.redirect('/account?emailError=' + code);
+  }
+
+  // Sync med Stripe så fakturor + kvitton går till nya adressen
+  if (user.stripe_customer_id && stripe) {
+    try {
+      await stripe.customers.update(user.stripe_customer_id, {
+        email: newEmail.trim().toLowerCase(),
+      });
+      console.log(`📧 Stripe customer-email syncad för user ${user.id}`);
+    } catch (err) {
+      console.error('Stripe email sync failed (DB uppdaterad ändå):', err.message);
+    }
+  }
+
+  audit(req, 'user.email_change', { id: user.id, username: user.username },
+        { from: oldEmail, to: newEmail.trim().toLowerCase() });
+  res.redirect('/account?emailOk=1');
+});
+
+// ── Byt för-/efternamn ────────────────────────────────────────────────────────
+// Ingen password-check (low-stakes, tillåter snabba updates efter giftermål etc).
+app.post('/account/change-name', requireLogin, blockWhenImpersonating, verifyCsrf, (req, res) => {
+  const { firstName, lastName } = req.body;
+
+  if (!firstName?.trim() || !lastName?.trim()) {
+    return res.redirect('/account?nameError=missing');
+  }
+  if (firstName.length > 50 || lastName.length > 50) {
+    return res.redirect('/account?nameError=long');
+  }
+  if (/<|>|\{|\}/.test(firstName + lastName)) {
+    return res.redirect('/account?nameError=html');
+  }
+
+  const user = findUserById(req.session.userId);
+  if (!user) return res.redirect('/account?nameError=unknown');
+
+  const result = updateUserName(user.id, firstName, lastName);
+  if (!result.ok) return res.redirect('/account?nameError=unknown');
+
+  // Uppdatera session.username så "Hej X"-hälsningar reflekterar nya förnamnet direkt
+  req.session.username = result.firstName;
+
+  audit(req, 'user.name_change', { id: user.id, username: user.username },
+        { firstName: result.firstName, lastName: result.lastName });
+  res.redirect('/account?nameOk=1');
 });
 
 // ── Terms of Service ──────────────────────────────────────────────────────────

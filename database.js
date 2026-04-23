@@ -688,6 +688,37 @@ function updateLastLogin(userId) {
   saveDb();
 }
 
+/**
+ * Byt e-postadress för en user. Returnerar { ok, error? }.
+ * Kollar uniqueness (om en annan user redan har den email) och att det
+ * inte är SAMMA email som redan är satt.
+ */
+function updateUserEmail(userId, newEmail) {
+  const normalized = (newEmail || '').trim().toLowerCase();
+  if (!normalized) return { ok: false, error: 'E-post krävs.' };
+  // Finns email redan på annan user?
+  const existing = findUserByEmail(normalized);
+  if (existing && existing.id !== userId) {
+    return { ok: false, error: 'E-postadressen används redan.' };
+  }
+  db.run('UPDATE users SET email = ? WHERE id = ?', [normalized, userId]);
+  saveDb();
+  return { ok: true };
+}
+
+/**
+ * Byt för-/efternamn. Ingen password-check (tillåt snabba ändringar).
+ * Returnerar { ok, error? }.
+ */
+function updateUserName(userId, firstName, lastName) {
+  const clean1 = (firstName || '').trim().slice(0, 50);
+  const clean2 = (lastName  || '').trim().slice(0, 50);
+  if (!clean1 || !clean2) return { ok: false, error: 'Förnamn och efternamn krävs.' };
+  db.run('UPDATE users SET first_name = ?, last_name = ? WHERE id = ?', [clean1, clean2, userId]);
+  saveDb();
+  return { ok: true, firstName: clean1, lastName: clean2 };
+}
+
 function getUserStats() {
   const run = sql => {
     const s = db.prepare(sql); s.step();
@@ -2649,6 +2680,7 @@ module.exports = {
   initDatabase, saveDb, cleanupExpiredTokens, rotateDbBackups,
   findUserByUsername, findUserByEmail, findUserById, generateUsernameFromEmail, displayName, fullName,
   createUser, getAllUsers, setUserRole, deleteUser, deleteUserAccount, getUserStats,
+  updateUserEmail, updateUserName,
   setStripeCustomerId, findUserByStripeCustomerId,
   updateLastLogin,
   getNotesByUserId, createNote, deleteNote,

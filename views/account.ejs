@@ -20,6 +20,90 @@
 
   <main id="main-content">
   <div class="success-wrap">
+
+    <!-- Profil: namn + email — hanteras här, inte via admin -->
+    <div class="success-card" style="margin-bottom:1.5rem;">
+      <h2 style="color:#f1f5f9;margin:0 0 0.5rem;font-size:1.15rem;text-align:center;">👤 Min profil</h2>
+      <p style="color:#94a3b8;margin:0 0 1.25rem;font-size:0.88rem;text-align:center;">
+        Din data — uppdatera när som helst.
+      </p>
+
+      <!-- Flash-meddelanden för namn -->
+      <% if (typeof nameOk !== 'undefined' && nameOk) { %>
+        <div role="status" aria-live="polite" style="padding:0.65rem 0.85rem;background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.25);border-radius:8px;color:#34d399;font-size:0.85rem;font-weight:600;margin-bottom:1rem;">✓ Namnet är uppdaterat</div>
+      <% } %>
+      <% if (typeof nameError !== 'undefined' && nameError) { %>
+        <div role="alert" aria-live="assertive" style="padding:0.65rem 0.85rem;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.25);border-radius:8px;color:#fca5a5;font-size:0.85rem;margin-bottom:1rem;">
+          <% if (nameError === 'missing') { %>⚠️ Både förnamn och efternamn krävs.
+          <% } else if (nameError === 'long') { %>⚠️ Namnen får max vara 50 tecken.
+          <% } else if (nameError === 'html') { %>⚠️ Namn kan inte innehålla HTML-tecken.
+          <% } else { %>⚠️ Något gick fel.
+          <% } %>
+        </div>
+      <% } %>
+
+      <!-- Namn-form -->
+      <form method="POST" action="/account/change-name" style="width:100%;margin-bottom:1.5rem;padding-bottom:1.5rem;border-bottom:1px solid rgba(255,255,255,0.06);">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;margin-bottom:0.75rem;">
+          <div>
+            <label for="accFirst" style="display:block;margin-bottom:0.3rem;color:#94a3b8;font-size:0.82rem;">Förnamn</label>
+            <input type="text" id="accFirst" name="firstName" value="<%= firstName || '' %>" required maxlength="50" autocomplete="given-name"
+                   style="width:100%;padding:0.65rem 0.85rem;border-radius:8px;border:1px solid #334155;background:#0f172a;color:#f1f5f9;font-size:0.95rem;box-sizing:border-box;" />
+          </div>
+          <div>
+            <label for="accLast" style="display:block;margin-bottom:0.3rem;color:#94a3b8;font-size:0.82rem;">Efternamn</label>
+            <input type="text" id="accLast" name="lastName" value="<%= lastName || '' %>" required maxlength="50" autocomplete="family-name"
+                   style="width:100%;padding:0.65rem 0.85rem;border-radius:8px;border:1px solid #334155;background:#0f172a;color:#f1f5f9;font-size:0.95rem;box-sizing:border-box;" />
+          </div>
+        </div>
+        <button type="submit" style="padding:0.6rem 1.1rem;background:rgba(99,102,241,0.15);color:#a5b4fc;border:1px solid rgba(99,102,241,0.3);border-radius:8px;font-weight:600;font-size:0.85rem;cursor:pointer;">
+          Spara namn
+        </button>
+      </form>
+
+      <!-- Flash-meddelanden för email -->
+      <% if (typeof emailOk !== 'undefined' && emailOk) { %>
+        <div role="status" aria-live="polite" style="padding:0.65rem 0.85rem;background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.25);border-radius:8px;color:#34d399;font-size:0.85rem;font-weight:600;margin-bottom:1rem;">✓ E-postadressen är uppdaterad</div>
+      <% } %>
+      <% if (typeof emailError !== 'undefined' && emailError) { %>
+        <div role="alert" aria-live="assertive" style="padding:0.65rem 0.85rem;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.25);border-radius:8px;color:#fca5a5;font-size:0.85rem;margin-bottom:1rem;">
+          <% if (emailError === 'pw') { %>⚠️ Fel lösenord — din e-post är oförändrad.
+          <% } else if (emailError === 'invalid') { %>⚠️ Ange en giltig e-postadress.
+          <% } else if (emailError === 'taken') { %>⚠️ Den e-postadressen används redan av ett annat konto.
+          <% } else if (emailError === 'same') { %>⚠️ Nya e-posten är samma som den nuvarande.
+          <% } else { %>⚠️ Något gick fel.
+          <% } %>
+        </div>
+      <% } %>
+
+      <!-- E-post-form (kräver password re-confirm för säkerhet) -->
+      <form method="POST" action="/account/change-email" style="width:100%;">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+        <div style="margin-bottom:0.75rem;">
+          <label for="accCurrentEmail" style="display:block;margin-bottom:0.3rem;color:#94a3b8;font-size:0.82rem;">Nuvarande e-post</label>
+          <input type="text" id="accCurrentEmail" value="<%= email %>" disabled
+                 style="width:100%;padding:0.65rem 0.85rem;border-radius:8px;border:1px solid #334155;background:rgba(255,255,255,0.02);color:#64748b;font-size:0.95rem;box-sizing:border-box;" />
+        </div>
+        <div style="margin-bottom:0.75rem;">
+          <label for="accNewEmail" style="display:block;margin-bottom:0.3rem;color:#94a3b8;font-size:0.82rem;">Ny e-post</label>
+          <input type="email" id="accNewEmail" name="newEmail" placeholder="ny@email.com" required autocomplete="email"
+                 style="width:100%;padding:0.65rem 0.85rem;border-radius:8px;border:1px solid #334155;background:#0f172a;color:#f1f5f9;font-size:0.95rem;box-sizing:border-box;" />
+        </div>
+        <div style="margin-bottom:0.75rem;">
+          <label for="accEmailPw" style="display:block;margin-bottom:0.3rem;color:#94a3b8;font-size:0.82rem;">Nuvarande lösenord <span style="color:#64748b;font-size:0.78rem;">(för säkerhet)</span></label>
+          <input type="password" id="accEmailPw" name="currentPassword" placeholder="••••••••" required autocomplete="current-password"
+                 style="width:100%;padding:0.65rem 0.85rem;border-radius:8px;border:1px solid #334155;background:#0f172a;color:#f1f5f9;font-size:0.95rem;box-sizing:border-box;" />
+        </div>
+        <button type="submit" style="padding:0.6rem 1.1rem;background:rgba(99,102,241,0.15);color:#a5b4fc;border:1px solid rgba(99,102,241,0.3);border-radius:8px;font-weight:600;font-size:0.85rem;cursor:pointer;">
+          Byt e-post
+        </button>
+        <p style="color:#64748b;font-size:0.72rem;margin:0.5rem 0 0;">
+          Din Stripe-profil uppdateras automatiskt så fakturor går till nya adressen.
+        </p>
+      </form>
+    </div>
+
     <div class="success-card">
       <div class="success-icon">🔐</div>
       <h1>Byt lösenord</h1>
@@ -265,10 +349,12 @@
       }
       return true;
     }
-    // Clean ?pwOk=1 / ?pwError=… from the URL after rendering so a refresh doesn't re-show the flash
+    // Clean flash-query-params från URL:en så refresh inte re-visar flash.
+    // Täcker alla success-/error-states från /account (pw, email, name, trial).
     (function() {
+      const flashParams = ['pwOk', 'pwError', 'emailOk', 'emailError', 'nameOk', 'nameError', 'trialCancelled', 'trialCancelError'];
       const p = new URLSearchParams(window.location.search);
-      if (p.has('pwOk') || p.has('pwError')) {
+      if (flashParams.some(k => p.has(k))) {
         history.replaceState({}, '', '/account');
       }
     })();
