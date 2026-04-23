@@ -141,7 +141,24 @@ module.exports = function createCallsRouter(deps) {
   // Vi tar emot filerna till disk (multer), läser in buffer per fil, skickar
   // till storage.putAudio(), och skapar en call_jobs-rad per fil.
   // Originaltemporärfilerna raderas efter lyckad upload.
-  router.post('/upload', verifyCsrf, bulkUpload.array('audio', 100), async (req, res) => {
+  //
+  // Middleware-ordning: multer MÅSTE köra före CSRF-check för multipart/form-data.
+  // Express default-body-parser hanterar inte multipart; req.body är tom tills
+  // multer parsat. Vi kör en custom csrfAfterUpload som också rensar temp-filer
+  // om token är ogiltig — så inget skräp lämnas på disk vid CSRF-fail.
+  const csrfAfterUpload = (req, res, next) => {
+    const token = req.body?._csrf;
+    if (!token || token !== req.session.csrfToken) {
+      // Rensa multers temp-filer
+      for (const f of (req.files || [])) {
+        try { fs.unlinkSync(f.path); } catch (_) {}
+      }
+      return res.status(403).send('Ogiltig begäran. Ladda om sidan och försök igen.');
+    }
+    next();
+  };
+
+  router.post('/upload', bulkUpload.array('audio', 100), csrfAfterUpload, async (req, res) => {
     const files = req.files || [];
     if (!files.length) {
       return res.status(400).render('admin/calls/upload', {
