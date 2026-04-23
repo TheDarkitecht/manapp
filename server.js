@@ -1639,6 +1639,24 @@ app.get('/cron/digest', async (req, res) => {
  * Admin-endpoint: skicka test-digest till inloggad admin själv.
  * Bypass CRON_SECRET eftersom vi är inloggad admin — säker route.
  */
+app.get('/admin/test-trial-reminder', requireLogin, requireAdmin, async (req, res) => {
+  // Förhandsgranska trial-reminder-mejl med mockdata. Ingen data skickas.
+  const baseUrl = process.env.APP_URL || `${req.protocol}://${req.get('host')}`;
+  const user = findUserById(req.session.userId);
+  const mockEnd = new Date(Date.now() + 10 * 60 * 60 * 1000); // 10h i framtiden
+  const unsubToken = emails.createUnsubscribeToken(user?.id || 0);
+  const html = emails.buildTrialEndingSoon({
+    username:       user?.username || 'admin',
+    endsAtHuman:    mockEnd.toLocaleString('sv-SE', { weekday: 'long', hour: '2-digit', minute: '2-digit' }),
+    hoursLeft:      10,
+    proUrl:         `${baseUrl}/pro`,
+    cancelUrl:      `${baseUrl}/account`,
+    unsubscribeUrl: `${baseUrl}/unsubscribe/${unsubToken}`,
+  });
+  res.setHeader('Content-Type', 'text/html; charset=utf-8');
+  res.send(html);
+});
+
 app.get('/admin/test-digest', requireLogin, requireAdmin, async (req, res) => {
   const mode = req.query.type === 'reengagement' ? 'reengagement' : 'digest';
   const dryRun = req.query.dry === '1';
@@ -3392,6 +3410,50 @@ async function startServer() {
   // Clean up gammal audit-log (retention 180 dagar) — dagligen
   cleanupOldAuditLog();
   setInterval(cleanupOldAuditLog, 24 * 60 * 60 * 1000);
+
+  // Pro-trial-påminnelse: kolla varje timme om någon har trial som slutar
+  // inom kommande TRIAL_REMINDER_HOURS (default 12h). Om ja + ingen påminnelse
+  // sänts än → skicka mejl. Skyddar konvertering + user-trust (ingen
+  // överraskande debitering, inga chargebacks).
+  const TRIAL_REMINDER_HOURS = parseInt(process.env.TRIAL_REMINDER_HOURS || '12');
+  const checkAndSendTrialReminders = async () => {
+    if (!resend) return; // inga mejl utan Resend-config
+    try {
+      const users = getUsersWithTrialEndingSoon(TRIAL_REMINDER_HOURS);
+      if (!users.length) return;
+      const baseUrl = process.env.APP_URL || 'https://manapp-production.up.railway.app';
+      for (const u of users) {
+        try {
+          const endMs = new Date(u.pro_trial_end_at).getTime();
+          const hoursLeft = Math.max(1, Math.round((endMs - Date.now()) / (60 * 60 * 1000)));
+          const endsAtHuman = new Date(endMs).toLocaleString('sv-SE', { weekday: 'long', hour: '2-digit', minute: '2-digit' });
+          const unsubToken = emails.createUnsubscribeToken(u.id);
+          await resend.emails.send({
+            from:    RESEND_FROM,
+            to:      u.email,
+            subject: `⏰ Din Pro-trial slutar om ~${hoursLeft}h`,
+            html:    emails.buildTrialEndingSoon({
+              username:       u.username,
+              endsAtHuman,
+              hoursLeft,
+              proUrl:         `${baseUrl}/pro`,
+              cancelUrl:      `${baseUrl}/account`,
+              unsubscribeUrl: `${baseUrl}/unsubscribe/${unsubToken}`,
+            }),
+          });
+          markProTrialReminderSent(u.id);
+          console.log(`⏰ Trial-reminder skickat till ${u.email} (${hoursLeft}h kvar)`);
+        } catch (err) {
+          console.error(`Trial reminder failed for user ${u.id}:`, err.message);
+        }
+      }
+    } catch (err) {
+      console.error('Trial reminder job error:', err.message);
+    }
+  };
+  // Kör 30 sek efter startup (första check), sen varje timme
+  setTimeout(checkAndSendTrialReminders, 30 * 1000);
+  setInterval(checkAndSendTrialReminders, 60 * 60 * 1000);
 
   // Rotating DB-backups (users.db.backup.1-3) — skydd mot filkorruption.
   // Körs 10 sek efter startup (ej omedelbart — låt DB-init stabilisera först)

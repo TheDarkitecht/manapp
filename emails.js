@@ -371,12 +371,70 @@ function ordinal(n) {
   return `${n}:e`;
 }
 
+/**
+ * Trial-påminnelse: fires 12h innan Pro-trialen auto-konverterar.
+ * Mål: användaren ska hinna utvärdera + välja medvetet istället för att
+ * antingen glömma (→ debitering + chargeback-risk) eller panikavbryta (→
+ * förlorad intäkt).
+ *
+ * Ton: ärlig, icke-manipulativ. Både "fortsätt"- och "avbryt"-knapp synliga.
+ *
+ * @param {object} opts
+ * @param {string} opts.username
+ * @param {string} opts.endsAtHuman   — "imorgon kl 14:00"
+ * @param {number} opts.hoursLeft     — ungefärliga timmar kvar
+ * @param {string} opts.proUrl        — länk till /pro (för att fortsätta testa)
+ * @param {string} opts.cancelUrl     — länk till /account (för att avbryta)
+ * @param {string} opts.unsubscribeUrl
+ */
+function buildTrialEndingSoon({ username, endsAtHuman, hoursLeft, proUrl, cancelUrl, unsubscribeUrl }) {
+  const content = `
+<h1 style="color:#f1f5f9;font-size:22px;margin:0 0 16px;">Din Pro-trial slutar snart</h1>
+
+<p style="color:#cbd5e1;font-size:15px;line-height:1.6;margin:0 0 16px;">
+  Hej ${username},
+</p>
+
+<p style="color:#cbd5e1;font-size:15px;line-height:1.6;margin:0 0 20px;">
+  Din gratis-trial av Pro slutar <strong style="color:#fbbf24;">${endsAtHuman}</strong>
+  (ungefär <strong>${hoursLeft}h</strong> kvar). Om du inte avbryter innan dess
+  debiteras ditt kort <strong style="color:#f1f5f9;">599 kr</strong> för första
+  månaden Pro.
+</p>
+
+<div style="margin:24px 0;padding:18px;background:rgba(99,102,241,0.08);border:1px solid rgba(99,102,241,0.25);border-radius:10px;">
+  <div style="color:#a5b4fc;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:10px;">Två tydliga alternativ</div>
+
+  <p style="color:#cbd5e1;font-size:14px;line-height:1.6;margin:0 0 14px;">
+    <strong style="color:#f1f5f9;">Gillar det du sett?</strong> Ladda upp ett till samtal och jämför analyserna innan trial går ut.<br>
+    <a href="${proUrl}" style="display:inline-block;margin-top:8px;padding:10px 18px;background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;text-decoration:none;border-radius:8px;font-weight:700;font-size:14px;">Fortsätt testa Pro →</a>
+  </p>
+
+  <p style="color:#cbd5e1;font-size:14px;line-height:1.6;margin:14px 0 0;padding-top:14px;border-top:1px solid rgba(255,255,255,0.06);">
+    <strong style="color:#f1f5f9;">Inte för dig?</strong> Ett klick avbryter — ingen kostnad, inget krångel.<br>
+    <a href="${cancelUrl}" style="display:inline-block;margin-top:8px;padding:10px 18px;background:rgba(255,255,255,0.05);color:#cbd5e1;text-decoration:none;border-radius:8px;font-weight:600;font-size:14px;border:1px solid rgba(255,255,255,0.15);">Avbryt trial utan kostnad</a>
+  </p>
+</div>
+
+<p style="color:#94a3b8;font-size:13px;line-height:1.55;margin:20px 0 0;">
+  Du kan självklart också låta trialen auto-konvertera och avsluta senare
+  via kontoinställningarna — då debiteras 599 kr/mån utan bindningstid.
+</p>
+
+<p style="color:#64748b;font-size:12px;line-height:1.5;margin:16px 0 0;">
+  // Joakim
+</p>
+  `;
+  return emailShell(content, unsubscribeUrl);
+}
+
 module.exports = {
   createUnsubscribeToken,
   verifyUnsubscribeToken,
   buildWeeklyDigest,
   buildReengagement,
   buildBlockCompletion,
+  buildTrialEndingSoon,
   isDigestEligible,
   isReengagementEligible,
 };
