@@ -177,6 +177,33 @@
 
   <main id="main-content">
 
+  <!-- Milstolpe-celebration: visas när free-user klarat quiz på sista gratis-blocket -->
+  <% if (typeof justUnlockedFreeTier !== 'undefined' && justUnlockedFreeTier) { %>
+    <div role="status" style="margin:1rem 1.25rem;padding:1.75rem;background:linear-gradient(145deg, rgba(251,191,36,0.15), rgba(245,158,11,0.06));border:2px solid rgba(251,191,36,0.5);border-radius:16px;position:relative;overflow:hidden;">
+      <div style="position:absolute;top:-20px;right:-20px;width:140px;height:140px;background:radial-gradient(circle,rgba(139,92,246,0.2),transparent 70%);border-radius:50%;pointer-events:none;"></div>
+      <div style="position:relative;z-index:1;">
+        <div style="font-size:2.5rem;margin-bottom:0.25rem;">🎉</div>
+        <h2 style="color:#f1f5f9;font-size:1.4rem;margin:0 0 0.5rem;">Grymt, <%= username %> — du klarade gratis-tiern!</h2>
+        <p style="color:#cbd5e1;font-size:0.98rem;line-height:1.5;margin:0 0 1.25rem;max-width:580px;">
+          Du har visat att du tar det här på allvar. Nästa block (<strong>Block 3: Tonfall</strong>) är där invändningshanteringen startar — och resten av resan är 18 block lång.
+        </p>
+        <div style="display:flex;gap:0.75rem;flex-wrap:wrap;align-items:center;">
+          <form method="POST" action="/upgrade/checkout" style="display:inline;">
+            <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+            <input type="hidden" name="tier" value="premium" />
+            <button type="submit" style="padding:0.85rem 1.5rem;background:linear-gradient(135deg,#fbbf24,#f59e0b);color:#0f172a;border:none;border-radius:10px;font-weight:800;font-size:1rem;cursor:pointer;box-shadow:0 4px 12px rgba(251,191,36,0.35);">
+              🔓 Fortsätt med Premium — 199 kr/mån →
+            </button>
+          </form>
+          <a href="/priser" style="color:#a5b4fc;font-size:0.88rem;text-decoration:none;padding:0.85rem 1rem;">
+            Se alla priser →
+          </a>
+        </div>
+        <p style="color:#64748b;font-size:0.78rem;margin:1rem 0 0;">Ingen bindningstid. Säg upp när du vill.</p>
+      </div>
+    </div>
+  <% } %>
+
   <!-- Välkomst-banner: visas första gången efter registrering -->
   <% if (typeof welcome !== 'undefined' && welcome) { %>
     <div role="status" style="margin:1rem 1.25rem;padding:1.25rem 1.5rem;background:linear-gradient(145deg, rgba(99,102,241,0.12), rgba(139,92,246,0.06));border:1px solid rgba(99,102,241,0.3);border-radius:14px;display:flex;align-items:center;gap:1rem;flex-wrap:wrap;">

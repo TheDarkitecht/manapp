@@ -847,6 +847,13 @@ app.get('/dashboard', requireLogin, (req, res) => {
   const completed   = getCompletedBlockCount(req.session.userId);
   const deleteError = req.query.deleteError === '1';
 
+  // Peak-intent conversion: free-användare som klarat båda gratis-blocken
+  // är maximalt varma — har bevisat commitment, har sett värdet, nått grinden.
+  // Använd state-flagga för att driva riktad upgrade-CTA.
+  const freeTierCompleted =
+    req.session.role === 'free' &&
+    FREE_BLOCK_IDS.every(id => progress[id] && progress[id].completed === 1);
+
   // Personaliserad pedagogik: 2–3 kort baserat på användarens learning state
   const learningState   = getUserLearningState(req.session.userId);
   const recommendations = generateRecommendations(
@@ -901,6 +908,7 @@ app.get('/dashboard', requireLogin, (req, res) => {
     blocks:       salesBlocks,
     freeBlockIds: FREE_BLOCK_IDS,
     recommendations,
+    freeTierCompleted,
     // Gamification
     gamEnabled,
     stats,
@@ -990,6 +998,18 @@ app.get('/learn/:id', requireLogin, (req, res) => {
     coachHint = generateBlockCoachHint(learningState, block.id, block);
   }
 
+  // Peak-intent: free-user som precis klarat båda gratis-blocken
+  const freeTierCompleted =
+    req.session.role === 'free' &&
+    FREE_BLOCK_IDS.every(id => progress[id] && progress[id].completed === 1);
+
+  // "Just klarade sista gratis-blocket"-detektering: visa milestone-firande
+  // när de är på block 2 OCH just har fått quizen godkänd (alla rätt eller >= 60%).
+  const isLastFreeBlock = block.id === FREE_BLOCK_IDS[FREE_BLOCK_IDS.length - 1];
+  const justUnlockedFreeTier = freeTierCompleted && isLastFreeBlock &&
+    blockProg.quiz_score !== null && blockProg.quiz_total > 0 &&
+    (blockProg.quiz_score / blockProg.quiz_total) >= 0.6;
+
   res.render('block', {
     username:     req.session.username,
     role:         req.session.role,
@@ -1001,7 +1021,9 @@ app.get('/learn/:id', requireLogin, (req, res) => {
     readTime,
     journey,
     coachHint,
-    welcome:      req.query.welcome === '1',
+    welcome:            req.query.welcome === '1',
+    freeTierCompleted,
+    justUnlockedFreeTier,
     csrfToken:    generateCsrfToken(req),
   });
 });
