@@ -95,4 +95,67 @@
   } else {
     initFormLoadingStates();
   }
+
+  // ── Impersonation-banner ──────────────────────────────────────────────────
+  // Pollar /impersonate/status en gång vid page load. Om admin impersonerar,
+  // visa banner högst upp med "Stoppa"-knapp. Universal via denna script ist.f.
+  // att editera alla 35 EJS-views med en partial.
+  function initImpersonateBanner() {
+    if (document.getElementById('jj-impersonate-banner')) return; // redan renderad
+    fetch('/impersonate/status', { credentials: 'same-origin' })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (data) {
+        if (!data || !data.active) return;
+        // Hämta CSRF-token för stop-formen
+        return fetch('/impersonate/csrf', { credentials: 'same-origin' })
+          .then(function (r) { return r.ok ? r.json() : null; })
+          .then(function (csrf) {
+            if (!csrf) return;
+            renderImpersonateBanner(data, csrf.token);
+          });
+      })
+      .catch(function () { /* tyst — ingen banner om nätverksfel */ });
+  }
+
+  function renderImpersonateBanner(data, csrfToken) {
+    var banner = document.createElement('div');
+    banner.id = 'jj-impersonate-banner';
+    banner.setAttribute('role', 'alert');
+    banner.setAttribute('aria-live', 'assertive');
+    banner.style.cssText = 'position:sticky;top:0;left:0;right:0;z-index:9999;background:linear-gradient(135deg,#dc2626,#b91c1c);color:#fff;padding:0.65rem 1rem;display:flex;align-items:center;justify-content:space-between;gap:1rem;font-size:0.88rem;font-weight:600;box-shadow:0 2px 12px rgba(220,38,38,0.4);flex-wrap:wrap;';
+
+    var msg = document.createElement('div');
+    msg.style.cssText = 'display:flex;align-items:center;gap:0.5rem;';
+    msg.innerHTML =
+      '<span aria-hidden="true" style="font-size:1.1rem;">🎭</span>' +
+      '<span>IMPERSONATION AKTIV — admin <strong>' + escapeHtml(data.adminUsername) +
+      '</strong> agerar som <strong>' + escapeHtml(data.targetUsername) + '</strong></span>';
+
+    var form = document.createElement('form');
+    form.method = 'POST';
+    form.action = '/impersonate/stop';
+    form.style.cssText = 'margin:0;display:inline;';
+    form.innerHTML =
+      '<input type="hidden" name="_csrf" value="' + escapeHtml(csrfToken) + '" />' +
+      '<button type="submit" style="padding:0.4rem 0.85rem;background:rgba(255,255,255,0.95);color:#b91c1c;border:none;border-radius:8px;font-weight:700;font-size:0.82rem;cursor:pointer;">Stoppa impersonation</button>';
+
+    banner.appendChild(msg);
+    banner.appendChild(form);
+    document.body.insertBefore(banner, document.body.firstChild);
+
+    // Lägg till margin på body så banner inte döljer innehåll
+    document.body.style.marginTop = '0';
+  }
+
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initImpersonateBanner);
+  } else {
+    initImpersonateBanner();
+  }
 })();

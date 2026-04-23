@@ -649,9 +649,41 @@ function requireLogin(req, res, next) {
 }
 
 function requireAdmin(req, res, next) {
+  // Vid impersonation: endast ursprungs-admin får komma åt admin-panelen
+  // (session.role kan vara 'free'/'premium' under impersonation).
+  if (req.session?.impersonatedBy?.role === 'admin') return next();
   if (req.session?.role === 'admin') return next();
   res.status(403).send('Åtkomst nekad.');
 }
+
+// ── Impersonation guard ──────────────────────────────────────────────────────
+// Under impersonation BLOCKERAS destruktiva actions som skulle ändra target-
+// users permanenta data (lösenord, kontoradering, billing-portal, betalning).
+// Alla "read-only + create content" är tillåtna för autentisk support-debugging.
+function blockWhenImpersonating(req, res, next) {
+  if (req.session?.impersonatedBy) {
+    return res.status(403).send(
+      'Åtgärden är blockerad under impersonation. ' +
+      'Stoppa impersonation först (banner högst upp) och logga in som admin.'
+    );
+  }
+  next();
+}
+
+// Middleware som injicerar impersonation-status i res.locals så alla views
+// kan visa banner utan att varje render-anrop måste skicka flaggan.
+app.use((req, res, next) => {
+  if (req.session?.impersonatedBy) {
+    res.locals.impersonation = {
+      active: true,
+      targetUsername: req.session.username,
+      adminUsername:  req.session.impersonatedBy.username,
+    };
+  } else {
+    res.locals.impersonation = { active: false };
+  }
+  next();
+});
 
 // ── Login / Register ──────────────────────────────────────────────────────────
 
@@ -2130,7 +2162,7 @@ app.post('/niva/sedd', requireLogin, verifyCsrf, (req, res) => {
 
 // ── Account deletion (GDPR right to erasure) ─────────────────────────────────
 
-app.post('/account/delete', requireLogin, deleteLimiter, verifyCsrf, async (req, res) => {
+app.post('/account/delete', requireLogin, blockWhenImpersonating, deleteLimiter, verifyCsrf, async (req, res) => {
   const { confirmDelete } = req.body;
   if (confirmDelete !== 'RADERA') {
     return res.redirect('/dashboard?deleteError=1');
@@ -2175,7 +2207,7 @@ app.get('/account/export.json', requireLogin, dataExportLimiter, (req, res) => {
   res.send(JSON.stringify(data, null, 2));
 });
 
-app.post('/account/change-password', requireLogin, passwordChangeLimiter, verifyCsrf, async (req, res) => {
+app.post('/account/change-password', requireLogin, blockWhenImpersonating, passwordChangeLimiter, verifyCsrf, async (req, res) => {
   const { currentPassword, newPassword, confirmPassword } = req.body;
   const user = findUserById(req.session.userId);
 
@@ -2437,6 +2469,83 @@ function buildBroadcastEmail({ username, body, unsubUrl, subject }) {
 </body></html>`;
 }
 
+// ── Admin impersonation: "Se som user X" för support/debugging ────────────────
+// Säkerhet:
+//  - Endast admin får starta impersonation
+//  - Kan INTE impersonera annan admin (double-admin-escalation skydd)
+//  - Original admin-identitet sparas i session.impersonatedBy
+//  - Alla sidor visar banner (via res.locals.impersonation middleware)
+//  - Destruktiva actions blockeras via blockWhenImpersonating-middleware
+//  - Impersonation är auto-slutad efter 30 min (sessionens TTL)
+
+app.post('/admin/users/:id/impersonate', requireLogin, requireAdmin, verifyCsrf, (req, res) => {
+  const targetId = Number(req.params.id);
+  if (!Number.isFinite(targetId)) return res.redirect('/admin');
+  if (targetId === req.session.userId) return res.redirect('/admin'); // no self-impersonate
+
+  const target = findUserById(targetId);
+  if (!target) return res.redirect('/admin');
+  if (target.role === 'admin') {
+    // Förhindra admin-impersonerar-admin (privilege-escalation-vektor)
+    return res.redirect('/admin?err=no_admin_impersonate');
+  }
+
+  // Spara ursprungs-identitet i sessionen så vi kan återställa
+  req.session.impersonatedBy = {
+    adminUserId:  req.session.userId,
+    username:     req.session.username, // admin-namnet
+    role:         'admin',
+    startedAt:    Date.now(),
+  };
+  // Byt session-state till target
+  req.session.userId    = target.id;
+  req.session.username  = target.username;
+  req.session.role      = target.role;
+  req.session.pwVersion = target.pw_version || 0;
+
+  console.log(`🎭 Impersonation startad: admin '${req.session.impersonatedBy.username}' → user '${target.username}' (id ${target.id})`);
+  res.redirect('/dashboard');
+});
+
+// Liten JSON-endpoint som heartbeat.js kan polla för att veta om impersonation
+// är aktiv och visa banner. Sparar att vi inte behöver ändra alla EJS-views.
+app.get('/impersonate/status', requireLogin, (req, res) => {
+  if (req.session.impersonatedBy) {
+    return res.json({
+      active: true,
+      targetUsername: req.session.username,
+      adminUsername:  req.session.impersonatedBy.username,
+      startedAt:      req.session.impersonatedBy.startedAt,
+    });
+  }
+  res.json({ active: false });
+});
+
+// Hidden form-render: ger heartbeat.js tillgång till CSRF-token för stop-form
+app.get('/impersonate/csrf', requireLogin, (req, res) => {
+  res.json({ token: generateCsrfToken(req) });
+});
+
+app.post('/impersonate/stop', requireLogin, verifyCsrf, (req, res) => {
+  const imp = req.session.impersonatedBy;
+  if (!imp) return res.redirect('/dashboard');
+
+  // Återställ admin-identitet
+  const admin = findUserById(imp.adminUserId);
+  if (!admin) {
+    // Admin raderad under impersonation — destroya hela sessionen säkerhetsmässigt
+    return req.session.destroy(() => res.redirect('/login'));
+  }
+
+  console.log(`🎭 Impersonation stoppad av '${imp.username}' (var '${req.session.username}')`);
+  req.session.userId            = admin.id;
+  req.session.username          = admin.username;
+  req.session.role              = admin.role;
+  req.session.pwVersion         = admin.pw_version || 0;
+  delete req.session.impersonatedBy;
+  res.redirect('/admin');
+});
+
 // ── Admin: referral credits-översikt + markera utbetalda ─────────────────────
 
 app.get('/admin/referral-credits', requireLogin, requireAdmin, (req, res) => {
@@ -2495,7 +2604,7 @@ app.get('/upgrade', requireLogin, (req, res) => {
   });
 });
 
-app.post('/upgrade/checkout', requireLogin, verifyCsrf, async (req, res) => {
+app.post('/upgrade/checkout', requireLogin, blockWhenImpersonating, verifyCsrf, async (req, res) => {
   const currentRole = req.session.role;
   const targetTier = req.body.tier === 'pro' ? 'pro' : 'premium';
 
@@ -2902,7 +3011,7 @@ ${ROLEPLAY_COACH_INSTRUCTION}
 // ── Stripe Customer Portal ───────────────────────────────────────────────────
 // Allows premium users to manage/cancel their subscription directly
 
-app.post('/billing/portal', requireLogin, verifyCsrf, async (req, res) => {
+app.post('/billing/portal', requireLogin, blockWhenImpersonating, verifyCsrf, async (req, res) => {
   const user    = findUserByUsername(req.session.username);
   const baseUrl = process.env.APP_URL || `${req.protocol}://${req.get('host')}`;
 

@@ -200,6 +200,15 @@
         </div>
       </div>
       <div class="ud-actions">
+        <% if (profile.user.role !== 'admin') { %>
+          <form method="POST" action="/admin/users/<%= profile.user.id %>/impersonate" style="margin:0;"
+                onsubmit="return confirm('Börja se appen som <%= profile.user.username %>?')">
+            <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+            <button type="submit" class="ud-btn" title="Se som <%= profile.user.username %>" style="background:rgba(139,92,246,0.15);border-color:rgba(139,92,246,0.3);color:#c4b5fd;">
+              🎭 Se som user
+            </button>
+          </form>
+        <% } %>
         <a href="/admin" class="ud-btn">← Tillbaka</a>
       </div>
     </div>

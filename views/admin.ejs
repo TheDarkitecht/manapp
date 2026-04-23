@@ -140,6 +140,15 @@
                     <button type="button" class="btn-email" title="Sätt nytt lösenord"
                             aria-label="Sätt nytt lösenord för <%= u.username %>"
                             onclick="openPwModal(<%= u.id %>, '<%= u.username.replace(/'/g, "\\'") %>')">🔑</button>
+                    <!-- Impersonate (admin-only, se som user för support/debug) -->
+                    <% if (u.role !== 'admin') { %>
+                    <form method="POST" action="/admin/users/<%= u.id %>/impersonate" class="inline-form"
+                          onsubmit="return confirm('Börja se appen som <%= u.username %>? Du kommer loggas in som dem men behålla admin-återgång via banner.')">
+                      <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+                      <button type="submit" title="Se som <%= u.username %>" aria-label="Se som <%= u.username %>"
+                              style="padding:0.35rem 0.5rem;background:rgba(139,92,246,0.15);color:#c4b5fd;border:1px solid rgba(139,92,246,0.3);border-radius:6px;cursor:pointer;font-size:0.82rem;">🎭</button>
+                    </form>
+                    <% } %>
                     <!-- Delete -->
                     <form method="POST" action="/admin/users/<%= u.id %>/delete" class="inline-form"
                           onsubmit="return confirm('Radera <%= u.username %>? Det går inte att ångra.')">
