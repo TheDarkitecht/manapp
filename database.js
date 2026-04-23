@@ -434,6 +434,36 @@ function findUserByEmail(email) {
   s.free(); return null;
 }
 
+/**
+ * Generera ett unikt användarnamn från email-adressen.
+ * Används vid registrering där email är primär identifier och username
+ * bara finns som display-name ("Hej, joakim" istället för hela email-adressen).
+ *
+ * Strategi:
+ *  1. Extrahera local-part (före @), lowercase, rensa till [a-z0-9._-]
+ *  2. Cap vid 20 tecken, fallback till "user" om tom
+ *  3. Om redan taget, lägg till siffer-suffix (joakim → joakim2 → joakim3)
+ *  4. Max 100 försök innan vi ger upp med random-suffix
+ */
+function generateUsernameFromEmail(email) {
+  if (!email || typeof email !== 'string') return 'user' + Math.floor(Math.random() * 10000);
+  const base = (email.split('@')[0] || '')
+    .toLowerCase()
+    .replace(/[^a-z0-9._-]/g, '')
+    .slice(0, 20) || 'user';
+  let candidate = base;
+  let n = 1;
+  while (findUserByUsername(candidate) && n < 100) {
+    n++;
+    candidate = base + n;
+  }
+  if (findUserByUsername(candidate)) {
+    // Extremt osannolik fallback efter 100 försök
+    candidate = base + '_' + Math.floor(Math.random() * 100000);
+  }
+  return candidate;
+}
+
 function findUserById(id) {
   const s = db.prepare('SELECT * FROM users WHERE id = ?');
   s.bind([id]);
@@ -2055,7 +2085,7 @@ function getFunnelMetrics() {
 
 module.exports = {
   initDatabase, saveDb, cleanupExpiredTokens, rotateDbBackups,
-  findUserByUsername, findUserByEmail, findUserById,
+  findUserByUsername, findUserByEmail, findUserById, generateUsernameFromEmail,
   createUser, getAllUsers, setUserRole, deleteUser, deleteUserAccount, getUserStats,
   setStripeCustomerId, findUserByStripeCustomerId,
   updateLastLogin,

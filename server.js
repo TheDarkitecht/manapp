@@ -8,7 +8,7 @@ const Stripe    = require('stripe');
 const { Resend } = require('resend');
 const helmet    = require('helmet');
 const {
-  initDatabase, cleanupExpiredTokens, rotateDbBackups, findUserByUsername, findUserByEmail, findUserById, createUser,
+  initDatabase, cleanupExpiredTokens, rotateDbBackups, findUserByUsername, findUserByEmail, findUserById, generateUsernameFromEmail, createUser,
   getAllUsers, setUserRole, deleteUser, deleteUserAccount, getUserStats,
   setStripeCustomerId, findUserByStripeCustomerId,
   updateLastLogin,
@@ -787,12 +787,23 @@ app.get('/login', (req, res) => {
 });
 
 app.post('/login', loginLimiter, async (req, res) => {
-  const { username, password } = req.body;
-  const user = findUserByUsername(username);
+  // Email är nu primär identifier. Vi accepterar också gammalt `username`-fält
+  // (backwards-compat för ev. cachade formulär i browsers) och försöker via
+  // username-lookup som fallback — så ingen ruttar på ett tidigare inloggningssätt.
+  const rawId = (req.body.email || req.body.username || '').trim().toLowerCase();
+  const password = req.body.password || '';
+
+  // Försök email först om input innehåller @, annars fallback till username
+  let user = null;
+  if (rawId.includes('@')) {
+    user = findUserByEmail(rawId);
+  } else {
+    user = findUserByUsername(rawId);
+  }
 
   if (!user || !(await bcrypt.compare(password, user.password_hash))) {
     return res.render('login', {
-      error: 'Fel användarnamn eller lösenord.',
+      error: 'Fel e-post eller lösenord.',
       registerError: null, success: null, turnstileSiteKey: TURNSTILE_SITE_KEY,
     });
   }
@@ -814,7 +825,7 @@ app.post('/login', loginLimiter, async (req, res) => {
 });
 
 app.post('/register', registerLimiter, async (req, res) => {
-  const { username, email, password, confirmPassword, gdpr } = req.body;
+  const { email, password, confirmPassword, gdpr } = req.body;
   const turnstileToken = req.body['cf-turnstile-response'];
 
   // Verify Turnstile CAPTCHA (skip if no secret key configured)
@@ -836,14 +847,9 @@ app.post('/register', registerLimiter, async (req, res) => {
     }
   }
 
-  if (!username || !email || !password)
+  if (!email || !password)
     return res.render('login', { error: null, success: null, turnstileSiteKey: TURNSTILE_SITE_KEY,
       registerError: 'Fyll i alla fält.' });
-
-  // Username: 3–30 chars, alphanumeric + underscore + hyphen only
-  if (!/^[a-zA-Z0-9_-]{3,30}$/.test(username.trim()))
-    return res.render('login', { error: null, success: null, turnstileSiteKey: TURNSTILE_SITE_KEY,
-      registerError: 'Användarnamnet måste vara 3–30 tecken och får bara innehålla bokstäver, siffror, _ och -.' });
 
   if (!gdpr)
     return res.render('login', { error: null, success: null, turnstileSiteKey: TURNSTILE_SITE_KEY,
@@ -865,7 +871,11 @@ app.post('/register', registerLimiter, async (req, res) => {
     return res.render('login', { error: null, success: null, turnstileSiteKey: TURNSTILE_SITE_KEY,
       registerError: 'Lösenordet får inte vara längre än 128 tecken.' });
 
-  const result = createUser(username.trim(), email.trim(), password);
+  // Auto-derivera unikt display-namn från email (joakim@foo.com → "joakim",
+  // "joakim2" om upptaget). Används i "Hej, X"-texter, ordboken, etc.
+  const username = generateUsernameFromEmail(email.trim());
+
+  const result = createUser(username, email.trim(), password);
   if (!result.ok)
     return res.render('login', { error: null, success: null, turnstileSiteKey: TURNSTILE_SITE_KEY,
       registerError: result.error });
@@ -893,8 +903,8 @@ app.post('/register', registerLimiter, async (req, res) => {
       await resend.emails.send({
         from:    RESEND_FROM,
         to:      email.trim(),
-        subject: `Välkommen, ${username.trim()}! Ditt konto är aktivt 🎯`,
-        html: buildWelcomeEmail(username.trim(), baseUrl),
+        subject: `Välkommen, ${username}! Ditt konto är aktivt 🎯`,
+        html: buildWelcomeEmail(username, baseUrl),
       });
     }
   } catch (emailErr) {
@@ -909,7 +919,7 @@ app.post('/register', registerLimiter, async (req, res) => {
     req.session.regenerate((err) => {
       if (err) {
         return res.render('login', { error: null, registerError: null, turnstileSiteKey: TURNSTILE_SITE_KEY,
-          success: `Konto skapat! Logga in med ${username.trim()}.` });
+          success: `Konto skapat! Logga in med ${email.trim()}.` });
       }
       req.session.userId    = newUser.id;
       req.session.username  = newUser.username;
@@ -924,7 +934,7 @@ app.post('/register', registerLimiter, async (req, res) => {
 
   // Fallback om findUserById misslyckas
   res.render('login', { error: null, registerError: null, turnstileSiteKey: TURNSTILE_SITE_KEY,
-    success: `Konto skapat! Välkommen ${username.trim()} — logga in med ditt användarnamn.` });
+    success: `Konto skapat! Välkommen ${username} — logga in med ${email.trim()}.` });
 });
 
 // GET /register — shortcut that opens login page with register tab active
