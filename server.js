@@ -679,6 +679,37 @@ function requireAdmin(req, res, next) {
   res.status(403).send('Åtkomst nekad.');
 }
 
+// ── CI (Conversation Intelligence) access control ───────────────────────────
+// Admin har alltid tillgång. Därutöver kan specifika user-IDs ges tillgång
+// via env-var CI_ALLOWED_USER_IDS=12,47,89 (komma-separerade integers).
+// Används för att ge testkonton (t.ex. arbetsledare) åtkomst till /admin/calls
+// UTAN att ge full admin-roll. Håller rollen som 'pro' eller 'premium' kvar.
+// Tomt/osatt env-var = bara admin får åtkomst (default-säkert).
+const CI_ALLOWED_USER_IDS = new Set(
+  (process.env.CI_ALLOWED_USER_IDS || '')
+    .split(',')
+    .map(s => parseInt(s.trim(), 10))
+    .filter(n => Number.isInteger(n) && n > 0)
+);
+
+function requireCIAccess(req, res, next) {
+  // Admin (inkl. impersonation som admin) — alltid OK
+  if (req.session?.impersonatedBy?.role === 'admin') return next();
+  if (req.session?.role === 'admin') return next();
+  // Allowlist via env-var
+  if (CI_ALLOWED_USER_IDS.has(req.session?.userId)) return next();
+  res.status(403).send('Åtkomst nekad. Kontakta Joakim om du ska ha tillgång till samtalsanalysen.');
+}
+
+// Destruktiva actions (radera, retry) på /admin/calls kräver admin även om
+// user är på allowlisten. Arbetsledare ska kunna SE och LADDA UPP samtal, men
+// inte råka radera andras arbete.
+function requireAdminForDestructive(req, res, next) {
+  if (req.session?.impersonatedBy?.role === 'admin') return next();
+  if (req.session?.role === 'admin') return next();
+  res.status(403).send('Bara admin kan radera eller retry:a samtal. Kontakta Joakim.');
+}
+
 /**
  * Audit-log-wrapper: fire-and-forget loggning av admin-åtgärd från en route.
  * Använder impersonatedBy-adminId om under impersonation, annars session.userId.
@@ -2969,6 +3000,13 @@ app.post('/pro/samtal/:id/delete', requireLogin, requirePro, verifyCsrf, (req, r
   res.redirect('/pro');
 });
 
+// ── CI (Conversation Intelligence) — admin-only bulk call-analytics ──────────
+// Separat från Pro-tier: skalar till 1000 samtal/dag via async DB-kö.
+// Routern ligger i routes/calls.js och tar middleware-deps via factory.
+app.use('/admin/calls', require('./routes/calls')({
+  requireLogin, requireCIAccess, requireAdminForDestructive, verifyCsrf, generateCsrfToken,
+}));
+
 // ── Företag-sida — enkel kontakta-oss ────────────────────────────────────────
 
 app.get('/foretag', (req, res) => {
@@ -3360,6 +3398,11 @@ async function startServer() {
   // och sedan var 6:e timme. Total recovery-fönster: ~18 timmar med 3 snapshots.
   setTimeout(() => rotateDbBackups(), 10_000);
   setInterval(rotateDbBackups, 6 * 60 * 60 * 1000);
+
+  // CI (Conversation Intelligence) — bulk call-analytics worker.
+  // Pollar call_jobs-tabellen efter pending uppladdningar och processar
+  // en i taget via Groq (Whisper + LLM). Admin-only i Fas 1.
+  require('./services/callQueue').start();
 
   // Graceful shutdown: flusha analytics-buffer innan processen dör.
   // Railway skickar SIGTERM vid redeploy — utan detta förloras analytics i flight.

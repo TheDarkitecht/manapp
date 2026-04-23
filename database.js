@@ -172,6 +172,71 @@ async function initDatabase() {
     )
   `);
 
+  // ── CI (Conversation Intelligence) — bulk-analys för säljkontor ───────────
+  // Se migrations/ci-schema.sql för designmotivering.
+  db.run(`
+    CREATE TABLE IF NOT EXISTS call_jobs (
+      id             INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id        INTEGER NOT NULL,
+      batch_id       TEXT,
+      original_name  TEXT    NOT NULL,
+      storage_key    TEXT,
+      file_size      INTEGER,
+      mime_type      TEXT,
+      title          TEXT,
+      status         TEXT    NOT NULL DEFAULT 'pending',
+      error          TEXT,
+      created_at     TEXT    NOT NULL DEFAULT (datetime('now')),
+      started_at     TEXT,
+      completed_at   TEXT,
+      FOREIGN KEY (user_id) REFERENCES users(id)
+    )
+  `);
+  db.run(`
+    CREATE TABLE IF NOT EXISTS call_transcripts (
+      job_id         INTEGER PRIMARY KEY,
+      text           TEXT    NOT NULL,
+      duration_sec   INTEGER,
+      language       TEXT,
+      word_count     INTEGER,
+      created_at     TEXT    NOT NULL DEFAULT (datetime('now')),
+      FOREIGN KEY (job_id) REFERENCES call_jobs(id)
+    )
+  `);
+  db.run(`
+    CREATE TABLE IF NOT EXISTS call_analyses (
+      job_id         INTEGER PRIMARY KEY,
+      analysis       TEXT    NOT NULL,
+      model          TEXT,
+      created_at     TEXT    NOT NULL DEFAULT (datetime('now')),
+      FOREIGN KEY (job_id) REFERENCES call_jobs(id)
+    )
+  `);
+  db.run(`
+    CREATE TABLE IF NOT EXISTS call_word_frequencies (
+      id             INTEGER PRIMARY KEY AUTOINCREMENT,
+      job_id         INTEGER NOT NULL,
+      word           TEXT    NOT NULL,
+      count          INTEGER NOT NULL,
+      FOREIGN KEY (job_id) REFERENCES call_jobs(id)
+    )
+  `);
+
+  // CI prompt-iteration: full historik av varje LLM-körning per samtal.
+  // call_analyses håller ENDAST senaste (för snabb detalj-vy). Historiken
+  // i denna tabell låter oss jämföra v1-v2-v3-feedback på samma samtal.
+  db.run(`
+    CREATE TABLE IF NOT EXISTS call_analysis_runs (
+      id             INTEGER PRIMARY KEY AUTOINCREMENT,
+      job_id         INTEGER NOT NULL,
+      prompt_version TEXT    NOT NULL,
+      analysis       TEXT    NOT NULL,
+      model          TEXT,
+      created_at     TEXT    NOT NULL DEFAULT (datetime('now')),
+      FOREIGN KEY (job_id) REFERENCES call_jobs(id)
+    )
+  `);
+
   // Session-store (ersätter MemoryStore så användare inte loggas ut vid redeploy)
   db.run(`
     CREATE TABLE IF NOT EXISTS sessions (
@@ -294,6 +359,18 @@ async function initDatabase() {
     "CREATE INDEX IF NOT EXISTS idx_audit_date           ON admin_audit_log(created_at DESC)",
     "CREATE INDEX IF NOT EXISTS idx_audit_admin          ON admin_audit_log(admin_user_id, created_at DESC)",
     "CREATE INDEX IF NOT EXISTS idx_audit_target         ON admin_audit_log(target_user_id, created_at DESC)",
+    // CI (Conversation Intelligence) — worker poll + admin dashboard + aggregation
+    "CREATE INDEX IF NOT EXISTS idx_call_jobs_status_created ON call_jobs(status, created_at)",
+    "CREATE INDEX IF NOT EXISTS idx_call_jobs_user_created   ON call_jobs(user_id, created_at DESC)",
+    "CREATE INDEX IF NOT EXISTS idx_call_jobs_batch          ON call_jobs(batch_id)",
+    "CREATE INDEX IF NOT EXISTS idx_call_wf_job              ON call_word_frequencies(job_id)",
+    "CREATE INDEX IF NOT EXISTS idx_call_wf_word_count       ON call_word_frequencies(word, count DESC)",
+    // Prompt-iteration: historik per samtal + senaste per version
+    "ALTER TABLE call_analyses ADD COLUMN prompt_version TEXT",
+    "CREATE INDEX IF NOT EXISTS idx_call_analysis_runs_job   ON call_analysis_runs(job_id, created_at DESC)",
+    // Metodik-val per jobb (vilken säljstil samtalet ska bedömas mot).
+    // Sätts vid upload; worker läser det när jobbet processas.
+    "ALTER TABLE call_jobs ADD COLUMN prompt_version TEXT",
   ];
   migrations.forEach(sql => { try { db.run(sql); } catch (_) {} });
 
@@ -2081,6 +2158,345 @@ function getFunnelMetrics() {
   ];
 }
 
+// ═══════════════════════════════════════════════════════════════════════════════
+// CONVERSATION INTELLIGENCE (CI) — bulk call-analytics queries
+// ═══════════════════════════════════════════════════════════════════════════════
+// Separat från Pro-tier (pro_call_analyses). CI skalar till 1000 samtal/dag
+// via en DB-backed jobb-kö. Se migrations/ci-schema.sql för designmotivering.
+
+/**
+ * Skapa ett nytt jobb. Returnerar jobId.
+ * storage_key fylls i av caller efter att ljudfilen lagts i R2/disk.
+ *
+ * VIKTIGT: Status default är 'uploading' — inte 'pending'. Worker pollar
+ * bara 'pending', så genom att starta i 'uploading' undviker vi race
+ * conditions där worker hinner plocka upp jobbet INNAN storage_key är satt.
+ * Caller MÅSTE uppgradera till 'pending' efter att putAudio() lyckats.
+ */
+function createCallJob(userId, { batch_id, original_name, storage_key, file_size, mime_type, title, status, prompt_version }) {
+  db.run(
+    `INSERT INTO call_jobs (user_id, batch_id, original_name, storage_key, file_size, mime_type, title, status, prompt_version)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [userId, batch_id || null, original_name, storage_key || null, file_size || null, mime_type || null, title || null, status || 'uploading', prompt_version || null]
+  );
+  const s = db.prepare('SELECT last_insert_rowid() AS id');
+  s.step();
+  const { id } = s.getAsObject();
+  s.free();
+  saveDb();
+  return id;
+}
+
+/**
+ * Tillåtna kolumner för update — skyddar mot injection via callers utan att
+ * kräva en full ORM. status, error, started_at, completed_at, storage_key.
+ */
+function updateCallJob(jobId, updates) {
+  const allowed = ['status', 'error', 'started_at', 'completed_at', 'storage_key', 'file_size', 'mime_type'];
+  const fields = [];
+  const values = [];
+  for (const [key, val] of Object.entries(updates)) {
+    if (allowed.includes(key)) {
+      fields.push(`${key} = ?`);
+      values.push(val);
+    }
+  }
+  if (!fields.length) return;
+  values.push(jobId);
+  db.run(`UPDATE call_jobs SET ${fields.join(', ')} WHERE id = ?`, values);
+  saveDb();
+}
+
+/**
+ * Atomisk "claim" av nästa pending-jobb. Returnerar jobbraden eller null.
+ * Använder UPDATE ... WHERE status='pending' för att undvika dubbelprocessering
+ * om flera workers startas (även om Fas 1 bara kör en).
+ */
+function claimNextPendingCallJob() {
+  const s = db.prepare(`
+    SELECT id, user_id, batch_id, original_name, storage_key, file_size, mime_type, title, prompt_version
+    FROM call_jobs
+    WHERE status = 'pending'
+    ORDER BY created_at ASC
+    LIMIT 1
+  `);
+  if (!s.step()) { s.free(); return null; }
+  const row = s.getAsObject();
+  s.free();
+
+  // Markera som transcribing — om nån annan worker hann före returneras 0 ändringar
+  db.run(
+    `UPDATE call_jobs SET status = 'transcribing', started_at = datetime('now')
+     WHERE id = ? AND status = 'pending'`,
+    [row.id]
+  );
+  const changes = db.getRowsModified();
+  saveDb();
+  if (changes === 0) return null; // någon annan tog jobbet
+  return row;
+}
+
+function getCallJob(jobId) {
+  const s = db.prepare('SELECT * FROM call_jobs WHERE id = ?');
+  s.bind([jobId]);
+  if (s.step()) { const r = s.getAsObject(); s.free(); return r; }
+  s.free();
+  return null;
+}
+
+/**
+ * Hämta jobb + transcript + analys för detalj-vy.
+ */
+function getCallJobFull(jobId) {
+  const job = getCallJob(jobId);
+  if (!job) return null;
+  const ts = db.prepare('SELECT text, duration_sec, language, word_count FROM call_transcripts WHERE job_id = ?');
+  ts.bind([jobId]);
+  let transcript = null;
+  if (ts.step()) transcript = ts.getAsObject();
+  ts.free();
+
+  const an = db.prepare('SELECT analysis, model, prompt_version, created_at FROM call_analyses WHERE job_id = ?');
+  an.bind([jobId]);
+  let analysis = null;
+  if (an.step()) analysis = an.getAsObject();
+  an.free();
+
+  const wf = db.prepare('SELECT word, count FROM call_word_frequencies WHERE job_id = ? ORDER BY count DESC LIMIT 50');
+  wf.bind([jobId]);
+  const wordFrequencies = [];
+  while (wf.step()) wordFrequencies.push(wf.getAsObject());
+  wf.free();
+
+  return { job, transcript, analysis, wordFrequencies };
+}
+
+/**
+ * Lista jobb med filter. Används av /admin/calls dashboard.
+ * statusFilter: array (['pending','done'] etc) eller null = alla
+ */
+function listCallJobs({ statusFilter = null, batchId = null, limit = 100, offset = 0 } = {}) {
+  const where = [];
+  const params = [];
+  if (statusFilter && statusFilter.length) {
+    where.push(`status IN (${statusFilter.map(() => '?').join(',')})`);
+    params.push(...statusFilter);
+  }
+  if (batchId) {
+    where.push('batch_id = ?');
+    params.push(batchId);
+  }
+  const whereClause = where.length ? `WHERE ${where.join(' AND ')}` : '';
+  params.push(limit, offset);
+
+  const s = db.prepare(`
+    SELECT j.id, j.user_id, j.batch_id, j.original_name, j.title, j.status, j.error,
+           j.created_at, j.started_at, j.completed_at, j.file_size, j.prompt_version,
+           t.duration_sec, t.word_count
+    FROM call_jobs j
+    LEFT JOIN call_transcripts t ON t.job_id = j.id
+    ${whereClause}
+    ORDER BY j.created_at DESC
+    LIMIT ? OFFSET ?
+  `);
+  s.bind(params);
+  const rows = [];
+  while (s.step()) rows.push(s.getAsObject());
+  s.free();
+  return rows;
+}
+
+/**
+ * Aggregerade counts för dashboard-header.
+ */
+function getCallJobStats() {
+  const rows = rowsQuery(`
+    SELECT status, COUNT(*) AS n
+    FROM call_jobs
+    GROUP BY status
+  `);
+  const stats = { pending: 0, transcribing: 0, analyzing: 0, done: 0, failed: 0, total: 0 };
+  for (const r of rows) {
+    stats[r.status] = r.n;
+    stats.total += r.n;
+  }
+  // Total duration + word count från done-samtal
+  const agg = rowsQuery(`
+    SELECT COALESCE(SUM(t.duration_sec), 0) AS total_sec,
+           COALESCE(SUM(t.word_count), 0)   AS total_words,
+           COUNT(*)                          AS analyzed
+    FROM call_transcripts t
+    INNER JOIN call_jobs j ON j.id = t.job_id
+    WHERE j.status = 'done'
+  `)[0] || { total_sec: 0, total_words: 0, analyzed: 0 };
+  stats.total_duration_sec = agg.total_sec;
+  stats.total_words        = agg.total_words;
+  stats.analyzed           = agg.analyzed;
+  return stats;
+}
+
+/**
+ * Spara transkript efter Whisper. word_count räknas av callern (callAnalytics).
+ */
+function saveCallTranscript(jobId, { text, duration_sec, language, word_count }) {
+  db.run(
+    `INSERT OR REPLACE INTO call_transcripts (job_id, text, duration_sec, language, word_count)
+     VALUES (?, ?, ?, ?, ?)`,
+    [jobId, text, duration_sec || null, language || null, word_count || null]
+  );
+  saveDb();
+}
+
+/**
+ * Spara analys + logga till runs-historiken.
+ * call_analyses = "senaste" (snabb lookup för detalj-vy).
+ * call_analysis_runs = full historik för jämförelse mellan prompt-versioner.
+ */
+function saveCallAnalysis(jobId, { analysis, model, promptVersion }) {
+  // 1. Senaste analysen (overskrivs vid re-analyse)
+  db.run(
+    `INSERT OR REPLACE INTO call_analyses (job_id, analysis, model, prompt_version) VALUES (?, ?, ?, ?)`,
+    [jobId, analysis, model || null, promptVersion || null]
+  );
+  // 2. Historik-rad (append-only)
+  db.run(
+    `INSERT INTO call_analysis_runs (job_id, prompt_version, analysis, model) VALUES (?, ?, ?, ?)`,
+    [jobId, promptVersion || 'unknown', analysis, model || null]
+  );
+  saveDb();
+}
+
+/**
+ * Lista alla historiska körningar för ett samtal, nyast först.
+ */
+function listCallAnalysisRuns(jobId) {
+  const s = db.prepare(`
+    SELECT id, prompt_version, model, created_at, length(analysis) AS chars
+    FROM call_analysis_runs
+    WHERE job_id = ?
+    ORDER BY created_at DESC
+  `);
+  s.bind([jobId]);
+  const rows = [];
+  while (s.step()) rows.push(s.getAsObject());
+  s.free();
+  return rows;
+}
+
+/**
+ * Hämta en specifik körning (för historisk jämförelse-vy).
+ */
+function getCallAnalysisRun(runId) {
+  const s = db.prepare(`
+    SELECT r.id, r.job_id, r.prompt_version, r.analysis, r.model, r.created_at,
+           j.original_name, j.title
+    FROM call_analysis_runs r
+    INNER JOIN call_jobs j ON j.id = r.job_id
+    WHERE r.id = ?
+  `);
+  s.bind([runId]);
+  if (s.step()) { const r = s.getAsObject(); s.free(); return r; }
+  s.free();
+  return null;
+}
+
+/**
+ * Hämta transkript separat (utan att dra in analys/word-freq).
+ * Används av re-analyze — vi behöver bara texten för att köra Groq igen.
+ */
+function getCallTranscript(jobId) {
+  const s = db.prepare('SELECT text, duration_sec, language, word_count FROM call_transcripts WHERE job_id = ?');
+  s.bind([jobId]);
+  if (s.step()) { const r = s.getAsObject(); s.free(); return r; }
+  s.free();
+  return null;
+}
+
+/**
+ * Batch-insert av ord-frekvenser. Clear-and-reinsert eftersom job-id är unikt per analys.
+ */
+function saveCallWordFrequencies(jobId, pairs) {
+  db.run('DELETE FROM call_word_frequencies WHERE job_id = ?', [jobId]);
+  for (const { word, count } of pairs) {
+    db.run(
+      'INSERT INTO call_word_frequencies (job_id, word, count) VALUES (?, ?, ?)',
+      [jobId, word, count]
+    );
+  }
+  saveDb();
+}
+
+/**
+ * Fulltext-sök (LIKE) över call_transcripts. Returnerar jobId + title + excerpt.
+ * Enkel Fas 1-implementation — Fas 2 byter till FTS5 eller Postgres tsvector.
+ */
+function searchCallTranscripts(query, { limit = 30 } = {}) {
+  if (!query || query.trim().length < 2) return [];
+  const pattern = `%${query.replace(/[%_]/g, '')}%`;
+  const s = db.prepare(`
+    SELECT j.id AS job_id, j.original_name, j.title, j.status, j.created_at,
+           t.text, t.duration_sec
+    FROM call_transcripts t
+    INNER JOIN call_jobs j ON j.id = t.job_id
+    WHERE t.text LIKE ?
+    ORDER BY j.created_at DESC
+    LIMIT ?
+  `);
+  s.bind([pattern, limit]);
+  const results = [];
+  const lowerQuery = query.toLowerCase();
+  while (s.step()) {
+    const row = s.getAsObject();
+    // Bygg excerpt: 80 tecken runt första träffen (case-insensitive)
+    const lowerText = (row.text || '').toLowerCase();
+    const idx = lowerText.indexOf(lowerQuery);
+    const start = Math.max(0, idx - 60);
+    const end = Math.min(row.text.length, idx + query.length + 60);
+    const excerpt = (start > 0 ? '…' : '') + row.text.slice(start, end) + (end < row.text.length ? '…' : '');
+    results.push({
+      job_id:         row.job_id,
+      original_name:  row.original_name,
+      title:          row.title,
+      status:         row.status,
+      created_at:     row.created_at,
+      duration_sec:   row.duration_sec,
+      excerpt,
+    });
+  }
+  s.free();
+  return results;
+}
+
+/**
+ * Radera ett jobb + cascaderade rader. Returnerar storage_key så caller kan
+ * rensa ljudfilen från R2/disk.
+ */
+function deleteCallJob(jobId) {
+  const job = getCallJob(jobId);
+  if (!job) return null;
+  db.run('DELETE FROM call_word_frequencies WHERE job_id = ?', [jobId]);
+  db.run('DELETE FROM call_analyses         WHERE job_id = ?', [jobId]);
+  db.run('DELETE FROM call_transcripts      WHERE job_id = ?', [jobId]);
+  db.run('DELETE FROM call_jobs             WHERE id = ?',     [jobId]);
+  saveDb();
+  return job.storage_key || null;
+}
+
+/**
+ * Återställ jobb som fastnade i 'transcribing'/'analyzing' vid en server-omstart.
+ * Kallas en gång vid start av callQueue-workern.
+ */
+function resetStuckCallJobs() {
+  db.run(`
+    UPDATE call_jobs
+    SET status = 'pending', started_at = NULL
+    WHERE status IN ('transcribing', 'analyzing')
+  `);
+  const n = db.getRowsModified();
+  if (n > 0) saveDb();
+  return n;
+}
+
 // ── Exports ───────────────────────────────────────────────────────────────────
 
 module.exports = {
@@ -2133,4 +2549,11 @@ module.exports = {
   grantReferralCreditIfEligible, markReferralCreditsRedeemed, getUsersWithPendingReferralCredits,
   // Pro-trial
   setProTrialEndAt, clearProTrial, markProTrialReminderSent, getUsersWithTrialEndingSoon,
+  // CI (Conversation Intelligence) — bulk call-analytics
+  createCallJob, updateCallJob, claimNextPendingCallJob,
+  getCallJob, getCallJobFull, listCallJobs, getCallJobStats,
+  saveCallTranscript, saveCallAnalysis, saveCallWordFrequencies,
+  searchCallTranscripts, deleteCallJob, resetStuckCallJobs,
+  // CI prompt-iteration
+  getCallTranscript, listCallAnalysisRuns, getCallAnalysisRun,
 };

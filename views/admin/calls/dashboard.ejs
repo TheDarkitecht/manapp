@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Samtalsintelligens — Admin</title>
+  <meta name="robots" content="noindex, nofollow" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🧠</text></svg>" />
+  <link rel="stylesheet" href="/style.css" />
+  <link rel="stylesheet" href="/call-analytics.css" />
+</head>
+<body class="learn-page ci-page">
+
+  <a href="#main-content" class="skip-to-main">Hoppa till innehåll</a>
+
+  <nav class="learn-nav">
+    <a href="/admin" class="learn-nav-back">← Admin</a>
+    <span class="learn-nav-title">🧠 Samtalsintelligens</span>
+    <span class="learn-nav-user"><%= username %></span>
+  </nav>
+
+  <main id="main-content" class="ci-wrap">
+
+    <!-- Top bar: actions + storage-indikator -->
+    <div class="ci-topbar">
+      <div class="ci-topbar-actions">
+        <a href="/admin/calls/upload" class="ci-btn ci-btn-primary">⬆ Ladda upp samtal</a>
+        <a href="/admin/calls/search" class="ci-btn ci-btn-secondary">🔎 Sök transkript</a>
+      </div>
+      <div class="ci-topbar-meta">
+        <span class="ci-storage-pill <%= r2Enabled ? 'on' : 'off' %>" title="<%= r2Enabled ? 'Cloudflare R2 aktiverat' : 'Lokal disk (dev). Sätt R2_BUCKET m.fl. env-vars för R2.' %>">
+          <%= r2Enabled ? '☁️ R2' : '💾 Lokal disk' %>
+        </span>
+        <span class="ci-worker-pill <%= workerStatus.running ? 'on' : 'off' %>">
+          <%= workerStatus.running ? (workerStatus.busy ? '⚙️ Bearbetar...' : '🟢 Worker aktiv') : '⚠️ Worker ej igång' %>
+        </span>
+      </div>
+    </div>
+
+    <!-- Batch-success-banner (efter upload) -->
+    <% if (typeof r2Enabled !== 'undefined') { %>
+      <script>
+        (function() {
+          const p = new URLSearchParams(window.location.search);
+          const created = p.get('created');
+          const errors  = p.get('errors');
+          if (created !== null) {
+            const banner = document.createElement('div');
+            banner.className = 'ci-flash ci-flash-' + (errors > 0 ? 'warn' : 'success');
+            banner.textContent = `✓ ${created} samtal köade för analys${errors > 0 ? ` (${errors} misslyckades)` : ''}. Worker börjar processera inom några sekunder.`;
+            document.querySelector('.ci-wrap').prepend(banner);
+            setTimeout(() => banner.remove(), 8000);
+            history.replaceState({}, '', '/admin/calls');
+          }
+        })();
+      </script>
+    <% } %>
+
+    <!-- Stats -->
+    <div class="ci-stats">
+      <div class="ci-stat">
+        <span class="ci-stat-num"><%= stats.total %></span>
+        <span class="ci-stat-label">Totalt jobb</span>
+      </div>
+      <div class="ci-stat ci-stat-pending">
+        <span class="ci-stat-num"><%= stats.pending + stats.transcribing + stats.analyzing %></span>
+        <span class="ci-stat-label">I kö</span>
+      </div>
+      <div class="ci-stat ci-stat-done">
+        <span class="ci-stat-num"><%= stats.done %></span>
+        <span class="ci-stat-label">Klara</span>
+      </div>
+      <div class="ci-stat ci-stat-failed">
+        <span class="ci-stat-num"><%= stats.failed %></span>
+        <span class="ci-stat-label">Misslyckade</span>
+      </div>
+      <div class="ci-stat">
+        <span class="ci-stat-num"><%= Math.round((stats.total_duration_sec || 0) / 60) %></span>
+        <span class="ci-stat-label">Minuter analyserat</span>
+      </div>
+      <div class="ci-stat">
+        <span class="ci-stat-num"><%= (stats.total_words || 0).toLocaleString('sv-SE') %></span>
+        <span class="ci-stat-label">Ord i korpus</span>
+      </div>
+    </div>
+
+    <!-- Kö (aktiva jobb) -->
+    <% if (queueJobs && queueJobs.length) { %>
+    <section class="ci-section">
+      <header class="ci-section-header">
+        <h2>🔄 Pågående kö (<%= queueJobs.length %>)</h2>
+        <button type="button" class="ci-btn ci-btn-ghost" onclick="window.location.reload()">⟳ Uppdatera</button>
+      </header>
+      <div class="ci-table-wrap">
+        <table class="ci-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Fil</th>
+              <th>Status</th>
+              <th>Uppladdad</th>
+              <th>Storlek</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            <% queueJobs.forEach(function(j) { %>
+              <tr>
+                <td class="ci-td-id"><%= j.id %></td>
+                <td class="ci-td-name" title="<%= j.original_name %>"><%= j.title || j.original_name %></td>
+                <td><span class="ci-status ci-status-<%= j.status %>"><%= j.status %></span></td>
+                <td class="ci-td-date"><%= (j.created_at || '').slice(11, 16) %></td>
+                <td class="ci-td-size"><%= formatFileSize(j.file_size) %></td>
+                <td><a class="ci-td-link" href="/admin/calls/<%= j.id %>">Öppna →</a></td>
+              </tr>
+            <% }); %>
+          </tbody>
+        </table>
+      </div>
+      <p class="ci-hint">Sidan laddar om var 15 sek när kön inte är tom.</p>
+    </section>
+    <script>
+      // Auto-refresh endast om kön är icke-tom
+      setTimeout(() => window.location.reload(), 15000);
+    </script>
+    <% } %>
+
+    <!-- Historik -->
+    <section class="ci-section">
+      <header class="ci-section-header">
+        <h2>📜 Historik</h2>
+        <div class="ci-filter-pills">
+          <a class="ci-filter-pill <%= !activeFilter ? 'active' : '' %>" href="/admin/calls">Alla</a>
+          <a class="ci-filter-pill <%= activeFilter && activeFilter.includes('done') && activeFilter.length === 1 ? 'active' : '' %>" href="/admin/calls?status=done">Klara</a>
+          <a class="ci-filter-pill <%= activeFilter && activeFilter.includes('failed') && activeFilter.length === 1 ? 'active' : '' %>" href="/admin/calls?status=failed">Misslyckade</a>
+        </div>
+      </header>
+
+      <% if (!historyJobs.length) { %>
+        <div class="ci-empty">
+          <p>Inga samtal ännu. <a href="/admin/calls/upload">Ladda upp första batchen →</a></p>
+        </div>
+      <% } else { %>
+        <div class="ci-table-wrap">
+          <table class="ci-table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Fil</th>
+                <th>Status</th>
+                <th>Längd</th>
+                <th>Ord</th>
+                <th>Uppladdad</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              <% historyJobs.forEach(function(j) { %>
+                <tr>
+                  <td class="ci-td-id"><%= j.id %></td>
+                  <td class="ci-td-name" title="<%= j.original_name %>">
+                    <a href="/admin/calls/<%= j.id %>"><%= j.title || j.original_name %></a>
+                  </td>
+                  <td><span class="ci-status ci-status-<%= j.status %>"><%= j.status %></span></td>
+                  <td class="ci-td-dur"><%= formatDuration(j.duration_sec) %></td>
+                  <td class="ci-td-num"><%= j.word_count || '—' %></td>
+                  <td class="ci-td-date"><%= (j.created_at || '').slice(0, 16) %></td>
+                  <td>
+                    <a class="ci-td-link" href="/admin/calls/<%= j.id %>">Öppna →</a>
+                  </td>
+                </tr>
+              <% }); %>
+            </tbody>
+          </table>
+        </div>
+      <% } %>
+    </section>
+
+  </main>
+
+  <script src="/heartbeat.js" defer></script>
+</body>
+</html>

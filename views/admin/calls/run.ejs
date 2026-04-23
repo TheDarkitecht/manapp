@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Körning <%= run.prompt_version %> — <%= job.title || job.original_name %></title>
+  <meta name="robots" content="noindex, nofollow" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🕰</text></svg>" />
+  <link rel="stylesheet" href="/style.css" />
+  <link rel="stylesheet" href="/call-analytics.css" />
+</head>
+<body class="learn-page ci-page">
+
+  <a href="#main-content" class="skip-to-main">Hoppa till innehåll</a>
+
+  <nav class="learn-nav">
+    <a href="/admin/calls/<%= job.id %>" class="learn-nav-back">← Till samtalet</a>
+    <span class="learn-nav-title">🕰 <%= versionCfg ? versionCfg.name : run.prompt_version %></span>
+    <span class="learn-nav-user"><%= username %></span>
+  </nav>
+
+  <main id="main-content" class="ci-wrap">
+
+    <div class="ci-detail-header">
+      <div class="ci-detail-meta">
+        <h1>Analys #<%= run.id %> — <%= versionCfg ? versionCfg.name : run.prompt_version %></h1>
+        <div class="ci-meta-row">
+          <% if (versionCfg) { %>
+            <span class="ci-version-pill"><%= versionCfg.name %></span>
+            <span style="color:#64748b;"><%= versionCfg.description %></span>
+          <% } else { %>
+            <span class="ci-version-pill"><%= run.prompt_version %></span>
+            <span style="color:#fbbf24;">⚠️ Metodiken "<%= run.prompt_version %>" finns inte längre i config (borttagen eller omdöpt)</span>
+          <% } %>
+        </div>
+        <div class="ci-meta-row">
+          <span>📁 <%= job.original_name %></span>
+          <% if (run.model) { %><span>🤖 <%= run.model %></span><% } %>
+          <span>📅 <%= run.created_at %></span>
+        </div>
+      </div>
+      <div class="ci-detail-actions">
+        <a href="/admin/calls/<%= job.id %>" class="ci-btn ci-btn-secondary">← Tillbaka till aktuell</a>
+      </div>
+    </div>
+
+    <section class="ci-section">
+      <header class="ci-section-header">
+        <h2>🎯 Feedback (analyserad mot <%= versionCfg ? versionCfg.name : run.prompt_version %>)</h2>
+      </header>
+      <article class="ci-analysis" id="analysisContent"><%= run.analysis || '' %></article>
+    </section>
+
+  </main>
+
+  <script>
+    (function(){
+      const el = document.getElementById('analysisContent');
+      if (!el) return;
+      let html = el.textContent;
+      html = html.replace(/^## (.+)$/gm, '<h2>$1</h2>');
+      html = html.replace(/^### (.+)$/gm, '<h3>$1</h3>');
+      html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+      html = html.replace(/\*(.+?)\*/g, '<em>$1</em>');
+      html = html.replace(/^\- (.+)$/gm, '<li>$1</li>');
+      html = html.replace(/(<li>[\s\S]*?<\/li>\n?)+/g, m => '<ul>' + m + '</ul>');
+      html = html.split(/\n\n+/).map(p => {
+        if (p.startsWith('<h') || p.startsWith('<ul') || p.startsWith('<li')) return p;
+        return '<p>' + p.replace(/\n/g, '<br>') + '</p>';
+      }).join('');
+      el.innerHTML = html;
+    })();
+  </script>
+
+  <script src="/heartbeat.js" defer></script>
+</body>
+</html>
