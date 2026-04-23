@@ -351,6 +351,117 @@
       </div>
     </div>
 
+    <!-- Block-tidsanalys: hur länge användaren spenderat per block + mastery-hastighet -->
+    <% if (typeof blockTime !== 'undefined' && blockTime && blockTime.length > 0) {
+      const formatDuration = (ms) => {
+        if (!ms || ms < 0) return '—';
+        const totalMin = Math.round(ms / 60000);
+        if (totalMin < 1) return '< 1 min';
+        if (totalMin < 60) return totalMin + ' min';
+        const h = Math.floor(totalMin / 60);
+        const m = totalMin % 60;
+        return h + 'h ' + m + 'm';
+      };
+      const formatTimeToQuiz = (ms) => {
+        if (!ms || ms < 0) return null;
+        const totalMin = Math.round(ms / 60000);
+        if (totalMin < 1) return '< 1 min (snabbt)';
+        if (totalMin < 60) return totalMin + ' min';
+        const totalHours = Math.round(ms / (60*60*1000));
+        if (totalHours < 24) return totalHours + 'h';
+        return Math.round(ms / (24*60*60*1000)) + ' dagar';
+      };
+    %>
+    <div class="section-card">
+      <h2>⏱️ Block-tidsanalys</h2>
+      <p class="section-desc">Hur mycket tid användaren spenderat per block, tid till quiz-pass, och 4-stegs-progress. Sorterat kronologiskt.</p>
+      <div style="overflow-x:auto;">
+        <table class="ud-table" style="min-width:560px;">
+          <thead>
+            <tr>
+              <th>Block</th>
+              <th style="text-align:right;">Tid</th>
+              <th style="text-align:right;">Besök</th>
+              <th style="text-align:right;">Tid till pass</th>
+              <th style="text-align:center;">4 steg</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% blockTime.forEach(function(bt) {
+              const meta = blockTitles[bt.blockId] || { title: bt.blockId, index: '?', icon: '' };
+              const status = bt.stepsDone === 4 ? '🏆 Bemästrad'
+                           : bt.quizPassedAt  ? '✓ Quiz klart'
+                           : bt.visits > 1    ? '📖 Pågår'
+                           : '👀 Besökt';
+              const statusColor = bt.stepsDone === 4 ? '#34d399'
+                                : bt.quizPassedAt  ? '#a5b4fc'
+                                : '#94a3b8';
+              const ttq = formatTimeToQuiz(bt.timeToQuizMs);
+            %>
+              <tr>
+                <td>
+                  <strong><%= meta.icon %> <%= meta.index %>. <%= meta.title %></strong>
+                  <div style="color:#64748b;font-size:0.72rem;">
+                    Första besök: <%= bt.firstVisited ? bt.firstVisited.slice(0,10) : '?' %>
+                  </div>
+                </td>
+                <td style="text-align:right;color:#cbd5e1;font-variant-numeric:tabular-nums;"><%= formatDuration(bt.totalMs) %></td>
+                <td style="text-align:right;color:#94a3b8;font-variant-numeric:tabular-nums;"><%= bt.visits %></td>
+                <td style="text-align:right;color:#cbd5e1;font-variant-numeric:tabular-nums;">
+                  <% if (ttq) { %><%= ttq %><% } else if (bt.quizPassedAt) { %>–<% } else { %><span style="color:#64748b;">ej än</span><% } %>
+                </td>
+                <td style="text-align:center;">
+                  <span style="font-variant-numeric:tabular-nums;color:<%= bt.stepsDone === 4 ? '#34d399' : bt.stepsDone >= 2 ? '#fbbf24' : '#64748b' %>;font-weight:700;">
+                    <%= bt.stepsDone %>/4
+                  </span>
+                </td>
+                <td>
+                  <span style="color:<%= statusColor %>;font-size:0.8rem;font-weight:600;"><%= status %></span>
+                  <% if (bt.quizScore && bt.quizScore.total > 0) { %>
+                    <div style="color:#64748b;font-size:0.72rem;"><%= bt.quizScore.score %>/<%= bt.quizScore.total %> quiz</div>
+                  <% } %>
+                </td>
+              </tr>
+            <% }); %>
+          </tbody>
+        </table>
+      </div>
+      <%
+        // Summary-rad under tabellen
+        const totalMs = blockTime.reduce((s, b) => s + b.totalMs, 0);
+        const blocksMastered = blockTime.filter(b => b.stepsDone === 4).length;
+        const blocksPassed   = blockTime.filter(b => b.quizPassedAt).length;
+        const avgTimePerBlock = blockTime.length > 0 ? Math.round(totalMs / blockTime.length / 60000) : 0;
+        const fastestPass = blockTime.filter(b => b.timeToQuizMs).sort((a,b) => a.timeToQuizMs - b.timeToQuizMs)[0];
+      %>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:0.75rem;margin-top:1.25rem;padding:0.85rem;background:rgba(255,255,255,0.02);border-radius:8px;">
+        <div style="text-align:center;">
+          <div style="font-size:0.72rem;color:#94a3b8;text-transform:uppercase;letter-spacing:0.05em;">Total tid</div>
+          <div style="font-size:1.1rem;font-weight:700;color:#f1f5f9;font-variant-numeric:tabular-nums;"><%= formatDuration(totalMs) %></div>
+        </div>
+        <div style="text-align:center;">
+          <div style="font-size:0.72rem;color:#94a3b8;text-transform:uppercase;letter-spacing:0.05em;">Snitt/block</div>
+          <div style="font-size:1.1rem;font-weight:700;color:#f1f5f9;font-variant-numeric:tabular-nums;"><%= avgTimePerBlock %> min</div>
+        </div>
+        <div style="text-align:center;">
+          <div style="font-size:0.72rem;color:#94a3b8;text-transform:uppercase;letter-spacing:0.05em;">Quiz klara</div>
+          <div style="font-size:1.1rem;font-weight:700;color:#a5b4fc;font-variant-numeric:tabular-nums;"><%= blocksPassed %>/<%= blockTime.length %></div>
+        </div>
+        <div style="text-align:center;">
+          <div style="font-size:0.72rem;color:#94a3b8;text-transform:uppercase;letter-spacing:0.05em;">Bemästrade</div>
+          <div style="font-size:1.1rem;font-weight:700;color:#34d399;font-variant-numeric:tabular-nums;"><%= blocksMastered %>/<%= blockTime.length %></div>
+        </div>
+        <% if (fastestPass) { %>
+          <div style="text-align:center;">
+            <div style="font-size:0.72rem;color:#94a3b8;text-transform:uppercase;letter-spacing:0.05em;">Snabbast pass</div>
+            <div style="font-size:0.9rem;font-weight:700;color:#fbbf24;"><%= formatTimeToQuiz(fastestPass.timeToQuizMs) %></div>
+          </div>
+        <% } %>
+      </div>
+    </div>
+    <% } %>
+
     <!-- Admin notes (interna) -->
     <div class="section-card" id="notes" style="border-color:rgba(251,191,36,0.25);background:linear-gradient(145deg, rgba(251,191,36,0.04), #0f172a);">
       <h2>📝 Interna admin-anteckningar</h2>

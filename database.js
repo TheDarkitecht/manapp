@@ -1979,6 +1979,114 @@ function getUserAnalyticsProfile(userId) {
  * Registrerad → öppnat block → klarat första provet → gjort första reflektionen → loggat första aktionen → blivit premium
  */
 /**
+ * Block-tidsanalys per user: hur länge de spenderat på varje block,
+ * mastery-hastighet, och vad de gör i varje block.
+ *
+ * Aggregerar page_views (alla paths som börjar med /learn/:blockId/...) +
+ * block_progress (quiz-pass-tid) + 4-stegs-events (reflection, roleplay,
+ * mission) för att ge en komplett bild per block.
+ *
+ * Returns array med en rad per block användaren har interagerat med,
+ * sorterat på first_visited_at ASC (kronologisk ordning).
+ */
+function getBlockTimeAnalytics(userId) {
+  if (!userId) return [];
+
+  // 1. Hämta alla page_views på /learn/*
+  const rawViews = rowsQuery(
+    `SELECT path, visited_at, COALESCE(duration_ms, 60000) AS duration_ms
+     FROM page_views
+     WHERE user_id = ? AND path LIKE '/learn/%'
+     ORDER BY visited_at ASC`,
+    [userId]
+  );
+
+  // 2. Bucketa per block_id (extrahera första segment efter /learn/)
+  const perBlock = {};
+  rawViews.forEach(v => {
+    const match = v.path.match(/^\/learn\/([^\/\?]+)/);
+    if (!match) return;
+    const blockId = match[1];
+    if (!perBlock[blockId]) {
+      perBlock[blockId] = {
+        blockId,
+        visits: 0,
+        totalMs: 0,
+        firstVisited: v.visited_at,
+        lastVisited: v.visited_at,
+      };
+    }
+    perBlock[blockId].visits += 1;
+    perBlock[blockId].totalMs += v.duration_ms || 0;
+    if (v.visited_at < perBlock[blockId].firstVisited) perBlock[blockId].firstVisited = v.visited_at;
+    if (v.visited_at > perBlock[blockId].lastVisited)  perBlock[blockId].lastVisited  = v.visited_at;
+  });
+
+  // 3. Berika med quiz-pass-tid från block_progress
+  const progressRows = rowsQuery(
+    `SELECT block_id, completed, quiz_score, quiz_total, completed_at
+     FROM block_progress WHERE user_id = ?`,
+    [userId]
+  );
+  const progressMap = {};
+  progressRows.forEach(p => { progressMap[p.block_id] = p; });
+
+  // 4. Steg-räknare: reflection, roleplay, mission (för "mastery"-status)
+  const reflectionCounts = {};
+  rowsQuery(`SELECT block_id, COUNT(*) AS n FROM user_reflections WHERE user_id = ? GROUP BY block_id`, [userId])
+    .forEach(r => { reflectionCounts[r.block_id] = r.n; });
+
+  const roleplayCounts = {};
+  rowsQuery(`SELECT block_id, COUNT(*) AS n FROM user_roleplays WHERE user_id = ? GROUP BY block_id`, [userId])
+    .forEach(r => { roleplayCounts[r.block_id] = r.n; });
+
+  const missionStatus = {};
+  rowsQuery(`SELECT block_id, completed_at FROM user_missions WHERE user_id = ?`, [userId])
+    .forEach(m => { missionStatus[m.block_id] = { started: true, completed: !!m.completed_at }; });
+
+  // 5. Bygg slutgiltig array + beräkna derived metrics
+  const result = Object.values(perBlock).map(b => {
+    const progress = progressMap[b.blockId];
+    const quizPassedAt = progress?.completed === 1 ? progress.completed_at : null;
+    const quizScore = progress ? { score: progress.quiz_score, total: progress.quiz_total } : null;
+
+    // Tid från första besök till quiz-pass
+    let timeToQuizMs = null;
+    if (quizPassedAt && b.firstVisited) {
+      timeToQuizMs = new Date(quizPassedAt).getTime() - new Date(b.firstVisited).getTime();
+      if (timeToQuizMs < 0) timeToQuizMs = null; // race condition safety
+    }
+
+    // 4-stegs-status för mastery-räknare
+    const stepsDone = [
+      progress?.completed === 1,
+      (roleplayCounts[b.blockId] || 0) > 0,
+      missionStatus[b.blockId]?.completed === true,
+      (reflectionCounts[b.blockId] || 0) > 0,
+    ].filter(Boolean).length;
+
+    return {
+      blockId:      b.blockId,
+      visits:       b.visits,
+      totalMs:      b.totalMs,
+      firstVisited: b.firstVisited,
+      lastVisited:  b.lastVisited,
+      quizPassedAt,
+      quizScore,
+      timeToQuizMs,
+      stepsDone, // 0-4
+      reflections: reflectionCounts[b.blockId] || 0,
+      roleplays:   roleplayCounts[b.blockId]   || 0,
+      missionDone: missionStatus[b.blockId]?.completed === true,
+    };
+  });
+
+  // Sortera kronologiskt (första besök först)
+  result.sort((a, b) => a.firstVisited.localeCompare(b.firstVisited));
+  return result;
+}
+
+/**
  * GDPR Article 20: Right to data portability.
  * Samlar ALL data som tillhör användaren i ett JSON-exportable objekt.
  * Användaren kan ladda ner detta via /account/export.json.
@@ -2566,6 +2674,7 @@ module.exports = {
   getUserDataExport,
   getCohortRetention,
   getContinueTarget,
+  getBlockTimeAnalytics,
   // Page-view tracking
   logPageView, updateLastPageViewDuration, cleanupOldPageViews, flushAnalytics,
   // Session store
