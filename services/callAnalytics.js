@@ -12,6 +12,28 @@ const prompts     = require('./prompts/feedback');
 
 const GROQ_API_URL = 'https://api.groq.com/openai/v1';
 
+// ─── Rate-limit-aware retry ─────────────────────────────────────────────────
+// Groq on_demand-tier har 12000 TPM. Långa samtal + diarization + analys kan
+// lätt spränga det. Istället för att direkt fajla jobbet: vänta och retry:a
+// upp till N gånger. Användaren behöver inte klicka "Försök igen" manuellt.
+//
+// Varför 30s + 45s? Groq's minute-window är rullande. 30s räcker oftast för
+// att delvis återställa TPM. 45s som andra retry om det inte räckte.
+async function callGroqWithRetry(fn, label = 'groq-call', maxRetries = 2) {
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      return await fn();
+    } catch (err) {
+      const msg = err && err.message ? err.message : String(err);
+      const is429 = msg.includes('429') || msg.toLowerCase().includes('rate limit');
+      if (!is429 || attempt === maxRetries) throw err;
+      const waitMs = 30000 + attempt * 15000; // 30s, 45s
+      console.warn(`[callAnalytics] ${label} rate-limited (attempt ${attempt + 1}/${maxRetries + 1}) — väntar ${waitMs / 1000}s innan retry`);
+      await new Promise(r => setTimeout(r, waitMs));
+    }
+  }
+}
+
 // Svenska stoppord — filtrerat bort från word-frequency. Listan är lagom
 // konservativ; vi vill ha kvar säljrelaterade ord som "pris", "kund", etc.
 const SWEDISH_STOPWORDS = new Set([
@@ -185,8 +207,11 @@ async function analyzeWithPrompt(transcript, apiKey, { promptVersion, userTitle 
 async function processCall(audioBuffer, filename, { title, apiKey, promptVersion, identifySpeakers: doIdentify } = {}) {
   if (!apiKey) throw new Error('GROQ_API_KEY saknas');
 
-  // Steg 1: Transkribering
-  const transcription = await proAnalysis.transcribeAudio(audioBuffer, filename, apiKey);
+  // Steg 1: Transkribering (med auto-retry vid 429 — ovanligt men kan hända)
+  const transcription = await callGroqWithRetry(
+    () => proAnalysis.transcribeAudio(audioBuffer, filename, apiKey),
+    'whisper-transcribe'
+  );
   const text = transcription.text || '';
   if (text.trim().length < 50) {
     throw new Error(`För kort transkription (${text.length} tecken) — samtalet kanske är tyst eller korrupt`);
@@ -198,16 +223,22 @@ async function processCall(audioBuffer, filename, { title, apiKey, promptVersion
   let structuredText = null;
   if (doIdentify) {
     try {
-      structuredText = await identifySpeakers(text, apiKey);
+      structuredText = await callGroqWithRetry(
+        () => identifySpeakers(text, apiKey),
+        'llm-diarization'
+      );
     } catch (err) {
       console.warn('[callAnalytics] diarization misslyckades, fortsätter med raw text:', err.message);
     }
   }
 
   // Steg 3: LLM-analys. Använd structured_text när den finns — LLM:en får
-  // bättre kontext när den vet vem som säger vad.
+  // bättre kontext när den vet vem som säger vad. Auto-retry vid rate limit.
   const textForAnalysis = structuredText || text;
-  const analysis = await analyzeWithPrompt(textForAnalysis, apiKey, { promptVersion, userTitle: title });
+  const analysis = await callGroqWithRetry(
+    () => analyzeWithPrompt(textForAnalysis, apiKey, { promptVersion, userTitle: title }),
+    'llm-analysis'
+  );
 
   // Steg 4: Word frequencies (på raw text — vi vill inte räkna "säljare" och "kund" som riktiga ord)
   const wordFrequencies = extractWordFrequencies(text);
