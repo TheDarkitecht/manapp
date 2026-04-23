@@ -95,10 +95,12 @@
   </main>
 
   <script>
-    // Metodik-beskrivningar (synkade med services/prompts/feedback.js .description)
+    // Metodik-beskrivningar (synkade med services/prompts/feedback.js .description).
+    // Viktigt: använd <%- %> (raw) för JSON-värdena — <%= %> HTML-escapar så
+    // att " blir &quot; vilket bryter JS-syntax inuti <script>-taggen.
     const methodologyDescriptions = {
       <% methodologies.forEach(function(m, i) { %>
-        <%= JSON.stringify(m.id) %>: <%- JSON.stringify(m.description) %><%= i < methodologies.length - 1 ? ',' : '' %>
+        <%- JSON.stringify(m.id) %>: <%- JSON.stringify(m.description) %><%- i < methodologies.length - 1 ? ',' : '' %>
       <% }); %>
     };
 
