@@ -205,7 +205,7 @@ app.post('/webhook', express.raw({ type: 'application/json' }), async (req, res)
       setUserRole(userId, tier);
       // Store Stripe customer ID for future webhook lookups
       if (sess.customer) setStripeCustomerId(userId, sess.customer);
-      console.log(`✅ User ${userId} upgraded to premium`);
+      console.log(`✅ User ${userId} upgraded to ${tier}`);
     }
   }
 
@@ -2257,6 +2257,15 @@ app.post('/upgrade/checkout', requireLogin, verifyCsrf, async (req, res) => {
       metadata: {
         userId: String(req.session.userId),
         tier:   targetTier,
+      },
+      // Kopiera metadata till den skapade subscriptionen så framtida
+      // customer.subscription.* events innehåller userId+tier direkt
+      // (annars måste vi fallback-lookup via customer_id).
+      subscription_data: {
+        metadata: {
+          userId: String(req.session.userId),
+          tier:   targetTier,
+        },
       },
     });
     res.redirect(303, session.url);
