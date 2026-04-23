@@ -596,8 +596,25 @@ function buildPasswordResetEmail(username, link) {
 
 // ── Auth helpers ──────────────────────────────────────────────────────────────
 
+// Endast interna paths — hindrar open-redirect-attacker där angripare
+// sätter ?next=https://ondskefull.com
+function isSafeReturnPath(p) {
+  return typeof p === 'string'
+    && p.startsWith('/')
+    && !p.startsWith('//')
+    && !p.includes('://')
+    && p.length < 512;
+}
+
 function requireLogin(req, res, next) {
-  if (!req.session?.userId) return res.redirect('/login');
+  if (!req.session?.userId) {
+    // Spara destination så användaren landar där de försökte gå efter login.
+    // Endast GET-requests (POST-body kan inte reproduceras automatiskt).
+    if (req.method === 'GET' && isSafeReturnPath(req.originalUrl)) {
+      req.session.returnTo = req.originalUrl;
+    }
+    return res.redirect('/login');
+  }
 
   // One DB lookup per request — gives us three things for free:
   //  1. Confirm the user still exists (not deleted mid-session)
@@ -670,6 +687,9 @@ app.post('/login', loginLimiter, async (req, res) => {
     });
   }
 
+  // Läs returnTo INNAN regenerate — sessionen nollställs annars
+  const returnTo = (isSafeReturnPath(req.session?.returnTo) ? req.session.returnTo : null);
+
   // Regenerate session ID to prevent session fixation attacks
   req.session.regenerate((err) => {
     if (err) return res.redirect('/login');
@@ -678,7 +698,8 @@ app.post('/login', loginLimiter, async (req, res) => {
     req.session.role      = user.role;
     req.session.pwVersion = user.pw_version || 0; // stored for session-invalidation after pw reset
     updateLastLogin(user.id);
-    res.redirect('/dashboard');
+    // Landa på deep-link om sådan sparades av requireLogin — annars dashboard
+    res.redirect(returnTo || '/dashboard');
   });
 });
 
