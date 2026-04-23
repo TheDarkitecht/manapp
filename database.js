@@ -207,6 +207,23 @@ async function initDatabase() {
     )
   `);
 
+  // Admin audit log — varje admin-åtgärd loggas för accountability + säkerhet.
+  // Kritiskt för att kunna svara "vem ändrade detta?" vid support-issues eller
+  // säkerhetsincidenter. Retention: 180 dagar (rensas via cron).
+  db.run(`
+    CREATE TABLE IF NOT EXISTS admin_audit_log (
+      id              INTEGER PRIMARY KEY AUTOINCREMENT,
+      admin_user_id   INTEGER NOT NULL,
+      admin_username  TEXT    NOT NULL,
+      action          TEXT    NOT NULL,
+      target_user_id  INTEGER,
+      target_username TEXT,
+      metadata        TEXT,
+      ip              TEXT,
+      created_at      TEXT    NOT NULL DEFAULT (datetime('now'))
+    )
+  `);
+
   // Page-view tracking (for admin analytics: tid aktiv, mest besökta sidor, funnel)
   // duration_ms fylls i när nästa page_view från samma user loggas (client-side heartbeat uppdaterar senast-aktiva)
   db.run(`
@@ -268,6 +285,10 @@ async function initDatabase() {
     "CREATE INDEX IF NOT EXISTS idx_sessions_expires     ON sessions(expires_at)",
     // Admin notes index (för snabb lookup per target user)
     "CREATE INDEX IF NOT EXISTS idx_admin_notes_target   ON admin_user_notes(target_user_id, created_at DESC)",
+    // Admin audit log index (huvud-query är "senaste 100 händelser")
+    "CREATE INDEX IF NOT EXISTS idx_audit_date           ON admin_audit_log(created_at DESC)",
+    "CREATE INDEX IF NOT EXISTS idx_audit_admin          ON admin_audit_log(admin_user_id, created_at DESC)",
+    "CREATE INDEX IF NOT EXISTS idx_audit_target         ON admin_audit_log(target_user_id, created_at DESC)",
   ];
   migrations.forEach(sql => { try { db.run(sql); } catch (_) {} });
 
@@ -492,6 +513,12 @@ function _deleteUserRows(userId) {
     db.run('DELETE FROM page_views          WHERE user_id = ?', [userId]);
     // Admin notes ABOUT this user (och admin-noteringar de själva skrivit om andra)
     db.run('DELETE FROM admin_user_notes    WHERE target_user_id = ? OR admin_user_id = ?', [userId, userId]);
+    // Audit-log-poster OM användaren nullas (behåll posten för accountability men ta bort
+    // personlig länkning — admin-agent-delen behålls). Detta är GDPR-korrekt: vi minns att
+    // en åtgärd utfördes men kan inte längre koppla den till en specifik raderad person.
+    db.run('UPDATE admin_audit_log SET target_user_id = NULL, target_username = NULL WHERE target_user_id = ?', [userId]);
+    // Om den raderade var admin: behåll audit-poster men anonymisera admin_user_id
+    db.run('UPDATE admin_audit_log SET admin_user_id = 0 WHERE admin_user_id = ?', [userId]);
     // Sessions (logga ut aktiva sessioner)
     db.run('DELETE FROM sessions            WHERE data LIKE ?', [`%"userId":${userId}%`]);
     // Referrer-länk: om någon hänvisats av den raderade, null:a referrer_id
@@ -1546,6 +1573,72 @@ function deleteAdminNote(noteId) {
   saveDb();
 }
 
+// ── Admin audit log ───────────────────────────────────────────────────────────
+
+/**
+ * Logga en admin-åtgärd. Fire-and-forget — får aldrig blockera requesten.
+ * action: kort kod ex 'user.role_change', 'user.delete', 'broadcast.send'
+ * target: { id, username } för target user (null om systemwide-action)
+ * metadata: valfritt objekt (stringified JSON) med action-specifik data
+ * ip: request IP (valfritt)
+ */
+function logAdminAction(adminId, adminUsername, action, target, metadata, ip) {
+  try {
+    db.run(
+      `INSERT INTO admin_audit_log
+         (admin_user_id, admin_username, action, target_user_id, target_username, metadata, ip)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      [
+        adminId,
+        adminUsername || '',
+        action,
+        target?.id || null,
+        target?.username || null,
+        metadata ? JSON.stringify(metadata).slice(0, 2000) : null,
+        (ip || '').slice(0, 64),
+      ]
+    );
+    _markAnalyticsDirty(); // batcha skriv — audit är högfrekvent, ingen mening flusha direkt
+  } catch (err) {
+    console.error('logAdminAction failed:', err.message);
+  }
+}
+
+/**
+ * Hämta audit-log-poster med filter.
+ * filters: { adminId, targetId, action, days } — alla valfria
+ * limit: default 200
+ */
+function getAuditLog(filters = {}, limit = 200) {
+  const where = [];
+  const params = [];
+  if (filters.adminId)  { where.push('admin_user_id = ?');  params.push(filters.adminId); }
+  if (filters.targetId) { where.push('target_user_id = ?'); params.push(filters.targetId); }
+  if (filters.action)   { where.push('action = ?');         params.push(filters.action); }
+  if (filters.days)     { where.push(`created_at > datetime('now', '-${parseInt(filters.days)} days')`); }
+  const whereSQL = where.length ? 'WHERE ' + where.join(' AND ') : '';
+  return rowsQuery(
+    `SELECT * FROM admin_audit_log ${whereSQL} ORDER BY created_at DESC LIMIT ?`,
+    [...params, Math.min(limit, 1000)]
+  );
+}
+
+/** Unika actions som förekommit i loggen (för filter-dropdown) */
+function getAuditActionTypes() {
+  return rowsQuery(`SELECT DISTINCT action FROM admin_audit_log ORDER BY action`).map(r => r.action);
+}
+
+function cleanupOldAuditLog() {
+  // Retention 180 dagar. Juridisk sweet-spot: långt nog för forensisk analys,
+  // kort nog för att inte anhopa privacy-känslig admin-metadata i evighet.
+  try {
+    db.run("DELETE FROM admin_audit_log WHERE created_at < datetime('now', '-180 days')");
+    saveDb();
+  } catch (err) {
+    console.error('cleanupOldAuditLog failed:', err.message);
+  }
+}
+
 function cleanupOldStripeEvents() {
   // Behåll 90 dagars event-historik för debugging. Äldre events retries
   // Stripe inte efter ~3 dagar så 90 är mer än nog.
@@ -1960,6 +2053,8 @@ module.exports = {
   markStripeEventProcessed, cleanupOldStripeEvents,
   // Admin notes
   getAdminNotesForUser, addAdminNote, deleteAdminNote,
+  // Admin audit log
+  logAdminAction, getAuditLog, getAuditActionTypes, cleanupOldAuditLog,
   // Pro-tier
   createProCallAnalysis, updateProCallAnalysis, getProCallAnalysis,
   getProCallAnalysesForUser, countProCallAnalysesThisMonth,

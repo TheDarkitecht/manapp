@@ -29,6 +29,7 @@ const {
   sessionGet, sessionSet, sessionDestroy, sessionCleanupExpired,
   markStripeEventProcessed, cleanupOldStripeEvents,
   getAdminNotesForUser, addAdminNote, deleteAdminNote,
+  logAdminAction, getAuditLog, getAuditActionTypes, cleanupOldAuditLog,
   createProCallAnalysis, updateProCallAnalysis, getProCallAnalysis,
   getProCallAnalysesForUser, canProUserUploadCall, deleteProCallAnalysis,
   PRO_CALL_LIMIT_PER_MONTH,
@@ -655,6 +656,24 @@ function requireAdmin(req, res, next) {
   if (req.session?.impersonatedBy?.role === 'admin') return next();
   if (req.session?.role === 'admin') return next();
   res.status(403).send('Åtkomst nekad.');
+}
+
+/**
+ * Audit-log-wrapper: fire-and-forget loggning av admin-åtgärd från en route.
+ * Använder impersonatedBy-adminId om under impersonation, annars session.userId.
+ * ip hämtas från request — anonymiserad (bara /24-prefix) för att undvika
+ * onödig personuppgifts-lagring.
+ */
+function audit(req, action, target, metadata) {
+  try {
+    const adminId  = req.session?.impersonatedBy?.adminUserId || req.session?.userId;
+    const adminUsr = req.session?.impersonatedBy?.username    || req.session?.username;
+    if (!adminId) return;
+    // Anonymisera IP till /24 prefix (sista oktett 0)
+    const rawIp = req.ip || req.connection?.remoteAddress || '';
+    const anonIp = rawIp.replace(/\.\d+$/, '.0').replace(/:[0-9a-f]+:[0-9a-f]+$/i, '::0/64');
+    logAdminAction(adminId, adminUsr, action, target, metadata, anonIp);
+  } catch (_) { /* never throw from audit */ }
 }
 
 // ── Impersonation guard ──────────────────────────────────────────────────────
@@ -2318,13 +2337,19 @@ app.post('/admin/users/:id/notes', requireLogin, requireAdmin, verifyCsrf, (req,
   const adminId = req.session.impersonatedBy?.adminUserId || req.session.userId;
   const result = addAdminNote(targetId, adminId, req.body.content || '');
   if (!result.ok) return res.redirect(`/admin/user/${targetId}#notes`);
+  const target = findUserById(targetId);
+  audit(req, 'note.add', { id: targetId, username: target?.username });
   res.redirect(`/admin/user/${targetId}?noteSaved=1#notes`);
 });
 
 app.post('/admin/users/:id/notes/:noteId/delete', requireLogin, requireAdmin, verifyCsrf, (req, res) => {
   const targetId = Number(req.params.id);
   const noteId = Number(req.params.noteId);
-  if (Number.isFinite(noteId)) deleteAdminNote(noteId);
+  if (Number.isFinite(noteId)) {
+    deleteAdminNote(noteId);
+    const target = findUserById(targetId);
+    audit(req, 'note.delete', { id: targetId, username: target?.username }, { noteId });
+  }
   res.redirect(`/admin/user/${targetId}?noteDeleted=1#notes`);
 });
 
@@ -2346,14 +2371,21 @@ app.post('/admin/users/:id/role', requireLogin, requireAdmin, verifyCsrf, (req, 
   if (targetId === req.session.userId) return res.redirect('/admin');
   const { role } = req.body;
   if (['free', 'premium', 'pro', 'admin'].includes(role)) {
+    const target = findUserById(targetId);
+    const oldRole = target?.role;
     setUserRole(targetId, role);
+    audit(req, 'user.role_change', { id: targetId, username: target?.username }, { from: oldRole, to: role });
   }
   res.redirect('/admin');
 });
 
 app.post('/admin/users/:id/delete', requireLogin, requireAdmin, verifyCsrf, (req, res) => {
   const id = Number(req.params.id);
-  if (id !== req.session.userId) deleteUser(id); // can't delete yourself
+  if (id !== req.session.userId) {
+    const target = findUserById(id);
+    deleteUser(id); // can't delete yourself
+    audit(req, 'user.delete', { id, username: target?.username }, { email: target?.email, role: target?.role });
+  }
   res.redirect('/admin');
 });
 
@@ -2373,6 +2405,7 @@ app.post('/admin/users/:id/password', requireLogin, requireAdmin, verifyCsrf, (r
   if (!target) return res.redirect('/admin');
 
   updateUserPassword(targetId, newPassword);
+  audit(req, 'user.password_reset', { id: targetId, username: target.username });
   res.redirect('/admin?pwOk=' + targetId);
 });
 
@@ -2392,6 +2425,7 @@ app.post('/admin/users/:id/email', requireLogin, requireAdmin, verifyCsrf, async
         subject: `Välkommen, ${user.username}! Ditt konto är aktivt 🎯`,
         html:    buildWelcomeEmail(user.username, baseUrl),
       });
+      audit(req, 'email.welcome_sent', { id: user.id, username: user.username });
     }
   } catch (err) {
     console.error('Admin email error:', err.message);
@@ -2461,6 +2495,7 @@ app.post('/admin/broadcast', requireLogin, requireAdmin, broadcastLimiter, verif
     }
   }
   console.log(`📢 Broadcast klar: ${sent} skickade, ${failed} misslyckade (segment=${segment})`);
+  audit(req, 'broadcast.send', null, { segment, sent, failed, subject: subject.slice(0, 100) });
   res.redirect(`/admin/broadcast?sent=${sent}&failed=${failed}`);
 });
 
@@ -2525,6 +2560,7 @@ app.post('/admin/users/:id/impersonate', requireLogin, requireAdmin, verifyCsrf,
   req.session.pwVersion = target.pw_version || 0;
 
   console.log(`🎭 Impersonation startad: admin '${req.session.impersonatedBy.username}' → user '${target.username}' (id ${target.id})`);
+  audit(req, 'impersonation.start', { id: target.id, username: target.username });
   res.redirect('/dashboard');
 });
 
@@ -2559,12 +2595,34 @@ app.post('/impersonate/stop', requireLogin, verifyCsrf, (req, res) => {
   }
 
   console.log(`🎭 Impersonation stoppad av '${imp.username}' (var '${req.session.username}')`);
+  const targetUsername = req.session.username;
+  const targetId = req.session.userId;
   req.session.userId            = admin.id;
   req.session.username          = admin.username;
   req.session.role              = admin.role;
   req.session.pwVersion         = admin.pw_version || 0;
   delete req.session.impersonatedBy;
+  audit(req, 'impersonation.stop', { id: targetId, username: targetUsername });
   res.redirect('/admin');
+});
+
+// ── Admin audit log-vy ───────────────────────────────────────────────────────
+
+app.get('/admin/audit', requireLogin, requireAdmin, (req, res) => {
+  const filters = {
+    adminId:  req.query.admin  ? parseInt(req.query.admin)  : null,
+    targetId: req.query.target ? parseInt(req.query.target) : null,
+    action:   req.query.action || null,
+    days:     req.query.days   ? parseInt(req.query.days)   : null,
+  };
+  const entries    = getAuditLog(filters, 300);
+  const actionTypes = getAuditActionTypes();
+  res.render('admin-audit', {
+    username: req.session.username,
+    entries,
+    actionTypes,
+    filters,
+  });
 });
 
 // ── Admin: referral credits-översikt + markera utbetalda ─────────────────────
@@ -2583,7 +2641,9 @@ app.post('/admin/users/:id/redeem-credits', requireLogin, requireAdmin, verifyCs
   const targetId = Number(req.params.id);
   const count    = Number(req.body.count);
   if (Number.isFinite(targetId) && Number.isFinite(count) && count > 0) {
+    const target = findUserById(targetId);
     markReferralCreditsRedeemed(targetId, count);
+    audit(req, 'referral.redeem', { id: targetId, username: target?.username }, { count });
   }
   res.redirect('/admin/referral-credits?saved=1');
 });
@@ -3179,6 +3239,10 @@ async function startServer() {
   // Clean up gamla Stripe-event-loggen (retention 90 dagar) — dagligen
   cleanupOldStripeEvents();
   setInterval(cleanupOldStripeEvents, 24 * 60 * 60 * 1000);
+
+  // Clean up gammal audit-log (retention 180 dagar) — dagligen
+  cleanupOldAuditLog();
+  setInterval(cleanupOldAuditLog, 24 * 60 * 60 * 1000);
 
   // Rotating DB-backups (users.db.backup.1-3) — skydd mot filkorruption.
   // Körs 10 sek efter startup (ej omedelbart — låt DB-init stabilisera först)

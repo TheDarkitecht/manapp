@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin — Audit log</title>
+  <meta name="robots" content="noindex" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📋</text></svg>" />
+  <link rel="stylesheet" href="/style.css" />
+  <link rel="stylesheet" href="/gamification.css" />
+  <style>
+    .au-wrap { max-width: 1200px; margin: 0 auto; padding: 2rem 1.25rem; }
+    .au-nav { display:flex;gap:0.75rem;margin-bottom:1.5rem;font-size:0.9rem;flex-wrap:wrap; }
+    .au-nav a {
+      padding: 0.5rem 1rem; background: rgba(255,255,255,0.04); color: #cbd5e1;
+      text-decoration: none; border-radius: 8px; border: 1px solid rgba(255,255,255,0.08);
+    }
+    .au-nav a:hover { border-color: rgba(99,102,241,0.4); color: #f1f5f9; }
+
+    .au-header { margin-bottom: 1.5rem; }
+    .au-header h1 { color:#f1f5f9;margin:0 0 0.4rem;font-size:1.5rem; }
+    .au-header p  { color:#94a3b8;margin:0;line-height:1.55;font-size:0.9rem; }
+
+    .au-filters {
+      display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center;
+      margin-bottom: 1.5rem; padding: 1rem;
+      background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06);
+      border-radius: 10px;
+    }
+    .au-filters label {
+      display: flex; align-items: center; gap: 0.4rem;
+      font-size: 0.82rem; color: #94a3b8;
+    }
+    .au-filters select, .au-filters input {
+      padding: 0.45rem 0.7rem; background: rgba(0,0,0,0.25); color: #f1f5f9;
+      border: 1px solid rgba(255,255,255,0.1); border-radius: 6px;
+      font-size: 0.85rem; font-family: inherit;
+    }
+    .au-filters .au-apply {
+      padding: 0.45rem 0.9rem; background: linear-gradient(135deg,#6366f1,#8b5cf6);
+      color: #fff; border: none; border-radius: 6px; font-weight: 600;
+      font-size: 0.82rem; cursor: pointer;
+    }
+    .au-filters .au-reset {
+      padding: 0.45rem 0.9rem; background: rgba(255,255,255,0.04);
+      color: #cbd5e1; text-decoration: none; border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 6px; font-size: 0.82rem;
+    }
+
+    .au-list {
+      background: linear-gradient(145deg,#1e293b,#0f172a);
+      border: 1px solid rgba(255,255,255,0.08); border-radius: 12px;
+      overflow: hidden;
+    }
+    .au-entry {
+      display: grid;
+      grid-template-columns: 140px 140px 1fr 100px;
+      gap: 1rem; padding: 0.75rem 1rem;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+      font-size: 0.85rem; align-items: center;
+    }
+    .au-entry:last-child { border-bottom: none; }
+    .au-entry:hover { background: rgba(255,255,255,0.02); }
+
+    .au-time   { color: #64748b; font-variant-numeric: tabular-nums; font-size: 0.78rem; }
+    .au-action {
+      display: inline-block; padding: 0.2rem 0.55rem; border-radius: 999px;
+      font-size: 0.72rem; font-weight: 700;
+      background: rgba(99,102,241,0.12); color: #a5b4fc;
+      white-space: nowrap;
+    }
+    .au-action-danger  { background: rgba(239,68,68,0.12);  color: #f87171; }
+    .au-action-impers  { background: rgba(139,92,246,0.15); color: #c4b5fd; }
+    .au-action-success { background: rgba(16,185,129,0.12); color: #34d399; }
+    .au-desc { color: #cbd5e1; }
+    .au-desc a { color: #a5b4fc; text-decoration: none; }
+    .au-desc a:hover { text-decoration: underline; }
+    .au-admin  { color: #94a3b8; font-size: 0.78rem; text-align: right; }
+
+    .au-meta {
+      grid-column: 1 / -1;
+      margin-top: 0.4rem;
+      padding: 0.5rem 0.75rem;
+      background: rgba(0,0,0,0.25);
+      border-radius: 6px;
+      font-family: 'SF Mono', Consolas, monospace;
+      font-size: 0.72rem; color: #64748b;
+      overflow-x: auto;
+      display: none;
+    }
+    .au-entry.expanded .au-meta { display: block; }
+    .au-toggle {
+      background: none; border: none; color: #64748b; cursor: pointer;
+      font-size: 0.75rem; padding: 0.1rem 0.3rem;
+    }
+    .au-toggle:hover { color: #a5b4fc; }
+
+    .au-empty {
+      padding: 3rem 1rem; text-align: center; color: #64748b;
+      font-style: italic; font-size: 0.9rem;
+    }
+
+    @media (max-width: 640px) {
+      .au-entry { grid-template-columns: 1fr; gap: 0.35rem; padding: 0.85rem; }
+      .au-admin { text-align: left; }
+    }
+  </style>
+</head>
+<body class="block-page">
+
+  <a href="#main-content" class="skip-to-main">Hoppa till innehåll</a>
+
+  <main id="main-content" class="au-wrap">
+
+    <div class="au-nav">
+      <a href="/admin">← Admin</a>
+      <a href="/admin/analytics">📊 Analytics</a>
+      <a href="/admin/referral-credits">🎁 Credits</a>
+      <a href="/admin/broadcast">📢 Broadcast</a>
+    </div>
+
+    <div class="au-header">
+      <h1>📋 Admin audit log</h1>
+      <p>Varje admin-åtgärd loggas för säkerhet + accountability. Retention 180 dagar. IP-adresser är anonymiserade till /24-prefix.</p>
+    </div>
+
+    <!-- Filter-form -->
+    <form method="GET" action="/admin/audit" class="au-filters">
+      <label>
+        <span>Åtgärd</span>
+        <select name="action">
+          <option value="">Alla</option>
+          <% actionTypes.forEach(function(at) { %>
+            <option value="<%= at %>" <%= filters.action === at ? 'selected' : '' %>><%= at %></option>
+          <% }); %>
+        </select>
+      </label>
+
+      <label>
+        <span>Period</span>
+        <select name="days">
+          <option value="">Alla</option>
+          <option value="1"   <%= filters.days == 1   ? 'selected' : '' %>>Senaste 24h</option>
+          <option value="7"   <%= filters.days == 7   ? 'selected' : '' %>>Senaste 7 dagar</option>
+          <option value="30"  <%= filters.days == 30  ? 'selected' : '' %>>Senaste 30 dagar</option>
+          <option value="90"  <%= filters.days == 90  ? 'selected' : '' %>>Senaste 90 dagar</option>
+        </select>
+      </label>
+
+      <label>
+        <span>Admin-id</span>
+        <input type="number" name="admin" value="<%= filters.adminId || '' %>" placeholder="ex 1" style="width:70px;" />
+      </label>
+
+      <label>
+        <span>Target-id</span>
+        <input type="number" name="target" value="<%= filters.targetId || '' %>" placeholder="ex 42" style="width:70px;" />
+      </label>
+
+      <button type="submit" class="au-apply">Tillämpa</button>
+      <a href="/admin/audit" class="au-reset">Nollställ</a>
+    </form>
+
+    <!-- Entries -->
+    <div class="au-list">
+      <% if (!entries.length) { %>
+        <div class="au-empty">Inga audit-poster matchar filtret.</div>
+      <% } else { %>
+        <% entries.forEach(function(e, idx) {
+          const when = e.created_at ? e.created_at.slice(0, 19).replace('T', ' ') : '';
+          const isImp = e.action.startsWith('impersonation.');
+          const isDel = e.action === 'user.delete' || e.action === 'note.delete';
+          const isOk  = e.action === 'broadcast.send' || e.action === 'email.welcome_sent';
+          const cls   = isDel ? 'au-action-danger' : isImp ? 'au-action-impers' : isOk ? 'au-action-success' : '';
+        %>
+          <div class="au-entry" id="entry-<%= e.id %>">
+            <span class="au-time"><%= when %></span>
+            <span><span class="au-action <%= cls %>"><%= e.action %></span></span>
+            <span class="au-desc">
+              <% if (e.target_username) { %>
+                → <a href="/admin/user/<%= e.target_user_id %>"><%= e.target_username %></a>
+              <% } else if (e.target_user_id) { %>
+                → user#<%= e.target_user_id %>
+              <% } else { %>
+                <em style="color:#64748b;">systemomfattande</em>
+              <% } %>
+              <% if (e.metadata) { %>
+                <button type="button" class="au-toggle" onclick="document.getElementById('entry-<%= e.id %>').classList.toggle('expanded')" aria-label="Visa detaljer">
+                  ⓘ detaljer
+                </button>
+              <% } %>
+            </span>
+            <span class="au-admin">
+              av <strong style="color:#c4b5fd;"><%= e.admin_username %></strong>
+            </span>
+            <% if (e.metadata) { %>
+              <pre class="au-meta"><%= e.metadata %></pre>
+            <% } %>
+          </div>
+        <% }); %>
+      <% } %>
+    </div>
+
+    <% if (entries.length === 300) { %>
+      <div style="margin-top:1rem;color:#64748b;font-size:0.82rem;text-align:center;">
+        Visar 300 senaste posterna. Använd filter för att avgränsa.
+      </div>
+    <% } %>
+
+  </main>
+
+  <script src="/heartbeat.js" defer></script>
+</body>
+</html>
