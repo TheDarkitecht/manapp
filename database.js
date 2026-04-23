@@ -371,6 +371,12 @@ async function initDatabase() {
     // Metodik-val per jobb (vilken säljstil samtalet ska bedömas mot).
     // Sätts vid upload; worker läser det när jobbet processas.
     "ALTER TABLE call_jobs ADD COLUMN prompt_version TEXT",
+    // Speaker diarization: opt-in flagga per jobb. 1 = kör LLM-post-
+    // processing för att identifiera "Säljare:" / "Kund:" i transkriptet.
+    "ALTER TABLE call_jobs ADD COLUMN identify_speakers INTEGER NOT NULL DEFAULT 0",
+    // Strukturerat transkript — markdown med Säljare:/Kund:-labels.
+    // Fylls i av worker efter identifySpeakers()-steget. NULL om inte begärt.
+    "ALTER TABLE call_transcripts ADD COLUMN structured_text TEXT",
   ];
   migrations.forEach(sql => { try { db.run(sql); } catch (_) {} });
 
@@ -2173,11 +2179,11 @@ function getFunnelMetrics() {
  * conditions där worker hinner plocka upp jobbet INNAN storage_key är satt.
  * Caller MÅSTE uppgradera till 'pending' efter att putAudio() lyckats.
  */
-function createCallJob(userId, { batch_id, original_name, storage_key, file_size, mime_type, title, status, prompt_version }) {
+function createCallJob(userId, { batch_id, original_name, storage_key, file_size, mime_type, title, status, prompt_version, identify_speakers }) {
   db.run(
-    `INSERT INTO call_jobs (user_id, batch_id, original_name, storage_key, file_size, mime_type, title, status, prompt_version)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    [userId, batch_id || null, original_name, storage_key || null, file_size || null, mime_type || null, title || null, status || 'uploading', prompt_version || null]
+    `INSERT INTO call_jobs (user_id, batch_id, original_name, storage_key, file_size, mime_type, title, status, prompt_version, identify_speakers)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [userId, batch_id || null, original_name, storage_key || null, file_size || null, mime_type || null, title || null, status || 'uploading', prompt_version || null, identify_speakers ? 1 : 0]
   );
   const s = db.prepare('SELECT last_insert_rowid() AS id');
   s.step();
@@ -2214,7 +2220,7 @@ function updateCallJob(jobId, updates) {
  */
 function claimNextPendingCallJob() {
   const s = db.prepare(`
-    SELECT id, user_id, batch_id, original_name, storage_key, file_size, mime_type, title, prompt_version
+    SELECT id, user_id, batch_id, original_name, storage_key, file_size, mime_type, title, prompt_version, identify_speakers
     FROM call_jobs
     WHERE status = 'pending'
     ORDER BY created_at ASC
@@ -2250,7 +2256,7 @@ function getCallJob(jobId) {
 function getCallJobFull(jobId) {
   const job = getCallJob(jobId);
   if (!job) return null;
-  const ts = db.prepare('SELECT text, duration_sec, language, word_count FROM call_transcripts WHERE job_id = ?');
+  const ts = db.prepare('SELECT text, duration_sec, language, word_count, structured_text FROM call_transcripts WHERE job_id = ?');
   ts.bind([jobId]);
   let transcript = null;
   if (ts.step()) transcript = ts.getAsObject();
@@ -2337,12 +2343,13 @@ function getCallJobStats() {
 
 /**
  * Spara transkript efter Whisper. word_count räknas av callern (callAnalytics).
+ * structured_text = diarized markdown (Säljare:/Kund:), NULL om ej begärt.
  */
-function saveCallTranscript(jobId, { text, duration_sec, language, word_count }) {
+function saveCallTranscript(jobId, { text, duration_sec, language, word_count, structured_text }) {
   db.run(
-    `INSERT OR REPLACE INTO call_transcripts (job_id, text, duration_sec, language, word_count)
-     VALUES (?, ?, ?, ?, ?)`,
-    [jobId, text, duration_sec || null, language || null, word_count || null]
+    `INSERT OR REPLACE INTO call_transcripts (job_id, text, duration_sec, language, word_count, structured_text)
+     VALUES (?, ?, ?, ?, ?, ?)`,
+    [jobId, text, duration_sec || null, language || null, word_count || null, structured_text || null]
   );
   saveDb();
 }
@@ -2405,7 +2412,7 @@ function getCallAnalysisRun(runId) {
  * Används av re-analyze — vi behöver bara texten för att köra Groq igen.
  */
 function getCallTranscript(jobId) {
-  const s = db.prepare('SELECT text, duration_sec, language, word_count FROM call_transcripts WHERE job_id = ?');
+  const s = db.prepare('SELECT text, duration_sec, language, word_count, structured_text FROM call_transcripts WHERE job_id = ?');
   s.bind([jobId]);
   if (s.step()) { const r = s.getAsObject(); s.free(); return r; }
   s.free();

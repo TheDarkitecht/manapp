@@ -58,6 +58,15 @@
             <% }); %>
           </select>
           <p class="ci-methodology-desc" id="methodologyDesc"></p>
+
+          <!-- Speaker diarization — opt-in per upload -->
+          <label class="ci-speaker-toggle">
+            <input type="checkbox" name="identifySpeakers" value="1" checked />
+            <span>
+              <strong>🎭 Identifiera talare (Säljare / Kund)</strong>
+              <span class="ci-speaker-toggle-help">Gör transkriptet läsbart som dialog och ger AI:n bättre kontext. Lägger ~5 sek extra per samtal.</span>
+            </span>
+          </label>
         </div>
 
         <label class="ci-dropzone" id="dropZone">
@@ -92,6 +101,18 @@
         <%= JSON.stringify(m.id) %>: <%- JSON.stringify(m.description) %><%= i < methodologies.length - 1 ? ',' : '' %>
       <% }); %>
     };
+
+    // Window-level drag/drop-catch: hindrar browsern från att öppna
+    // filen i ny flik om user släpper UTANFÖR dropzonen. Klassisk bugg —
+    // utan detta tolkar Chrome en drop-outside som "visa filen" och
+    // uppladdningen bryts tyst.
+    ['dragover', 'drop'].forEach(ev => {
+      window.addEventListener(ev, e => {
+        // Tillåt events i själva dropzonen eller i file-inputen
+        if (e.target.closest('#dropZone, #fileInput')) return;
+        e.preventDefault();
+      });
+    });
 
     (function(){
       const methodologySelect = document.getElementById('methodology');

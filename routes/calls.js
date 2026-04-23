@@ -191,6 +191,10 @@ module.exports = function createCallsRouter(deps) {
     const methodologyCfg = prompts.get(requestedMethodology);
     const methodologyId = methodologyCfg ? methodologyCfg.id : prompts.DEFAULT_VERSION_ID;
 
+    // Speaker diarization: opt-in per upload (checkbox). HTML-form skickar
+    // 'identifySpeakers=1' när ikryssad, inget fält alls när inte — läs defensivt.
+    const identifySpeakers = req.body.identifySpeakers === '1' || req.body.identifySpeakers === 'on';
+
     for (const file of files) {
       let jobId = null;
       try {
@@ -198,13 +202,14 @@ module.exports = function createCallsRouter(deps) {
         //    detta håller workern borta tills storage_key är säkert satt.
         //    Förhindrar race där worker plockar jobbet innan R2-put är klar.
         jobId = db.createCallJob(req.session.userId, {
-          batch_id:       batchId,
-          original_name:  file.originalname,
-          file_size:      file.size,
-          mime_type:      file.mimetype,
-          title:          null,
-          status:         'uploading',
-          prompt_version: methodologyId,
+          batch_id:          batchId,
+          original_name:     file.originalname,
+          file_size:         file.size,
+          mime_type:         file.mimetype,
+          title:             null,
+          status:            'uploading',
+          prompt_version:    methodologyId,
+          identify_speakers: identifySpeakers,
         });
 
         // 2. Läs buffer från disk, lagra i R2/final disk
