@@ -1496,12 +1496,13 @@ app.post('/quiz-result', requireLogin, quizLimiter, verifyCsrf, async (req, res)
     const unsubToken = emails.createUnsubscribeToken(user.id);
     const unsubUrl   = `${baseUrl}/unsubscribe/${unsubToken}`;
 
+    const personalName = displayName(user); // först förnamn, fallback username
     await resend.emails.send({
       from:    RESEND_FROM,
       to:      user.email,
-      subject: `🎯 Grymt, ${user.username}! Du klarade Block ${blockIndex + 1}`,
+      subject: `🎯 Grymt, ${personalName}! Du klarade Block ${blockIndex + 1}`,
       html:    emails.buildBlockCompletion({
-        username:      user.username,
+        username:      personalName,
         block:         { id: block.id, title: block.title, icon: block.icon, index: blockIndex + 1 },
         nextBlock:     nextBlockRaw ? { id: nextBlockRaw.id, title: nextBlockRaw.title, icon: nextBlockRaw.icon, index: blockIndex + 2 } : null,
         totalDone,
@@ -1565,7 +1566,7 @@ app.get('/cron/digest', async (req, res) => {
         const lastBlock = lastBlockId ? salesBlocks.find(b => b.id === lastBlockId) : null;
 
         const mail = emails.buildReengagement({
-          username: user.username,
+          username: displayName(user),
           daysInactive,
           stats,
           lastBlockTitle: lastBlock ? lastBlock.title : null,
@@ -1623,7 +1624,7 @@ app.get('/cron/digest', async (req, res) => {
       const unsubToken = emails.createUnsubscribeToken(user.id);
       const unsubUrl = `${baseUrl}/unsubscribe/${unsubToken}`;
       const mail = emails.buildWeeklyDigest({
-        username: user.username,
+        username: displayName(user),
         stats,
         weekData: { blocksTouched, xpGained: 0 }, // xpGained svårt utan historik — skippat för nu
         baseUrl,
@@ -1696,7 +1697,7 @@ app.get('/admin/test-digest', requireLogin, requireAdmin, async (req, res) => {
     let mail;
     if (mode === 'reengagement') {
       mail = emails.buildReengagement({
-        username: user.username,
+        username: displayName(user),
         daysInactive: 14,
         stats,
         lastBlockTitle: 'Tonfall & Psykologisk Påverkan',
@@ -1712,7 +1713,7 @@ app.get('/admin/test-digest', requireLogin, requireAdmin, async (req, res) => {
       else dailyChallenge = gamification.selectDailyChallenge({ actions: getUserActions(user.id, 50) }, today);
 
       mail = emails.buildWeeklyDigest({
-        username: user.username,
+        username: displayName(user),
         stats,
         weekData: { blocksTouched: 3, xpGained: 0 },
         baseUrl,
@@ -1869,7 +1870,9 @@ app.get('/bevis/:token', (req, res) => {
     valid: true,
     stillValid,
     level,
-    username: user.username,
+    // Full name för professional presentation på publik cert-URL
+    username:  user.username, // fallback för legacy-templates
+    certName:  fullName(user) || user.username,
     currentLevel: stats.level.current,
     issuedAt: new Date(issuedAt * 1000),
     xp: stats.xp,
@@ -1900,9 +1903,14 @@ app.get('/mina-framsteg/bevis/:level', requireLogin, (req, res) => {
   if (!level) return res.redirect('/mina-framsteg');
 
   const stats = computeStatsForUser(req.session.userId);
+  // Certifikat ska visa full name om det finns — professional för LinkedIn-sharing.
+  // Fallback till session.username (som redan är displayName) för legacy-konton.
+  const user = findUserById(req.session.userId);
+  const certName = fullName(user) || req.session.username;
 
   res.render('bevis', {
-    username: req.session.username,
+    username:  req.session.username, // för nav-bar (förnamn eller display)
+    certName,                         // för själva certifikatet (full name)
     level,
     stats,
     date: new Date().toLocaleDateString('sv-SE', { year: 'numeric', month: 'long', day: 'numeric' }),
@@ -1919,7 +1927,9 @@ app.get('/mina-framsteg/bevis/:level.svg', requireLogin, (req, res) => {
   if (!level) return res.redirect('/mina-framsteg');
 
   const stats = computeStatsForUser(req.session.userId);
-  const name = req.session.username || 'Säljare';
+  // SVG visar full name om det finns — detta är vad som delas på LinkedIn
+  const user = findUserById(req.session.userId);
+  const name = fullName(user) || req.session.username || 'Säljare';
   const date = new Date().toLocaleDateString('sv-SE', { year: 'numeric', month: 'long', day: 'numeric' });
 
   // Escape XML special chars
@@ -2720,7 +2730,7 @@ app.post('/admin/broadcast', requireLogin, requireAdmin, broadcastLimiter, verif
         from:    RESEND_FROM,
         to:      u.email,
         subject,
-        html:    buildBroadcastEmail({ username: u.username, body, unsubUrl, subject }),
+        html:    buildBroadcastEmail({ username: u.first_name || u.username, body, unsubUrl, subject }),
       });
       sent++;
       // Resend free tier = 10 emails/sec, betalad = 100. 100ms = säker marginal.

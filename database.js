@@ -974,7 +974,8 @@ function getUsersForBroadcast(segment) {
   else if (segment === 'free')    where += " AND role = 'free'";
   else if (segment === 'paid')    where += " AND role IN ('premium', 'pro')";
   // 'all' = ingen extra filtrering
-  const s = db.prepare(`SELECT id, username, email FROM users WHERE ${where} ORDER BY id`);
+  // first_name inkluderat så broadcast-mejl kan säga "Hej Anna" istället för "Hej anna"
+  const s = db.prepare(`SELECT id, username, email, first_name, last_name FROM users WHERE ${where} ORDER BY id`);
   const rows = [];
   while (s.step()) rows.push(s.getAsObject());
   s.free();

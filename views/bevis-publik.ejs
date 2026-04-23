@@ -4,17 +4,17 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <% if (valid) { %>
-    <title>Bevis: <%= username %> — <%= level.name %> — Joakim Jaksens Säljutbildning</title>
-    <meta name="description" content="<%= username %> har uppnått nivå <%= level.name %> i Joakim Jaksens Säljutbildning — <%= level.signalizes %>" />
+    <title>Bevis: <%= typeof certName !== 'undefined' ? certName : username %> — <%= level.name %> — Joakim Jaksens Säljutbildning</title>
+    <meta name="description" content="<%= typeof certName !== 'undefined' ? certName : username %> har uppnått nivå <%= level.name %> i Joakim Jaksens Säljutbildning — <%= level.signalizes %>" />
 
     <!-- Open Graph för LinkedIn/Facebook -->
     <meta property="og:type" content="website" />
-    <meta property="og:title" content="<%= username %> — <%= level.name %> · Joakim Jaksens Säljutbildning" />
+    <meta property="og:title" content="<%= typeof certName !== 'undefined' ? certName : username %> — <%= level.name %> · Joakim Jaksens Säljutbildning" />
     <meta property="og:description" content="<%= level.signalizes %>" />
 
     <!-- Twitter -->
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="<%= username %> — <%= level.name %>" />
+    <meta name="twitter:title" content="<%= typeof certName !== 'undefined' ? certName : username %> — <%= level.name %>" />
     <meta name="twitter:description" content="<%= level.signalizes %>" />
   <% } else { %>
     <title>Ogiltig certifikat-länk</title>
@@ -63,7 +63,7 @@
         <div class="bc-footer">
           <div>
             <div class="bc-label">BEVIS FÖR</div>
-            <div class="bc-name"><%= username %></div>
+            <div class="bc-name"><%= typeof certName !== 'undefined' ? certName : username %></div>
           </div>
           <div style="text-align:right;">
             <div class="bc-label">NUVARANDE NIVÅ</div>
