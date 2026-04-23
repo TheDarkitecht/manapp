@@ -73,6 +73,64 @@ function countWords(text) {
   return text.split(/\s+/).filter(Boolean).length;
 }
 
+// ─── Speaker diarization via LLM post-processing ────────────────────────────
+// Groq Whisper ger bara blob-text utan speaker labels. Vi kör en extra LLM-
+// call som klassificerar varje yttrande som "Säljare:" eller "Kund:". Inte
+// perfekt (kanske 80-90% träff), men dramatiskt bättre läsbarhet och bättre
+// kontext för huvudanalys-prompten.
+
+const DIARIZATION_SYSTEM = `Du får ett råtranskript från ett säljsamtal på svenska, utan markering av vem som säger vad. Din uppgift: dela upp texten i yttranden och klassificera varje som "Säljare:" eller "Kund:".
+
+REGLER:
+- Börja ALLTID med säljaren (säljsamtal öppnas alltid av säljaren — "Hallå?", "Hej, jag ringer från...", etc).
+- Varje nytt yttrande på ny rad med "Säljare:" eller "Kund:" som prefix.
+- Behåll ORD FÖR ORD vad som sagts. Ändra INTE ord, lägg INTE till, ta INTE bort. Bara split + label.
+- Vid korta "mm", "ja", "okej" — gissa baserat på kontext (är det en bekräftelse från den som lyssnar, eller en öppning?).
+- Om Whisper uppenbarligen missade ord (ex. "jag h inte riktigt d f vad sa du") — behåll exakt som det står, märk ändå som rimlig talare.
+- Inga andra markeringar, ingen analys, ingen sammanfattning. BARA strukturerad dialog.
+
+OUTPUT-FORMAT (strikt):
+Säljare: [yttrande]
+
+Kund: [yttrande]
+
+Säljare: [yttrande]
+
+(Tom rad mellan varje yttrande.)`;
+
+async function identifySpeakers(rawText, apiKey) {
+  if (!apiKey) throw new Error('GROQ_API_KEY saknas');
+  if (!rawText || rawText.trim().length < 20) {
+    throw new Error('För kort text för diarization (min 20 tecken)');
+  }
+
+  const res = await fetch(`${GROQ_API_URL}/chat/completions`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      model: 'llama-3.3-70b-versatile',
+      messages: [
+        { role: 'system', content: DIARIZATION_SYSTEM },
+        { role: 'user',   content: `RÅTRANSKRIPT:\n\n${rawText}` },
+      ],
+      max_tokens:  4000, // diarization output är ungefär samma längd som input + labels
+      temperature: 0.1,  // deterministiskt — vi vill inte ha kreativitet här
+    }),
+  });
+
+  if (!res.ok) {
+    const errText = await res.text();
+    throw new Error(`Groq diarization error ${res.status}: ${errText.slice(0, 200)}`);
+  }
+  const data = await res.json();
+  const text = data.choices?.[0]?.message?.content;
+  if (!text) throw new Error('Tomt svar från diarization-LLM');
+  return text.trim();
+}
+
 /**
  * Kör LLM-analys med en specifik prompt-version. Ren funktion: ingen DB-access.
  * Användas både av processCall (hela pipelinen) och av re-analyze-endpointen
@@ -124,28 +182,43 @@ async function analyzeWithPrompt(transcript, apiKey, { promptVersion, userTitle 
  * Returnerar { transcript, analysis, wordFrequencies, meta }.
  * Kastar vid fel — caller (callQueue) hanterar status/error.
  */
-async function processCall(audioBuffer, filename, { title, apiKey, promptVersion } = {}) {
+async function processCall(audioBuffer, filename, { title, apiKey, promptVersion, identifySpeakers: doIdentify } = {}) {
   if (!apiKey) throw new Error('GROQ_API_KEY saknas');
 
-  // Steg 1: Transkribering (prompt-versionsoberoende)
+  // Steg 1: Transkribering
   const transcription = await proAnalysis.transcribeAudio(audioBuffer, filename, apiKey);
   const text = transcription.text || '';
   if (text.trim().length < 50) {
     throw new Error(`För kort transkription (${text.length} tecken) — samtalet kanske är tyst eller korrupt`);
   }
 
-  // Steg 2: LLM-analys med vald prompt-version
-  const analysis = await analyzeWithPrompt(text, apiKey, { promptVersion, userTitle: title });
+  // Steg 2 (opt-in): Speaker diarization via LLM. Ger oss en strukturerad
+  // "Säljare:/Kund:"-version av transkriptet. Misslyckas inte hela pipelinen
+  // om diarizationen kraschar — vi loggar och fortsätter med raw text.
+  let structuredText = null;
+  if (doIdentify) {
+    try {
+      structuredText = await identifySpeakers(text, apiKey);
+    } catch (err) {
+      console.warn('[callAnalytics] diarization misslyckades, fortsätter med raw text:', err.message);
+    }
+  }
 
-  // Steg 3: Word frequencies (lokalt, ingen API-kostnad)
+  // Steg 3: LLM-analys. Använd structured_text när den finns — LLM:en får
+  // bättre kontext när den vet vem som säger vad.
+  const textForAnalysis = structuredText || text;
+  const analysis = await analyzeWithPrompt(textForAnalysis, apiKey, { promptVersion, userTitle: title });
+
+  // Steg 4: Word frequencies (på raw text — vi vill inte räkna "säljare" och "kund" som riktiga ord)
   const wordFrequencies = extractWordFrequencies(text);
 
   return {
     transcript: {
       text,
-      duration_sec: transcription.duration ? Math.round(transcription.duration) : null,
-      language:     'sv',
-      word_count:   countWords(text),
+      structured_text: structuredText,
+      duration_sec:    transcription.duration ? Math.round(transcription.duration) : null,
+      language:        'sv',
+      word_count:      countWords(text),
     },
     analysis,
     wordFrequencies,
@@ -155,6 +228,7 @@ async function processCall(audioBuffer, filename, { title, apiKey, promptVersion
 module.exports = {
   processCall,
   analyzeWithPrompt,
+  identifySpeakers,
   extractWordFrequencies,
   countWords,
   SWEDISH_STOPWORDS,

@@ -148,10 +148,42 @@
     <div class="ci-detail-grid">
       <section class="ci-section">
         <header class="ci-section-header">
-          <h2>📝 Transkript</h2>
+          <h2>📝 Transkript<% if (transcript.structured_text) { %> <span class="ci-version-pill">talare identifierade</span><% } %></h2>
           <button type="button" class="ci-btn ci-btn-ghost" onclick="copyTranscript()">📋 Kopiera</button>
         </header>
-        <pre class="ci-transcript" id="transcriptText"><%= transcript.text %></pre>
+        <% if (transcript.structured_text) { %>
+          <div class="ci-dialog" id="dialogView">
+            <%
+              // Parsa strukturerad text: varje yttrande börjar med "Säljare:" eller "Kund:".
+              // Splitta på radbrytningar och märk upp per tur.
+              const lines = transcript.structured_text.split(/\n+/);
+              const turns = [];
+              let current = null;
+              for (const line of lines) {
+                const m = line.match(/^(Säljare|Kund)\s*:\s*(.*)$/i);
+                if (m) {
+                  if (current) turns.push(current);
+                  current = { speaker: m[1].toLowerCase() === 'säljare' ? 'sales' : 'customer', text: m[2] };
+                } else if (current && line.trim()) {
+                  current.text += ' ' + line.trim();
+                }
+              }
+              if (current) turns.push(current);
+            %>
+            <% turns.forEach(function(t) { %>
+              <div class="ci-dialog-turn ci-dialog-<%= t.speaker %>">
+                <span class="ci-dialog-speaker"><%= t.speaker === 'sales' ? 'Säljare' : 'Kund' %></span>
+                <p class="ci-dialog-text"><%= t.text %></p>
+              </div>
+            <% }); %>
+          </div>
+          <details class="ci-transcript-raw-toggle">
+            <summary>Visa råtranskript (utan talarmärkning)</summary>
+            <pre class="ci-transcript" id="transcriptText"><%= transcript.text %></pre>
+          </details>
+        <% } else { %>
+          <pre class="ci-transcript" id="transcriptText"><%= transcript.text %></pre>
+        <% } %>
       </section>
 
       <section class="ci-section">

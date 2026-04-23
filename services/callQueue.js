@@ -42,13 +42,14 @@ async function processJob(job) {
     // 1. Hämta audio
     const buffer = await storage.getAudioBuffer(job.storage_key);
 
-    // 2. Kör Whisper + LLM + word-freq med jobbets valda metodik.
-    //    Fallback till default om jobbet saknar metodik (äldre jobb innan metodik-systemet).
+    // 2. Kör Whisper + (ev. diarization) + LLM + word-freq.
+    //    Metodik + identify_speakers är satta på jobbet vid upload.
     const methodologyId = job.prompt_version || prompts.DEFAULT_VERSION_ID;
     const result = await analytics.processCall(buffer, job.original_name, {
-      title:         job.title,
-      apiKey:        process.env.GROQ_API_KEY,
-      promptVersion: methodologyId,
+      title:            job.title,
+      apiKey:           process.env.GROQ_API_KEY,
+      promptVersion:    methodologyId,
+      identifySpeakers: Boolean(job.identify_speakers),
     });
 
     // 3. Spara transcript

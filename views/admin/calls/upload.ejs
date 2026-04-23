@@ -58,6 +58,15 @@
             <% }); %>
           </select>
           <p class="ci-methodology-desc" id="methodologyDesc"></p>
+
+          <!-- Speaker diarization — opt-in per upload -->
+          <label class="ci-speaker-toggle">
+            <input type="checkbox" name="identifySpeakers" value="1" checked />
+            <span>
+              <strong>🎭 Identifiera talare (Säljare / Kund)</strong>
+              <span class="ci-speaker-toggle-help">Gör transkriptet läsbart som dialog och ger AI:n bättre kontext. Lägger ~5 sek extra per samtal.</span>
+            </span>
+          </label>
         </div>
 
         <label class="ci-dropzone" id="dropZone">
