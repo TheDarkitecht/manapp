@@ -28,6 +28,8 @@ const express = require('express');
 const db         = require('../database');
 const storage    = require('../services/callStorage');
 const queue      = require('../services/callQueue');
+const analytics  = require('../services/callAnalytics');
+const prompts    = require('../services/prompts/feedback');
 
 // ── Multer: disk storage för att hantera 100 filer × 15 MB utan att
 //    spränga minnet. Vi flyttar filerna till permanent lagring i route-handlern.
@@ -299,6 +301,61 @@ module.exports = function createCallsRouter(deps) {
     }
   });
 
+  // ── Re-analysera med annan prompt-version ───────────────────────────────
+  // Synkront — blockar requesten 20-60 sek medan Groq kör. Admin-only,
+  // rimligt UX-val för v1 av iterations-infran.
+  router.post('/:id/reanalyze', verifyCsrf, async (req, res) => {
+    const jobId = parseInt(req.params.id, 10);
+    if (!jobId) return res.redirect('/admin/calls');
+
+    const version = (req.body.promptVersion || '').trim();
+    const cfg = prompts.get(version);
+    if (!cfg) return res.status(400).send('Ogiltig prompt-version');
+
+    const job = db.getCallJob(jobId);
+    if (!job) return res.redirect('/admin/calls');
+
+    const transcript = db.getCallTranscript(jobId);
+    if (!transcript || !transcript.text) {
+      return res.status(400).send('Samtalet har inget transkript än — re-analyse kräver att transkribering är klar.');
+    }
+
+    try {
+      const result = await analytics.analyzeWithPrompt(transcript.text, process.env.GROQ_API_KEY, {
+        promptVersion: version,
+        userTitle:     job.title,
+      });
+      db.saveCallAnalysis(jobId, {
+        analysis:      result.text,
+        model:         result.model,
+        promptVersion: result.promptVersion,
+      });
+      res.redirect(`/admin/calls/${jobId}?reanalyzed=${encodeURIComponent(version)}`);
+    } catch (err) {
+      console.error('[calls/reanalyze]', err.message);
+      res.status(500).send('Re-analyse failed: ' + err.message);
+    }
+  });
+
+  // ── Visa en historisk körning (för jämförelse) ──────────────────────────
+  router.get('/:id/run/:runId', (req, res) => {
+    const jobId = parseInt(req.params.id, 10);
+    const runId = parseInt(req.params.runId, 10);
+    if (!jobId || !runId) return res.redirect('/admin/calls');
+    const run = db.getCallAnalysisRun(runId);
+    if (!run || run.job_id !== jobId) return res.redirect(`/admin/calls/${jobId}`);
+    const job = db.getCallJob(jobId);
+    const versionCfg = prompts.get(run.prompt_version);
+    res.render('admin/calls/run', {
+      username:    req.session.username,
+      role:        req.session.role,
+      job,
+      run,
+      versionCfg,
+      csrfToken:   generateCsrfToken(req),
+    });
+  });
+
   // ── Detalj-vy ────────────────────────────────────────────────────────────
   // Obs: denna ska ligga SIST bland GETs så :id inte fångar upp /upload, /search etc.
   router.get('/:id', (req, res) => {
@@ -306,16 +363,19 @@ module.exports = function createCallsRouter(deps) {
     if (!jobId) return res.redirect('/admin/calls');
     const full = db.getCallJobFull(jobId);
     if (!full) return res.redirect('/admin/calls');
+    const runs = db.listCallAnalysisRuns(jobId);
     res.render('admin/calls/detail', {
-      username:   req.session.username,
-      role:       req.session.role,
-      job:        full.job,
-      transcript: full.transcript,
-      analysis:   full.analysis,
-      wordFrequencies: full.wordFrequencies,
+      username:         req.session.username,
+      role:             req.session.role,
+      job:              full.job,
+      transcript:       full.transcript,
+      analysis:         full.analysis,
+      wordFrequencies:  full.wordFrequencies,
+      runs,
+      promptVersions:   prompts.list(),
       formatDuration,
       formatFileSize,
-      csrfToken:  generateCsrfToken(req),
+      csrfToken:        generateCsrfToken(req),
     });
   });
 

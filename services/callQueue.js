@@ -17,6 +17,7 @@
 const db           = require('../database');
 const storage      = require('./callStorage');
 const analytics    = require('./callAnalytics');
+const prompts      = require('./prompts/feedback');
 
 const POLL_INTERVAL_MS = parseInt(process.env.CI_POLL_MS || '5000', 10);
 
@@ -41,10 +42,12 @@ async function processJob(job) {
     // 1. Hämta audio
     const buffer = await storage.getAudioBuffer(job.storage_key);
 
-    // 2. Kör Whisper + LLM + word-freq
+    // 2. Kör Whisper + LLM + word-freq med aktuell aktiv prompt-version
+    const activeVersion = prompts.getActive().id;
     const result = await analytics.processCall(buffer, job.original_name, {
-      title:  job.title,
-      apiKey: process.env.GROQ_API_KEY,
+      title:         job.title,
+      apiKey:        process.env.GROQ_API_KEY,
+      promptVersion: activeVersion,
     });
 
     // 3. Spara transcript
@@ -53,8 +56,12 @@ async function processJob(job) {
     // 4. Byt status till analyzing (för UI-transparens — klart för word-freq & analys-save)
     db.updateCallJob(jobId, { status: 'analyzing' });
 
-    // 5. Spara analys + word-freq
-    db.saveCallAnalysis(jobId, { analysis: result.analysis.text, model: result.analysis.model });
+    // 5. Spara analys (både senaste + historik-run) + word-freq
+    db.saveCallAnalysis(jobId, {
+      analysis:      result.analysis.text,
+      model:         result.analysis.model,
+      promptVersion: result.analysis.promptVersion,
+    });
     db.saveCallWordFrequencies(jobId, result.wordFrequencies);
 
     // 6. Done

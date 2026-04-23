@@ -596,6 +596,92 @@
   font-style: italic;
 }
 
+/* ── Prompt-version pill + reanalyse-form + run-list ─────────────────────── */
+.ci-version-pill {
+  display: inline-block;
+  padding: 0.15rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  background: rgba(168, 85, 247, 0.15);
+  color: #d8b4fe;
+  border: 1px solid rgba(168, 85, 247, 0.35);
+  vertical-align: middle;
+  margin-left: 0.4rem;
+}
+
+.ci-reanalyze-form {
+  display: flex;
+  gap: 0.4rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.ci-version-select {
+  padding: 0.45rem 0.7rem;
+  background: #0b0b1a;
+  color: #e2e8f0;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-family: inherit;
+  cursor: pointer;
+}
+.ci-version-select:focus {
+  outline: none;
+  border-color: rgba(99, 102, 241, 0.6);
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+}
+
+.ci-run-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+.ci-run-row {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 8px;
+  transition: background 0.15s ease;
+}
+.ci-run-row:hover { background: rgba(99, 102, 241, 0.08); }
+.ci-run-row.is-latest { border-color: rgba(16, 185, 129, 0.3); }
+
+.ci-run-link {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  text-decoration: none;
+  color: #e2e8f0;
+}
+.ci-run-time {
+  color: #94a3b8;
+  font-variant-numeric: tabular-nums;
+  font-size: 0.85rem;
+  flex: 1;
+}
+.ci-run-chars {
+  color: #64748b;
+  font-size: 0.8rem;
+  font-variant-numeric: tabular-nums;
+}
+.ci-run-latest-badge {
+  padding: 0.15rem 0.55rem;
+  border-radius: 999px;
+  background: rgba(16, 185, 129, 0.15);
+  color: #6ee7b7;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
 /* ── Utility ─────────────────────────────────────────────────────────────── */
 .visually-hidden {
   position: absolute !important;

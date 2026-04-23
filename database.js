@@ -222,6 +222,21 @@ async function initDatabase() {
     )
   `);
 
+  // CI prompt-iteration: full historik av varje LLM-körning per samtal.
+  // call_analyses håller ENDAST senaste (för snabb detalj-vy). Historiken
+  // i denna tabell låter oss jämföra v1-v2-v3-feedback på samma samtal.
+  db.run(`
+    CREATE TABLE IF NOT EXISTS call_analysis_runs (
+      id             INTEGER PRIMARY KEY AUTOINCREMENT,
+      job_id         INTEGER NOT NULL,
+      prompt_version TEXT    NOT NULL,
+      analysis       TEXT    NOT NULL,
+      model          TEXT,
+      created_at     TEXT    NOT NULL DEFAULT (datetime('now')),
+      FOREIGN KEY (job_id) REFERENCES call_jobs(id)
+    )
+  `);
+
   // Session-store (ersätter MemoryStore så användare inte loggas ut vid redeploy)
   db.run(`
     CREATE TABLE IF NOT EXISTS sessions (
@@ -350,6 +365,9 @@ async function initDatabase() {
     "CREATE INDEX IF NOT EXISTS idx_call_jobs_batch          ON call_jobs(batch_id)",
     "CREATE INDEX IF NOT EXISTS idx_call_wf_job              ON call_word_frequencies(job_id)",
     "CREATE INDEX IF NOT EXISTS idx_call_wf_word_count       ON call_word_frequencies(word, count DESC)",
+    // Prompt-iteration: historik per samtal + senaste per version
+    "ALTER TABLE call_analyses ADD COLUMN prompt_version TEXT",
+    "CREATE INDEX IF NOT EXISTS idx_call_analysis_runs_job   ON call_analysis_runs(job_id, created_at DESC)",
   ];
   migrations.forEach(sql => { try { db.run(sql); } catch (_) {} });
 
@@ -2205,7 +2223,7 @@ function getCallJobFull(jobId) {
   if (ts.step()) transcript = ts.getAsObject();
   ts.free();
 
-  const an = db.prepare('SELECT analysis, model, created_at FROM call_analyses WHERE job_id = ?');
+  const an = db.prepare('SELECT analysis, model, prompt_version, created_at FROM call_analyses WHERE job_id = ?');
   an.bind([jobId]);
   let analysis = null;
   if (an.step()) analysis = an.getAsObject();
@@ -2296,12 +2314,69 @@ function saveCallTranscript(jobId, { text, duration_sec, language, word_count })
   saveDb();
 }
 
-function saveCallAnalysis(jobId, { analysis, model }) {
+/**
+ * Spara analys + logga till runs-historiken.
+ * call_analyses = "senaste" (snabb lookup för detalj-vy).
+ * call_analysis_runs = full historik för jämförelse mellan prompt-versioner.
+ */
+function saveCallAnalysis(jobId, { analysis, model, promptVersion }) {
+  // 1. Senaste analysen (overskrivs vid re-analyse)
   db.run(
-    `INSERT OR REPLACE INTO call_analyses (job_id, analysis, model) VALUES (?, ?, ?)`,
-    [jobId, analysis, model || null]
+    `INSERT OR REPLACE INTO call_analyses (job_id, analysis, model, prompt_version) VALUES (?, ?, ?, ?)`,
+    [jobId, analysis, model || null, promptVersion || null]
+  );
+  // 2. Historik-rad (append-only)
+  db.run(
+    `INSERT INTO call_analysis_runs (job_id, prompt_version, analysis, model) VALUES (?, ?, ?, ?)`,
+    [jobId, promptVersion || 'unknown', analysis, model || null]
   );
   saveDb();
+}
+
+/**
+ * Lista alla historiska körningar för ett samtal, nyast först.
+ */
+function listCallAnalysisRuns(jobId) {
+  const s = db.prepare(`
+    SELECT id, prompt_version, model, created_at, length(analysis) AS chars
+    FROM call_analysis_runs
+    WHERE job_id = ?
+    ORDER BY created_at DESC
+  `);
+  s.bind([jobId]);
+  const rows = [];
+  while (s.step()) rows.push(s.getAsObject());
+  s.free();
+  return rows;
+}
+
+/**
+ * Hämta en specifik körning (för historisk jämförelse-vy).
+ */
+function getCallAnalysisRun(runId) {
+  const s = db.prepare(`
+    SELECT r.id, r.job_id, r.prompt_version, r.analysis, r.model, r.created_at,
+           j.original_name, j.title
+    FROM call_analysis_runs r
+    INNER JOIN call_jobs j ON j.id = r.job_id
+    WHERE r.id = ?
+  `);
+  s.bind([runId]);
+  if (s.step()) { const r = s.getAsObject(); s.free(); return r; }
+  s.free();
+  return null;
+}
+
+/**
+ * Hämta transkript separat (utan att dra in analys/word-freq).
+ * Används av re-analyze — vi behöver bara texten för att köra Groq igen.
+ */
+function getCallTranscript(jobId) {
+  const s = db.prepare('SELECT text, duration_sec, language, word_count FROM call_transcripts WHERE job_id = ?');
+  s.bind([jobId]);
+  if (s.step()) { const r = s.getAsObject(); s.free(); return r; }
+  s.free();
+  return null;
 }
 
 /**
@@ -2446,4 +2521,6 @@ module.exports = {
   getCallJob, getCallJobFull, listCallJobs, getCallJobStats,
   saveCallTranscript, saveCallAnalysis, saveCallWordFrequencies,
   searchCallTranscripts, deleteCallJob, resetStuckCallJobs,
+  // CI prompt-iteration
+  getCallTranscript, listCallAnalysisRuns, getCallAnalysisRun,
 };

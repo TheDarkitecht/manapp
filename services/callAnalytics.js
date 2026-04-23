@@ -8,6 +8,9 @@
 // ═══════════════════════════════════════════════════════════════════════════
 
 const proAnalysis = require('../proCallAnalysis');
+const prompts     = require('./prompts/feedback');
+
+const GROQ_API_URL = 'https://api.groq.com/openai/v1';
 
 // Svenska stoppord — filtrerat bort från word-frequency. Listan är lagom
 // konservativ; vi vill ha kvar säljrelaterade ord som "pris", "kund", etc.
@@ -71,22 +74,68 @@ function countWords(text) {
 }
 
 /**
+ * Kör LLM-analys med en specifik prompt-version. Ren funktion: ingen DB-access.
+ * Användas både av processCall (hela pipelinen) och av re-analyze-endpointen
+ * (bara LLM-steget på existerande transkript).
+ */
+async function analyzeWithPrompt(transcript, apiKey, { promptVersion, userTitle } = {}) {
+  if (!apiKey) throw new Error('GROQ_API_KEY saknas');
+  if (!transcript || transcript.trim().length < 50) {
+    throw new Error('För kort transkription för meningsfull analys (min 50 tecken)');
+  }
+
+  const cfg = prompts.get(promptVersion) || prompts.getActive();
+  const userContent = `${userTitle ? `SAMTAL: "${userTitle}"\n\n` : ''}TRANSKRIBERING:\n\n${transcript}`;
+
+  const res = await fetch(`${GROQ_API_URL}/chat/completions`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      model: cfg.model,
+      messages: [
+        { role: 'system', content: cfg.systemPrompt },
+        { role: 'user',   content: userContent },
+      ],
+      max_tokens:  cfg.maxTokens,
+      temperature: cfg.temperature,
+    }),
+  });
+
+  if (!res.ok) {
+    const errText = await res.text();
+    throw new Error(`Groq LLM error ${res.status}: ${errText.slice(0, 200)}`);
+  }
+  const data = await res.json();
+  const analysis = data.choices?.[0]?.message?.content;
+  if (!analysis) throw new Error('Tomt svar från AI');
+
+  return {
+    text:          analysis,
+    model:         cfg.model,
+    promptVersion: cfg.id,
+  };
+}
+
+/**
  * Kör hela analysen för ett samtal: Whisper + LLM + word-freq.
  * Returnerar { transcript, analysis, wordFrequencies, meta }.
  * Kastar vid fel — caller (callQueue) hanterar status/error.
  */
-async function processCall(audioBuffer, filename, { title, apiKey } = {}) {
+async function processCall(audioBuffer, filename, { title, apiKey, promptVersion } = {}) {
   if (!apiKey) throw new Error('GROQ_API_KEY saknas');
 
-  // Steg 1: Transkribering
+  // Steg 1: Transkribering (prompt-versionsoberoende)
   const transcription = await proAnalysis.transcribeAudio(audioBuffer, filename, apiKey);
   const text = transcription.text || '';
   if (text.trim().length < 50) {
     throw new Error(`För kort transkription (${text.length} tecken) — samtalet kanske är tyst eller korrupt`);
   }
 
-  // Steg 2: LLM-analys (Jocke-feedback)
-  const analysis = await proAnalysis.analyzeCall(text, apiKey, { userTitle: title });
+  // Steg 2: LLM-analys med vald prompt-version
+  const analysis = await analyzeWithPrompt(text, apiKey, { promptVersion, userTitle: title });
 
   // Steg 3: Word frequencies (lokalt, ingen API-kostnad)
   const wordFrequencies = extractWordFrequencies(text);
@@ -98,16 +147,14 @@ async function processCall(audioBuffer, filename, { title, apiKey } = {}) {
       language:     'sv',
       word_count:   countWords(text),
     },
-    analysis: {
-      text:  analysis,
-      model: 'llama-3.3-70b-versatile',
-    },
+    analysis,
     wordFrequencies,
   };
 }
 
 module.exports = {
   processCall,
+  analyzeWithPrompt,
   extractWordFrequencies,
   countWords,
   SWEDISH_STOPWORDS,

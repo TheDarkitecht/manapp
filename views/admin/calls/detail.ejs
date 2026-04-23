@@ -69,13 +69,70 @@
       <script>setTimeout(() => window.location.reload(), 10000);</script>
     <% } %>
 
+    <!-- Re-analyze banner (efter redirect från POST /reanalyze) -->
+    <script>
+      (function() {
+        const p = new URLSearchParams(window.location.search);
+        const v = p.get('reanalyzed');
+        if (v) {
+          const banner = document.createElement('div');
+          banner.className = 'ci-flash ci-flash-success';
+          banner.textContent = `✓ Re-analyserat med ${v}. Nya feedbacken visas nedan. Tidigare körningar finns kvar i historiken.`;
+          document.querySelector('main').prepend(banner);
+          setTimeout(() => banner.remove(), 8000);
+          history.replaceState({}, '', window.location.pathname);
+        }
+      })();
+    </script>
+
     <!-- Analys -->
     <% if (analysis) { %>
     <section class="ci-section">
       <header class="ci-section-header">
-        <h2>🎯 Jockes feedback</h2>
+        <h2>🎯 Jockes feedback
+          <% if (analysis.prompt_version) { %>
+            <span class="ci-version-pill" title="Körd med prompt-version <%= analysis.prompt_version %>"><%= analysis.prompt_version %></span>
+          <% } %>
+        </h2>
+        <% if (transcript && transcript.text) { %>
+          <form method="POST" action="/admin/calls/<%= job.id %>/reanalyze" class="ci-reanalyze-form"
+                onsubmit="return confirmReanalyze(this);">
+            <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+            <label class="visually-hidden" for="promptVersion">Prompt-version</label>
+            <select name="promptVersion" id="promptVersion" class="ci-version-select">
+              <% promptVersions.forEach(function(v) { %>
+                <option value="<%= v.id %>" <%= analysis.prompt_version === v.id ? 'disabled' : '' %>>
+                  <%= v.name %><%= v.isActive ? ' (aktiv)' : '' %>
+                </option>
+              <% }); %>
+            </select>
+            <button type="submit" class="ci-btn ci-btn-secondary">↻ Re-analysera</button>
+          </form>
+        <% } %>
       </header>
       <article class="ci-analysis" id="analysisContent"><%= analysis.analysis || '' %></article>
+    </section>
+    <% } %>
+
+    <!-- Historik: tidigare körningar -->
+    <% if (runs && runs.length > 1) { %>
+    <section class="ci-section">
+      <header class="ci-section-header">
+        <h2>🕰 Tidigare körningar (<%= runs.length %>)</h2>
+      </header>
+      <ul class="ci-run-list">
+        <% runs.forEach(function(r, i) { %>
+          <li class="ci-run-row <%= i === 0 ? 'is-latest' : '' %>">
+            <a href="/admin/calls/<%= job.id %>/run/<%= r.id %>" class="ci-run-link">
+              <span class="ci-version-pill"><%= r.prompt_version %></span>
+              <span class="ci-run-time"><%= r.created_at %></span>
+              <span class="ci-run-chars"><%= r.chars %> tecken</span>
+              <% if (i === 0) { %><span class="ci-run-latest-badge">senaste</span><% } %>
+            </a>
+          </li>
+        <% }); %>
+      </ul>
+      <p class="ci-hint">Klicka på en körning för att se dess feedback. Senaste visas alltid ovan.</p>
     </section>
     <% } %>
 
@@ -116,6 +173,19 @@
   </main>
 
   <script>
+    function confirmReanalyze(form) {
+      const sel = form.querySelector('select[name="promptVersion"]');
+      const version = sel.value;
+      const name = sel.options[sel.selectedIndex].textContent.trim();
+      if (!confirm(`Re-analysera detta samtal med "${name}"?\n\nTar 20-60 sekunder. Tidigare feedback sparas i historiken.`)) {
+        return false;
+      }
+      const btn = form.querySelector('button[type="submit"]');
+      btn.disabled = true;
+      btn.textContent = '⏳ Analyserar…';
+      return true;
+    }
+
     function copyTranscript() {
       const el = document.getElementById('transcriptText');
       if (!el) return;
