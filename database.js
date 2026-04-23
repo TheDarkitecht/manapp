@@ -3,6 +3,7 @@
 
 const initSqlJs = require('sql.js');
 const bcrypt    = require('bcryptjs');
+const crypto    = require('crypto');
 const fs        = require('fs');
 const path      = require('path');
 
@@ -252,17 +253,64 @@ async function initDatabase() {
   stmt.free();
 
   if (total === 0) {
-    const hash = bcrypt.hashSync('123456', 10);
+    // Säker admin-seed: använd ADMIN_SEED_PASSWORD om satt, annars generera
+    // slumpmässigt lösenord och logga det LOUDLY så det syns i Railway-loggar.
+    // Detta fixar säkerhetshålet där gamla `admin/123456` var default i prod.
+    const isProd = process.env.NODE_ENV === 'production';
+    let adminPw = process.env.ADMIN_SEED_PASSWORD;
+    let generated = false;
+    if (!adminPw) {
+      if (isProd) {
+        // Genererat + loggat en gång — användaren ändrar via /account
+        adminPw = crypto.randomBytes(12).toString('base64').replace(/[+/=]/g, '').slice(0, 16);
+        generated = true;
+      } else {
+        // Dev-miljö: ok med fix enkelt lösenord för smidig utveckling
+        adminPw = '123456';
+      }
+    }
+    const hash = bcrypt.hashSync(adminPw, 10);
     db.run(
       `INSERT INTO users (username, email, password_hash, role, gdpr, gdpr_at, created_at)
        VALUES (?, ?, ?, 'admin', 1, datetime('now'), datetime('now'))`,
       ['admin', 'admin@example.com', hash]
     );
-    console.warn('⚠️  SECURITY: Seeded admin user with default password admin/123456.');
-    console.warn('    → Change the password immediately via the admin panel or ADMIN_RESET_PASSWORD env var!');
+    if (generated) {
+      console.warn('╔══════════════════════════════════════════════════════════════════╗');
+      console.warn('║  🔐 ADMIN USER SEEDED WITH RANDOM PASSWORD                      ║');
+      console.warn('║  Användarnamn: admin                                            ║');
+      console.warn(`║  Lösenord:    ${adminPw.padEnd(51)}║`);
+      console.warn('║                                                                  ║');
+      console.warn('║  ⚠️  Spara detta NU — det visas inte igen!                       ║');
+      console.warn('║  Logga in och byt via /account, eller sätt ADMIN_RESET_PASSWORD  ║');
+      console.warn('╚══════════════════════════════════════════════════════════════════╝');
+    } else if (adminPw === '123456') {
+      console.warn('⚠️  DEV: Seeded admin/123456 (only safe i non-production).');
+      console.warn('    I prod: sätt ADMIN_SEED_PASSWORD env var eller låt systemet generera.');
+    } else {
+      console.log('✅ Admin seedad med ADMIN_SEED_PASSWORD från env.');
+    }
   } else {
     // Ensure existing admin account has admin role
     db.run(`UPDATE users SET role = 'admin' WHERE username = 'admin' AND role = 'free'`);
+
+    // ── Säkerhetskontroll: varna om admin fortfarande har default-lösenordet ──
+    // Detta hjälper upptäcka existerande prod-deploys som seedats före fixen.
+    if (process.env.NODE_ENV === 'production') {
+      try {
+        const adminStmt = db.prepare("SELECT password_hash FROM users WHERE username = 'admin'");
+        adminStmt.step();
+        const adminRow = adminStmt.getAsObject();
+        adminStmt.free();
+        if (adminRow?.password_hash && bcrypt.compareSync('123456', adminRow.password_hash)) {
+          console.warn('╔══════════════════════════════════════════════════════════════════╗');
+          console.warn('║  🔴 KRITISKT: admin-kontot har default-lösenordet "123456"      ║');
+          console.warn('║  Byt genast via /account, eller sätt ADMIN_RESET_PASSWORD env    ║');
+          console.warn('║  var och starta om servern för att rotera lösenordet.            ║');
+          console.warn('╚══════════════════════════════════════════════════════════════════╝');
+        }
+      } catch (_) {}
+    }
   }
 
   // ── Emergency admin password reset via env var ────────────────────────────
