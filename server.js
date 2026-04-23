@@ -8,7 +8,7 @@ const Stripe    = require('stripe');
 const { Resend } = require('resend');
 const helmet    = require('helmet');
 const {
-  initDatabase, cleanupExpiredTokens, rotateDbBackups, findUserByUsername, findUserByEmail, findUserById, generateUsernameFromEmail, createUser,
+  initDatabase, cleanupExpiredTokens, rotateDbBackups, findUserByUsername, findUserByEmail, findUserById, generateUsernameFromEmail, displayName, fullName, createUser,
   getAllUsers, setUserRole, deleteUser, deleteUserAccount, getUserStats,
   setStripeCustomerId, findUserByStripeCustomerId,
   updateLastLogin,
@@ -846,7 +846,9 @@ app.post('/login', loginLimiter, async (req, res) => {
   req.session.regenerate((err) => {
     if (err) return res.redirect('/login');
     req.session.userId    = user.id;
-    req.session.username  = user.username;
+    // session.username används som display i templates. Prio: first_name,
+    // fallback till user.username. Så "Hej, Joakim" istället för "Hej, jaksen".
+    req.session.username  = displayName(user);
     req.session.role      = user.role;
     req.session.pwVersion = user.pw_version || 0; // stored for session-invalidation after pw reset
     updateLastLogin(user.id);
@@ -856,7 +858,7 @@ app.post('/login', loginLimiter, async (req, res) => {
 });
 
 app.post('/register', registerLimiter, async (req, res) => {
-  const { email, password, confirmPassword, gdpr } = req.body;
+  const { email, password, confirmPassword, gdpr, firstName, lastName } = req.body;
   const turnstileToken = req.body['cf-turnstile-response'];
 
   // Verify Turnstile CAPTCHA (skip if no secret key configured)
@@ -878,9 +880,19 @@ app.post('/register', registerLimiter, async (req, res) => {
     }
   }
 
-  if (!email || !password)
+  if (!email || !password || !firstName || !lastName)
     return res.render('login', { error: null, success: null, turnstileSiteKey: TURNSTILE_SITE_KEY,
       registerError: 'Fyll i alla fält.' });
+
+  // Namn-validering: 1-50 tecken, ingen HTML-garbage
+  const cleanFirst = firstName.trim();
+  const cleanLast  = lastName.trim();
+  if (cleanFirst.length < 1 || cleanFirst.length > 50 || cleanLast.length < 1 || cleanLast.length > 50)
+    return res.render('login', { error: null, success: null, turnstileSiteKey: TURNSTILE_SITE_KEY,
+      registerError: 'För- och efternamn måste vara 1–50 tecken.' });
+  if (/<|>|\{|\}/.test(cleanFirst + cleanLast))
+    return res.render('login', { error: null, success: null, turnstileSiteKey: TURNSTILE_SITE_KEY,
+      registerError: 'Namn kan inte innehålla HTML-tecken.' });
 
   if (!gdpr)
     return res.render('login', { error: null, success: null, turnstileSiteKey: TURNSTILE_SITE_KEY,
@@ -902,11 +914,19 @@ app.post('/register', registerLimiter, async (req, res) => {
     return res.render('login', { error: null, success: null, turnstileSiteKey: TURNSTILE_SITE_KEY,
       registerError: 'Lösenordet får inte vara längre än 128 tecken.' });
 
-  // Auto-derivera unikt display-namn från email (joakim@foo.com → "joakim",
-  // "joakim2" om upptaget). Används i "Hej, X"-texter, ordboken, etc.
-  const username = generateUsernameFromEmail(email.trim());
+  // Auto-derivera unikt username-slug: prio 1 från förnamn (lowercase, rensat),
+  // fallback från email-local-part om förnamn inte ger unik match.
+  // Username är internt; displayName() visar först förnamn, sen username.
+  const firstNameSlug = cleanFirst.toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 20);
+  let username;
+  if (firstNameSlug && !findUserByUsername(firstNameSlug)) {
+    username = firstNameSlug;
+  } else {
+    // Förnamn upptaget eller tom slug → generera från email
+    username = generateUsernameFromEmail(email.trim());
+  }
 
-  const result = createUser(username, email.trim(), password);
+  const result = createUser(username, email.trim(), password, cleanFirst, cleanLast);
   if (!result.ok)
     return res.render('login', { error: null, success: null, turnstileSiteKey: TURNSTILE_SITE_KEY,
       registerError: result.error });
@@ -934,8 +954,8 @@ app.post('/register', registerLimiter, async (req, res) => {
       await resend.emails.send({
         from:    RESEND_FROM,
         to:      email.trim(),
-        subject: `Välkommen, ${username}! Ditt konto är aktivt 🎯`,
-        html: buildWelcomeEmail(username, baseUrl),
+        subject: `Välkommen, ${cleanFirst}! Ditt konto är aktivt 🎯`,
+        html: buildWelcomeEmail(cleanFirst, baseUrl),
       });
     }
   } catch (emailErr) {
@@ -953,7 +973,7 @@ app.post('/register', registerLimiter, async (req, res) => {
           success: `Konto skapat! Logga in med ${email.trim()}.` });
       }
       req.session.userId    = newUser.id;
-      req.session.username  = newUser.username;
+      req.session.username  = displayName(newUser); // först förnamn, sen username
       req.session.role      = newUser.role;
       req.session.pwVersion = newUser.pw_version || 0;
       updateLastLogin(newUser.id);
@@ -965,7 +985,7 @@ app.post('/register', registerLimiter, async (req, res) => {
 
   // Fallback om findUserById misslyckas
   res.render('login', { error: null, registerError: null, turnstileSiteKey: TURNSTILE_SITE_KEY,
-    success: `Konto skapat! Välkommen ${username} — logga in med ${email.trim()}.` });
+    success: `Konto skapat! Välkommen ${cleanFirst} — logga in med ${email.trim()}.` });
 });
 
 // GET /register — shortcut that opens login page with register tab active
@@ -2798,10 +2818,12 @@ app.post('/admin/users/:id/redeem-credits', requireLogin, requireAdmin, verifyCs
 
 app.get('/admin/export/users.csv', requireLogin, requireAdmin, (req, res) => {
   const users = getAllUsers();
-  const header = ['id', 'username', 'email', 'role', 'gdpr', 'created_at', 'last_login', 'stripe_customer_id'].join(',');
+  const header = ['id', 'first_name', 'last_name', 'username', 'email', 'role', 'gdpr', 'created_at', 'last_login', 'stripe_customer_id'].join(',');
   const rows   = users.map(u =>
     [
       u.id,
+      `"${(u.first_name        || '').replace(/"/g, '""')}"`,
+      `"${(u.last_name         || '').replace(/"/g, '""')}"`,
       `"${(u.username          || '').replace(/"/g, '""')}"`,
       `"${(u.email             || '').replace(/"/g, '""')}"`,
       u.role,

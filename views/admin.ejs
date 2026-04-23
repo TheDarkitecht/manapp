@@ -97,13 +97,22 @@
             </tr>
           </thead>
           <tbody>
-            <% users.forEach(function(u) { %>
-              <tr data-search="<%= (u.username + ' ' + (u.email||'')).toLowerCase() %>">
+            <% users.forEach(function(u) {
+              const fullName = [u.first_name, u.last_name].filter(Boolean).join(' ');
+              const displayLabel = fullName || u.username;
+              const initial = (u.first_name || u.username || '?')[0].toUpperCase();
+            %>
+              <tr data-search="<%= (u.username + ' ' + (u.email||'') + ' ' + fullName).toLowerCase() %>">
                 <td class="td-id"><%= u.id %></td>
                 <td>
-                  <a href="/admin/user/<%= u.id %>" class="user-cell" style="display:flex;align-items:center;gap:0.5rem;text-decoration:none;color:inherit;" title="Öppna beteendeprofil för <%= u.username %>">
-                    <div class="user-avatar"><%= u.username[0].toUpperCase() %></div>
-                    <span style="color:#a5b4fc;border-bottom:1px dashed rgba(165,180,252,0.3);"><%= u.username %></span>
+                  <a href="/admin/user/<%= u.id %>" class="user-cell" style="display:flex;align-items:center;gap:0.5rem;text-decoration:none;color:inherit;" title="Öppna beteendeprofil för <%= displayLabel %>">
+                    <div class="user-avatar"><%= initial %></div>
+                    <div style="display:flex;flex-direction:column;gap:0.1rem;">
+                      <span style="color:#a5b4fc;border-bottom:1px dashed rgba(165,180,252,0.3);"><%= displayLabel %></span>
+                      <% if (fullName && u.username !== displayLabel) { %>
+                        <span style="color:#64748b;font-size:0.72rem;">@<%= u.username %></span>
+                      <% } %>
+                    </div>
                   </a>
                 </td>
                 <td class="td-email"><%= u.email || '—' %></td>

@@ -75,9 +75,19 @@
         <% } %>
 
         <form method="POST" action="/register" class="auth-form" onsubmit="authLoading(this)">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;">
+            <div class="field-group">
+              <label for="reg-first">Förnamn</label>
+              <input type="text" id="reg-first" name="firstName" placeholder="Anna" required maxlength="50" autocomplete="given-name" autofocus />
+            </div>
+            <div class="field-group">
+              <label for="reg-last">Efternamn</label>
+              <input type="text" id="reg-last" name="lastName" placeholder="Andersson" required maxlength="50" autocomplete="family-name" />
+            </div>
+          </div>
           <div class="field-group">
             <label for="reg-email">E-postadress</label>
-            <input type="email" id="reg-email" name="email" placeholder="din@email.com" required autocomplete="email" autofocus />
+            <input type="email" id="reg-email" name="email" placeholder="din@email.com" required autocomplete="email" />
           </div>
           <div class="field-group">
             <label for="reg-password">Lösenord <span class="hint">(minst 8 tecken)</span></label>
@@ -97,7 +107,7 @@
           <label class="gdpr-label">
             <input type="checkbox" name="gdpr" value="1" required />
             <span>
-              Jag godkänner att mina uppgifter (e-post och lösenord i krypterad form) lagras och behandlas i enlighet med
+              Jag godkänner att mina uppgifter (namn, e-post och lösenord i krypterad form) lagras och behandlas i enlighet med
               <button type="button" class="link-btn" onclick="openPrivacy()">integritetspolicyn</button>.
             </span>
           </label>
@@ -125,7 +135,7 @@
         <p><strong>Senast uppdaterad:</strong> April 2026</p>
 
         <h4>Vilka uppgifter samlar vi in?</h4>
-        <p>Vi samlar in din <strong>e-postadress</strong> och ditt <strong>lösenord i krypterad form</strong> (vi lagrar aldrig ditt lösenord i klartext). Vi sparar även tidpunkten för din registrering och ditt GDPR-godkännande. Ett visningsnamn auto-genereras från din e-post (används i "Hej, X"-hälsningar).</p>
+        <p>Vi samlar in ditt <strong>förnamn</strong> och <strong>efternamn</strong> (för personlig kommunikation), din <strong>e-postadress</strong> och ditt <strong>lösenord i krypterad form</strong> (vi lagrar aldrig ditt lösenord i klartext). Vi sparar även tidpunkten för din registrering och ditt GDPR-godkännande.</p>
 
         <h4>Varför samlar vi in uppgifterna?</h4>
         <p>Uppgifterna används uteslutande för att ge dig tillgång till plattformen, skicka relevant kommunikation om ditt konto och förbättra tjänsten.</p>

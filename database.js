@@ -348,6 +348,12 @@ async function initDatabase() {
     // cron-job för att undvika dubbel-påminnelse.
     "ALTER TABLE users ADD COLUMN pro_trial_end_at            TEXT",
     "ALTER TABLE users ADD COLUMN pro_trial_reminder_sent     INTEGER NOT NULL DEFAULT 0",
+    // Förnamn + efternamn: används i personaliserade mejl ("Hej Joakim"),
+    // admin-översikt och kund-support. NULL för legacy-konton (admin-seeden,
+    // testkonton) som skapades innan denna migration — display faller tillbaka
+    // till username då.
+    "ALTER TABLE users ADD COLUMN first_name TEXT",
+    "ALTER TABLE users ADD COLUMN last_name  TEXT",
     // Page-view tracking index
     "CREATE INDEX IF NOT EXISTS idx_page_views_user_date ON page_views(user_id, visited_at DESC)",
     "CREATE INDEX IF NOT EXISTS idx_page_views_path      ON page_views(path)",
@@ -555,17 +561,20 @@ function findUserById(id) {
 }
 
 // Register a new user. Returns { ok, error? }
-function createUser(username, email, password) {
+function createUser(username, email, password, firstName, lastName) {
   if (findUserByUsername(username))
     return { ok: false, error: 'Användarnamnet är redan taget.' };
   if (findUserByEmail(email))
     return { ok: false, error: 'E-postadressen används redan.' };
 
   const hash = bcrypt.hashSync(password, 10);
+  const cleanFirst = firstName ? firstName.trim().slice(0, 50) : null;
+  const cleanLast  = lastName  ? lastName.trim().slice(0, 50)  : null;
+
   db.run(
-    `INSERT INTO users (username, email, password_hash, role, gdpr, gdpr_at, created_at)
-     VALUES (?, ?, ?, 'free', 1, datetime('now'), datetime('now'))`,
-    [username.trim(), email.trim().toLowerCase(), hash]
+    `INSERT INTO users (username, email, password_hash, role, gdpr, gdpr_at, created_at, first_name, last_name)
+     VALUES (?, ?, ?, 'free', 1, datetime('now'), datetime('now'), ?, ?)`,
+    [username.trim(), email.trim().toLowerCase(), hash, cleanFirst, cleanLast]
   );
   // Hämta nyss skapat ID
   const s = db.prepare('SELECT last_insert_rowid() AS id');
@@ -576,11 +585,30 @@ function createUser(username, email, password) {
   return { ok: true, userId: id };
 }
 
+/**
+ * Få "display-namn" för en user: förnamn om satt, annars fallback till username.
+ * Används i hälsningar "Hej, X" och mejl-subjects för att känna personligt.
+ */
+function displayName(user) {
+  if (!user) return '';
+  if (user.first_name && user.first_name.trim()) return user.first_name.trim();
+  return user.username || '';
+}
+
+/** Full name för admin-panelen + CSV: "Förnamn Efternamn" eller fallback */
+function fullName(user) {
+  if (!user) return '';
+  const parts = [];
+  if (user.first_name) parts.push(user.first_name.trim());
+  if (user.last_name)  parts.push(user.last_name.trim());
+  return parts.join(' ') || user.username || '';
+}
+
 // ── Admin queries ─────────────────────────────────────────────────────────────
 
 function getAllUsers() {
   const s = db.prepare(
-    'SELECT id, username, email, role, gdpr, gdpr_at, created_at, last_login, stripe_customer_id FROM users ORDER BY id DESC'
+    'SELECT id, username, email, first_name, last_name, role, gdpr, gdpr_at, created_at, last_login, stripe_customer_id FROM users ORDER BY id DESC'
   );
   const users = [];
   while (s.step()) users.push(s.getAsObject());
@@ -1972,6 +2000,8 @@ function getUserDataExport(userId) {
   const profile = {
     id:              user.id,
     username:        user.username,
+    first_name:      user.first_name || null,
+    last_name:       user.last_name  || null,
     email:           user.email,
     role:            user.role,
     gdpr_accepted:   !!user.gdpr,
@@ -2508,7 +2538,7 @@ function resetStuckCallJobs() {
 
 module.exports = {
   initDatabase, saveDb, cleanupExpiredTokens, rotateDbBackups,
-  findUserByUsername, findUserByEmail, findUserById, generateUsernameFromEmail,
+  findUserByUsername, findUserByEmail, findUserById, generateUsernameFromEmail, displayName, fullName,
   createUser, getAllUsers, setUserRole, deleteUser, deleteUserAccount, getUserStats,
   setStripeCustomerId, findUserByStripeCustomerId,
   updateLastLogin,
