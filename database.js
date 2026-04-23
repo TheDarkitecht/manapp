@@ -450,13 +450,36 @@ function findUserByStripeCustomerId(customerId) {
 }
 
 function _deleteUserRows(userId) {
-  // Run all deletions in a single transaction
+  // Run all deletions in a single transaction — säkerställer att en
+  // GDPR-radering är komplett eller inte alls körs (no orphans).
+  // OBS: Tidigare rensade denna bara 4 tabeller — alla tabeller som lagts
+  // till efter v1 (gamification, pro-calls, analytics, sessions, referrals)
+  // lämnade orphan-data kvar i DB:n. Komplett lista nu:
   db.run('BEGIN TRANSACTION');
   try {
-    db.run('DELETE FROM block_progress WHERE user_id = ?', [userId]);
-    db.run('DELETE FROM notes WHERE user_id = ?', [userId]);
-    db.run('DELETE FROM reset_tokens WHERE user_id = ?', [userId]);
-    db.run('DELETE FROM users WHERE id = ?', [userId]);
+    // Lärande + progress
+    db.run('DELETE FROM block_progress      WHERE user_id = ?', [userId]);
+    db.run('DELETE FROM user_reflections    WHERE user_id = ?', [userId]);
+    db.run('DELETE FROM user_roleplays      WHERE user_id = ?', [userId]);
+    db.run('DELETE FROM user_missions       WHERE user_id = ?', [userId]);
+    // Gamification
+    db.run('DELETE FROM user_actions        WHERE user_id = ?', [userId]);
+    db.run('DELETE FROM user_preferences    WHERE user_id = ?', [userId]);
+    db.run('DELETE FROM daily_challenges    WHERE user_id = ?', [userId]);
+    // Notes + auth
+    db.run('DELETE FROM notes               WHERE user_id = ?', [userId]);
+    db.run('DELETE FROM reset_tokens        WHERE user_id = ?', [userId]);
+    // Pro-calls (innehåller transkriberingar — kritiskt att radera)
+    db.run('DELETE FROM pro_call_analyses   WHERE user_id = ?', [userId]);
+    // Analytics
+    db.run('DELETE FROM page_views          WHERE user_id = ?', [userId]);
+    // Sessions (logga ut aktiva sessioner)
+    db.run('DELETE FROM sessions            WHERE data LIKE ?', [`%"userId":${userId}%`]);
+    // Referrer-länk: om någon hänvisats av den raderade, null:a referrer_id
+    // (ingen anledning att ta bort dem — de är egna konton)
+    db.run('UPDATE users SET referrer_id = NULL WHERE referrer_id = ?', [userId]);
+    // Slutligen användarraden själv
+    db.run('DELETE FROM users               WHERE id = ?', [userId]);
     db.run('COMMIT');
   } catch (err) {
     db.run('ROLLBACK');
