@@ -278,6 +278,11 @@ async function initDatabase() {
     "ALTER TABLE users ADD COLUMN referral_credit_granted    INTEGER NOT NULL DEFAULT 0",
     "ALTER TABLE users ADD COLUMN referral_credits_earned    INTEGER NOT NULL DEFAULT 0",
     "ALTER TABLE users ADD COLUMN referral_credits_redeemed  INTEGER NOT NULL DEFAULT 0",
+    // Pro-trial: användaren har startat en trial som auto-konverterar till Pro
+    // om de inte avbryter innan pro_trial_end_at. reminder_sent används av
+    // cron-job för att undvika dubbel-påminnelse.
+    "ALTER TABLE users ADD COLUMN pro_trial_end_at            TEXT",
+    "ALTER TABLE users ADD COLUMN pro_trial_reminder_sent     INTEGER NOT NULL DEFAULT 0",
     // Page-view tracking index
     "CREATE INDEX IF NOT EXISTS idx_page_views_user_date ON page_views(user_id, visited_at DESC)",
     "CREATE INDEX IF NOT EXISTS idx_page_views_path      ON page_views(path)",
@@ -1127,6 +1132,39 @@ function markReferralCreditsRedeemed(userId, count) {
  * Admin-översikt: alla referrers med pending credits.
  * Användas för att se vilka som ska krediteras.
  */
+// ── Pro-trial helpers ─────────────────────────────────────────────────────────
+
+function setProTrialEndAt(userId, endAtIso) {
+  db.run('UPDATE users SET pro_trial_end_at = ?, pro_trial_reminder_sent = 0 WHERE id = ?', [endAtIso, userId]);
+  saveDb();
+}
+
+function clearProTrial(userId) {
+  db.run('UPDATE users SET pro_trial_end_at = NULL, pro_trial_reminder_sent = 0 WHERE id = ?', [userId]);
+  saveDb();
+}
+
+function markProTrialReminderSent(userId) {
+  db.run('UPDATE users SET pro_trial_reminder_sent = 1 WHERE id = ?', [userId]);
+  saveDb();
+}
+
+/**
+ * Hämta users vars pro_trial tar slut inom N timmar OCH inte fått påminnelse än.
+ * Används av cron för att skicka 12h-innan-påminnelse.
+ */
+function getUsersWithTrialEndingSoon(withinHours = 24) {
+  return rowsQuery(
+    `SELECT id, username, email, pro_trial_end_at
+     FROM users
+     WHERE pro_trial_end_at IS NOT NULL
+       AND pro_trial_reminder_sent = 0
+       AND datetime(pro_trial_end_at) BETWEEN datetime('now') AND datetime('now', '+' || ? || ' hours')
+       AND email IS NOT NULL`,
+    [withinHours]
+  );
+}
+
 function getUsersWithPendingReferralCredits() {
   return rowsQuery(`
     SELECT id, username, email, role,
@@ -2063,4 +2101,6 @@ module.exports = {
   // Referral
   getOrCreateReferralCode, findUserByReferralCode, setReferrerForUser, getReferralStats,
   grantReferralCreditIfEligible, markReferralCreditsRedeemed, getUsersWithPendingReferralCredits,
+  // Pro-trial
+  setProTrialEndAt, clearProTrial, markProTrialReminderSent, getUsersWithTrialEndingSoon,
 };

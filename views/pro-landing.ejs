@@ -63,9 +63,12 @@
           <form method="POST" action="/upgrade/checkout" style="display:inline;">
             <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
             <input type="hidden" name="tier" value="pro" />
-            <button type="submit" class="pro-cta-btn">Uppgradera till Pro — 599 kr/mån →</button>
+            <button type="submit" class="pro-cta-btn">🎁 Prova Pro gratis i 24h →</button>
           </form>
-          <p class="pro-paywall-fine">15 samtal/månad · max 60 min per samtal · avsluta när som helst</p>
+          <p class="pro-paywall-fine">
+            Gratis i 24 timmar · sen 599 kr/mån · avbryt utan kostnad under trial<br>
+            15 samtal/månad · max 60 min per samtal
+          </p>
         </div>
 
         <div class="pro-paywall-compare">
@@ -76,6 +79,21 @@
 
     <% } else { %>
       <!-- ═══ PRO-DASHBOARD för Pro-användare ═══ -->
+
+      <!-- Trial-status-banner: visas när användaren är i 24h-trial -->
+      <% if (typeof proTrial !== 'undefined' && proTrial.active) { %>
+        <div role="status" aria-live="polite" style="margin-bottom:1.25rem;padding:1.1rem 1.5rem;background:linear-gradient(145deg,rgba(251,191,36,0.15),rgba(245,158,11,0.05));border:1px solid rgba(251,191,36,0.4);border-radius:12px;display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap;">
+          <div>
+            <div style="color:#fbbf24;font-weight:800;font-size:0.95rem;margin-bottom:0.2rem;">🎁 Du är i gratis-trial — <%= proTrial.hoursLeft %>h kvar</div>
+            <div style="color:#cbd5e1;font-size:0.82rem;">Trial slutar <strong><%= proTrial.endsAtDate %></strong>. Sen debiteras 599 kr/mån om du inte avbryter.</div>
+          </div>
+          <form method="POST" action="/billing/portal" style="margin:0;">
+            <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+            <button type="submit" style="padding:0.55rem 1rem;background:rgba(255,255,255,0.08);color:#f1f5f9;border:1px solid rgba(255,255,255,0.15);border-radius:8px;font-weight:600;font-size:0.82rem;cursor:pointer;">Avbryt trial</button>
+          </form>
+        </div>
+      <% } %>
+
       <div class="pro-hero">
         <div class="pro-hero-badge">⚡ PRO</div>
         <h1>🎙️ Samtalsanalys</h1>

@@ -86,6 +86,24 @@
       <a href="/dashboard" class="success-link">← Tillbaka till dashboard</a>
     </div>
 
+    <!-- Pro-trial-status — visas endast när användaren är i gratis-trial -->
+    <% if (typeof proTrial !== 'undefined' && proTrial.active) { %>
+    <div class="success-card" style="margin-top:1.5rem;border-color:rgba(251,191,36,0.4);background:linear-gradient(145deg,rgba(251,191,36,0.08),rgba(245,158,11,0.02));">
+      <h2 style="color:#fbbf24;margin:0 0 0.5rem;font-size:1.15rem;">🎁 Du är i Pro-trial</h2>
+      <p style="color:#cbd5e1;margin:0 0 1.25rem;font-size:0.9rem;line-height:1.5;">
+        <strong><%= proTrial.hoursLeft %> timmar kvar</strong> — slutar <%= proTrial.endsAtDate %>.
+        Om du inte avbryter innan dess debiteras ditt kort <strong>599 kr</strong> för första månaden.
+        Du kan avbryta när som helst utan kostnad via Stripe-portalen.
+      </p>
+      <form method="POST" action="/billing/portal" style="margin:0;">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+        <button type="submit" style="padding:0.75rem 1.25rem;background:rgba(239,68,68,0.12);color:#fca5a5;border:1px solid rgba(239,68,68,0.3);border-radius:10px;font-weight:600;font-size:0.9rem;cursor:pointer;">
+          Avbryt trial nu →
+        </button>
+      </form>
+    </div>
+    <% } %>
+
     <!-- Stripe customer portal — self-serve cancel, uppdatera kort, ladda ner kvitton -->
     <% if (role === 'premium' || role === 'pro') { %>
     <div class="success-card" style="margin-top:1.5rem;">

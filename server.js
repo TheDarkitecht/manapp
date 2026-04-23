@@ -35,6 +35,7 @@ const {
   PRO_CALL_LIMIT_PER_MONTH,
   getOrCreateReferralCode, findUserByReferralCode, setReferrerForUser, getReferralStats,
   grantReferralCreditIfEligible, markReferralCreditsRedeemed, getUsersWithPendingReferralCredits,
+  setProTrialEndAt, clearProTrial, markProTrialReminderSent, getUsersWithTrialEndingSoon,
 } = require('./database');
 const gamification = require('./gamification');
 const emails = require('./emails');
@@ -222,6 +223,21 @@ app.post('/webhook', express.raw({ type: 'application/json' }), async (req, res)
       if (sess.customer) setStripeCustomerId(userId, sess.customer);
       console.log(`✅ User ${userId} upgraded to ${tier}`);
 
+      // ── Pro-trial-tracking: om detta var en Pro-subscription med trial,
+      // fetch:a subscriptionen för att få trial_end-timestamp.
+      if (tier === 'pro' && sess.subscription) {
+        try {
+          const subscription = await stripe.subscriptions.retrieve(sess.subscription);
+          if (subscription.trial_end) {
+            const trialEndIso = new Date(subscription.trial_end * 1000).toISOString();
+            setProTrialEndAt(userId, trialEndIso);
+            console.log(`🎯 Pro-trial startad för user ${userId}, slutar ${trialEndIso}`);
+          }
+        } catch (err) {
+          console.error('Pro trial tracking error:', err.message);
+        }
+      }
+
       // ── Auto-referral-reward: om den här användaren refererades av någon
       // och detta är deras första upgrade, kreditera referrern 1 gratis månad.
       // Idempotent via referral_credit_granted-flaggan i DB.
@@ -248,6 +264,8 @@ app.post('/webhook', express.raw({ type: 'application/json' }), async (req, res)
     }
     if (userId) {
       setUserRole(userId, 'free');
+      // Rensa trial-tracking om det var en trial-cancel
+      try { clearProTrial(userId); } catch (_) {}
       console.log(`⬇️ User ${userId} downgraded to free (subscription cancelled)`);
     }
   }
@@ -286,6 +304,9 @@ app.post('/webhook', express.raw({ type: 'application/json' }), async (req, res)
         const priceId = sub.items?.data?.[0]?.price?.id;
         const tier = (priceId && priceId === process.env.STRIPE_PRICE_ID_PRO) ? 'pro' : 'premium';
         setUserRole(userId, tier);
+        // Om trial precis slutade (status 'trialing' → 'active'): rensa trial_end_at
+        // så UI-bannern försvinner. Första betalningen har gått igenom.
+        try { clearProTrial(userId); } catch (_) {}
       }
     }
   }
@@ -701,6 +722,28 @@ app.use((req, res, next) => {
     };
   } else {
     res.locals.impersonation = { active: false };
+  }
+
+  // Pro-trial-status: lookup:as från DB för inloggade users och exponeras
+  // till alla views via res.locals.proTrial (active + hoursLeft + endsAt)
+  res.locals.proTrial = { active: false };
+  if (req.session?.userId && req.session?.role === 'pro') {
+    try {
+      const user = findUserById(req.session.userId);
+      if (user?.pro_trial_end_at) {
+        const endMs = new Date(user.pro_trial_end_at).getTime();
+        const nowMs = Date.now();
+        if (endMs > nowMs) {
+          const hoursLeft = Math.max(1, Math.round((endMs - nowMs) / (60 * 60 * 1000)));
+          res.locals.proTrial = {
+            active:     true,
+            hoursLeft,
+            endsAt:     user.pro_trial_end_at,
+            endsAtDate: new Date(endMs).toLocaleString('sv-SE', { dateStyle: 'short', timeStyle: 'short' }),
+          };
+        }
+      }
+    } catch (_) {}
   }
   next();
 });
@@ -2693,6 +2736,12 @@ app.post('/upgrade/checkout', requireLogin, blockWhenImpersonating, verifyCsrf, 
   if (targetTier === 'premium' && isPremiumOrHigher(currentRole)) return res.redirect('/dashboard');
   if (targetTier === 'pro' && isProOrHigher(currentRole)) return res.redirect('/dashboard');
 
+  // Pro-trial: env-var-styrd. TRIAL_DAYS_PRO=1 → 24h gratis.
+  // Sätt till 0 för att stänga av trial helt.
+  const proTrialDays = targetTier === 'pro'
+    ? parseInt(process.env.TRIAL_DAYS_PRO || '1')
+    : 0;
+
   const priceId = targetTier === 'pro'
     ? process.env.STRIPE_PRICE_ID_PRO
     : process.env.STRIPE_PRICE_ID;
@@ -2732,6 +2781,10 @@ app.post('/upgrade/checkout', requireLogin, blockWhenImpersonating, verifyCsrf, 
           userId: String(req.session.userId),
           tier:   targetTier,
         },
+        // Pro-trial: 1 dag gratis (konfigurerbart via TRIAL_DAYS_PRO env-var).
+        // Stripe debiterar INGET under trial; efter trial fires invoice.paid
+        // och kortet debiteras. Om användaren avbryter innan trial_end = 0 kr.
+        ...(proTrialDays > 0 ? { trial_period_days: proTrialDays } : {}),
       },
     });
     res.redirect(303, session.url);
