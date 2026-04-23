@@ -1779,6 +1779,70 @@ function getCohortRetention() {
   return enriched;
 }
 
+/**
+ * "Fortsätt där du slutade" — hittar det mest relevanta blocket att leda
+ * returnerande användare till. Prioriterad logik:
+ *   1. Om de just startat ett uppdrag som inte är klart → det blocket
+ *   2. Annars: senaste block de besökte (page_view /learn/:id) som inte är klart
+ *   3. Annars: senaste klara-quiz-block (de kanske vill göra rollspel/reflektion)
+ *   4. Annars: null (helt ny eller klara med allt)
+ *
+ * Returns: { blockId, reason } eller null
+ */
+function getContinueTarget(userId) {
+  // 1. Pågående uppdrag (started_at < now, completed_at IS NULL)
+  const mission = rowsQuery(
+    `SELECT block_id FROM user_missions
+     WHERE user_id = ? AND completed_at IS NULL
+     ORDER BY started_at DESC LIMIT 1`,
+    [userId]
+  )[0];
+  if (mission) return { blockId: mission.block_id, reason: 'mission_in_progress' };
+
+  // 2. Senaste /learn/X-besök som INTE är klart
+  const lastVisited = rowsQuery(
+    `SELECT path FROM page_views
+     WHERE user_id = ? AND path LIKE '/learn/%'
+     ORDER BY visited_at DESC LIMIT 10`,
+    [userId]
+  );
+  for (const pv of lastVisited) {
+    // Extrahera block-id från path: /learn/:id eller /learn/:id/ova etc
+    const match = pv.path.match(/^\/learn\/([^\/]+)/);
+    if (!match) continue;
+    const blockId = match[1];
+    // Kolla om detta block är klart
+    const p = db.prepare('SELECT completed FROM block_progress WHERE user_id = ? AND block_id = ?');
+    p.bind([userId, blockId]);
+    const isCompleted = p.step() ? (p.getAsObject().completed === 1) : false;
+    p.free();
+    if (!isCompleted) {
+      return { blockId, reason: 'recently_visited' };
+    }
+  }
+
+  // 3. Senaste klara quiz där de KANSKE vill göra rollspel/uppdrag/reflektion
+  //    (dvs block som är "quiz-klart" men inte "mastered" = alla 4 steg)
+  const lastCompleted = rowsQuery(
+    `SELECT block_id FROM block_progress
+     WHERE user_id = ? AND completed = 1
+     ORDER BY completed_at DESC LIMIT 5`,
+    [userId]
+  );
+  for (const bp of lastCompleted) {
+    // Kolla om alla 4 steg är klara (mastered)
+    const hasRoleplay   = rowsQuery('SELECT 1 FROM user_roleplays   WHERE user_id = ? AND block_id = ? LIMIT 1', [userId, bp.block_id]).length > 0;
+    const hasMission    = rowsQuery('SELECT 1 FROM user_missions    WHERE user_id = ? AND block_id = ? AND completed_at IS NOT NULL LIMIT 1', [userId, bp.block_id]).length > 0;
+    const hasReflection = rowsQuery('SELECT 1 FROM user_reflections WHERE user_id = ? AND block_id = ? LIMIT 1', [userId, bp.block_id]).length > 0;
+    if (!(hasRoleplay && hasMission && hasReflection)) {
+      return { blockId: bp.block_id, reason: 'steps_remaining' };
+    }
+  }
+
+  // 4. Ingen pågående — null betyder "visa normal dashboard, kanske nytt block"
+  return null;
+}
+
 function getFunnelMetrics() {
   const s = (sql) => { const st = db.prepare(sql); st.step(); const r = st.getAsObject(); st.free(); return r; };
 
@@ -1838,6 +1902,7 @@ module.exports = {
   getFunnelMetrics,
   getUserDataExport,
   getCohortRetention,
+  getContinueTarget,
   // Page-view tracking
   logPageView, updateLastPageViewDuration, cleanupOldPageViews, flushAnalytics,
   // Session store

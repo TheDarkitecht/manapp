@@ -24,6 +24,7 @@ const {
   getDailyChallenge, saveDailyChallenge, completeDailyChallenge,
   getAllUsersWithEmail, getUsersForBroadcast,
   getAdminAnalytics, getUserAnalyticsProfile, getFunnelMetrics, getUserDataExport, getCohortRetention,
+  getContinueTarget,
   logPageView, updateLastPageViewDuration, cleanupOldPageViews, flushAnalytics,
   sessionGet, sessionSet, sessionDestroy, sessionCleanupExpired,
   markStripeEventProcessed, cleanupOldStripeEvents,
@@ -947,6 +948,28 @@ app.get('/dashboard', requireLogin, (req, res) => {
     req.session.role === 'free' &&
     FREE_BLOCK_IDS.every(id => progress[id] && progress[id].completed === 1);
 
+  // "Fortsätt där du slutade" — smart deeplink till senaste relevanta block
+  const continueTarget = getContinueTarget(req.session.userId);
+  let continueBlock = null;
+  if (continueTarget) {
+    const block = salesBlocks.find(b => b.id === continueTarget.blockId);
+    if (block) {
+      const blockIdx = salesBlocks.findIndex(b => b.id === block.id);
+      continueBlock = {
+        id: block.id,
+        title: block.title,
+        icon: block.icon,
+        index: blockIdx + 1,
+        reason: continueTarget.reason,
+        // Reason-specifikt CTA-label
+        cta: continueTarget.reason === 'mission_in_progress' ? 'Fortsätt ditt uppdrag'
+           : continueTarget.reason === 'recently_visited'    ? 'Fortsätt där du slutade'
+           : continueTarget.reason === 'steps_remaining'     ? 'Slutför alla 4 steg'
+           : 'Fortsätt',
+      };
+    }
+  }
+
   // Personaliserad pedagogik: 2–3 kort baserat på användarens learning state
   const learningState   = getUserLearningState(req.session.userId);
   const recommendations = generateRecommendations(
@@ -1002,6 +1025,7 @@ app.get('/dashboard', requireLogin, (req, res) => {
     freeBlockIds: FREE_BLOCK_IDS,
     recommendations,
     freeTierCompleted,
+    continueBlock,
     // Gamification
     gamEnabled,
     stats,

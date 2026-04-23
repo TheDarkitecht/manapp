@@ -56,6 +56,37 @@
   </div>
 
   <main id="main-content">
+
+  <!-- ══ Sök + filter — hjälper användare hitta specifikt block ═══════════ -->
+  <div class="learn-filter-wrap" style="max-width:1200px;margin:0 auto 1.5rem;padding:0 1.25rem;display:flex;gap:0.75rem;flex-wrap:wrap;align-items:center;">
+    <div style="position:relative;flex:1;min-width:200px;">
+      <input type="search" id="blockSearch" placeholder="Sök block — ex 'invändning', 'tonfall'…"
+             oninput="filterBlocks()"
+             aria-label="Sök bland block"
+             style="width:100%;padding:0.7rem 1rem 0.7rem 2.5rem;background:rgba(255,255,255,0.04);color:#f1f5f9;border:1px solid rgba(255,255,255,0.1);border-radius:10px;font-size:0.9rem;box-sizing:border-box;" />
+      <span style="position:absolute;left:0.85rem;top:50%;transform:translateY(-50%);color:#64748b;pointer-events:none;" aria-hidden="true">🔍</span>
+    </div>
+    <div role="group" aria-label="Filtrera block efter status" style="display:flex;gap:0.35rem;flex-wrap:wrap;">
+      <button type="button" class="learn-filter-btn active" data-filter="all" onclick="setFilter('all',this)"
+              style="padding:0.5rem 0.85rem;background:rgba(99,102,241,0.2);color:#f1f5f9;border:1px solid rgba(99,102,241,0.4);border-radius:8px;cursor:pointer;font-size:0.82rem;font-weight:600;" aria-pressed="true">
+        Alla
+      </button>
+      <button type="button" class="learn-filter-btn" data-filter="unfinished" onclick="setFilter('unfinished',this)"
+              style="padding:0.5rem 0.85rem;background:rgba(255,255,255,0.04);color:#cbd5e1;border:1px solid rgba(255,255,255,0.1);border-radius:8px;cursor:pointer;font-size:0.82rem;font-weight:600;" aria-pressed="false">
+        Oavslutade
+      </button>
+      <button type="button" class="learn-filter-btn" data-filter="completed" onclick="setFilter('completed',this)"
+              style="padding:0.5rem 0.85rem;background:rgba(255,255,255,0.04);color:#cbd5e1;border:1px solid rgba(255,255,255,0.1);border-radius:8px;cursor:pointer;font-size:0.82rem;font-weight:600;" aria-pressed="false">
+        Klarade
+      </button>
+      <button type="button" class="learn-filter-btn" data-filter="mastered" onclick="setFilter('mastered',this)"
+              style="padding:0.5rem 0.85rem;background:rgba(255,255,255,0.04);color:#cbd5e1;border:1px solid rgba(255,255,255,0.1);border-radius:8px;cursor:pointer;font-size:0.82rem;font-weight:600;" aria-pressed="false">
+        🏆 Bemästrade
+      </button>
+    </div>
+    <div id="filterResultCount" aria-live="polite" style="font-size:0.78rem;color:#94a3b8;min-width:80px;"></div>
+  </div>
+
   <div class="blocks-grid">
     <% blocks.forEach(function(block, i) { %>
       <% const isLocked = role === 'free' && !freeBlockIds.includes(block.id); %>
@@ -68,6 +99,9 @@
       <% const isNext = !isLocked && !isMastered && nextUnfinished && nextUnfinished.id === block.id; %>
       <a href="/learn/<%= block.id %>"
          class="block-card block-card-status-<%= status.status %> <%= isLocked ? 'block-locked' : '' %> <%= isMastered ? 'block-mastered' : '' %> <%= prog.completed ? 'block-completed' : '' %> <%= isNext ? 'block-next' : '' %>"
+         data-search="<%= (block.title + ' ' + block.subtitle).toLowerCase() %>"
+         data-status="<%= status.status %>"
+         data-completed="<%= prog.completed ? '1' : '0' %>"
          style="--card-gradient: <%= block.gradient %>;">
         <div class="block-card-number">
           <% if (isMastered) { %>🏆<% } else if (isAdvanced) { %>⚡<% } else if (isQuizDone) { %>✓<% } else { %><%= i + 1 %><% } %>
@@ -118,6 +152,60 @@
         fill.style.width = target;
       }));
     })();
+
+    // ── Block search + filter ─────────────────────────────────────────────
+    let activeFilter = 'all';
+    let searchTerm = '';
+
+    function setFilter(f, btn) {
+      activeFilter = f;
+      document.querySelectorAll('.learn-filter-btn').forEach(b => {
+        const isActive = b === btn;
+        b.classList.toggle('active', isActive);
+        b.setAttribute('aria-pressed', String(isActive));
+        b.style.background = isActive ? 'rgba(99,102,241,0.2)' : 'rgba(255,255,255,0.04)';
+        b.style.color      = isActive ? '#f1f5f9' : '#cbd5e1';
+        b.style.borderColor = isActive ? 'rgba(99,102,241,0.4)' : 'rgba(255,255,255,0.1)';
+      });
+      applyFilter();
+    }
+
+    function filterBlocks() {
+      searchTerm = (document.getElementById('blockSearch').value || '').toLowerCase().trim();
+      applyFilter();
+    }
+
+    function applyFilter() {
+      const cards = document.querySelectorAll('.block-card');
+      let visible = 0;
+      cards.forEach(c => {
+        const text = c.dataset.search || '';
+        const status = c.dataset.status || '';
+        const completed = c.dataset.completed === '1';
+
+        let matchesSearch = !searchTerm || text.includes(searchTerm);
+        let matchesFilter = true;
+        if (activeFilter === 'unfinished') matchesFilter = !completed;
+        else if (activeFilter === 'completed') matchesFilter = completed && status !== 'mastered';
+        else if (activeFilter === 'mastered') matchesFilter = status === 'mastered';
+
+        const show = matchesSearch && matchesFilter;
+        c.style.display = show ? '' : 'none';
+        if (show) visible++;
+      });
+      const counter = document.getElementById('filterResultCount');
+      if (counter) {
+        counter.textContent = visible === cards.length ? '' : `${visible} av ${cards.length}`;
+      }
+    }
+
+    // Keyboard shortcut: '/' to focus search
+    document.addEventListener('keydown', function(e) {
+      if (e.key === '/' && document.activeElement.tagName !== 'INPUT' && document.activeElement.tagName !== 'TEXTAREA') {
+        e.preventDefault();
+        document.getElementById('blockSearch')?.focus();
+      }
+    });
   </script>
 
   </main>

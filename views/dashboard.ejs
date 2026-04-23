@@ -109,6 +109,33 @@
         <div class="dash-alert dash-alert-error">Ange "RADERA" för att bekräfta att du vill radera ditt konto.</div>
       <% } %>
 
+      <!-- ════════════ FORTSÄTT DÄR DU SLUTADE ═══════════════════════════
+           Smart deeplink till senaste relevanta block baserat på:
+           pågående uppdrag → senaste besökta oavslutade → steg kvar efter quiz.
+           Returning users slipper leta — de ser direkt var de ska fortsätta.
+      ════════════════════════════════════════════════════════════════ -->
+      <% if (typeof continueBlock !== 'undefined' && continueBlock) { %>
+      <section style="margin-bottom:1.5rem;padding:1.25rem 1.5rem;background:linear-gradient(145deg, rgba(16,185,129,0.08), rgba(52,211,153,0.04));border:1px solid rgba(16,185,129,0.3);border-radius:14px;display:flex;align-items:center;gap:1.25rem;flex-wrap:wrap;">
+        <div style="font-size:2rem;line-height:1;" aria-hidden="true">📍</div>
+        <div style="flex:1;min-width:200px;">
+          <div style="color:#34d399;font-size:0.72rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;margin-bottom:0.25rem;">
+            <%= continueBlock.cta %>
+          </div>
+          <div style="color:#f1f5f9;font-size:1.1rem;font-weight:700;">
+            <%= continueBlock.icon %> Block <%= continueBlock.index %>: <%= continueBlock.title %>
+          </div>
+          <% if (continueBlock.reason === 'steps_remaining') { %>
+            <div style="color:#94a3b8;font-size:0.82rem;margin-top:0.25rem;">Du klarade provet — men rollspelet, uppdraget eller reflektionen väntar.</div>
+          <% } else if (continueBlock.reason === 'mission_in_progress') { %>
+            <div style="color:#94a3b8;font-size:0.82rem;margin-top:0.25rem;">Du har ett aktivt uppdrag här.</div>
+          <% } %>
+        </div>
+        <a href="/learn/<%= continueBlock.id %>" style="padding:0.75rem 1.25rem;background:linear-gradient(135deg,#10b981,#34d399);color:#022c1d;border-radius:10px;font-weight:800;font-size:0.9rem;text-decoration:none;white-space:nowrap;">
+          Fortsätt →
+        </a>
+      </section>
+      <% } %>
+
       <!-- ════════════ PEAK-INTENT CONVERSION-BANNER ═══════════════════════
            Visas för free-användare som klarat båda gratis-blocken. Detta
            är det VARMASTE momentet — de har bevisat commitment och nått
