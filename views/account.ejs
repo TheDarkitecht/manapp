@@ -134,6 +134,73 @@
     </div>
     <% } %>
 
+    <!-- Stripe invoice-history — listas direkt i appen, ingen portal-bounce -->
+    <% if (typeof invoices !== 'undefined' && invoices && invoices.length > 0) { %>
+    <div class="success-card" style="margin-top:1.5rem;text-align:left;">
+      <h2 style="color:#f1f5f9;margin:0 0 0.5rem;font-size:1.15rem;text-align:center;">📄 Fakturor & kvitton</h2>
+      <p style="color:#94a3b8;margin:0 0 1.25rem;font-size:0.9rem;line-height:1.5;text-align:center;">
+        Alla dina betalningar — klicka PDF:en för officiellt kvitto.
+      </p>
+      <div style="display:flex;flex-direction:column;gap:0.5rem;">
+        <% invoices.forEach(function(inv) {
+          const dt = new Date(inv.createdAt);
+          const dateStr = dt.toLocaleDateString('sv-SE', { year: 'numeric', month: 'short', day: 'numeric' });
+          const amount = Math.round(inv.amountPaid / 100);
+          const currency = (inv.currency || 'sek').toUpperCase();
+          const isPaid = inv.status === 'paid';
+          const isOpen = inv.status === 'open';
+          const isDraft = inv.status === 'draft';
+          const isVoid = inv.status === 'void' || inv.status === 'uncollectible';
+          const statusColor = isPaid ? '#34d399' : isOpen ? '#fbbf24' : isVoid ? '#64748b' : '#94a3b8';
+          const statusText = isPaid ? 'Betald' : isOpen ? 'Väntar' : isDraft ? 'Utkast' : isVoid ? 'Annullerad' : inv.status;
+        %>
+          <div style="display:grid;grid-template-columns:1fr auto auto auto;gap:0.75rem;align-items:center;padding:0.75rem 1rem;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.05);border-radius:8px;font-size:0.88rem;">
+            <div style="min-width:0;">
+              <div style="color:#f1f5f9;font-weight:600;"><%= dateStr %></div>
+              <div style="color:#64748b;font-size:0.75rem;"><%= inv.description || 'Prenumeration' %></div>
+            </div>
+            <div style="color:#cbd5e1;font-variant-numeric:tabular-nums;font-weight:700;white-space:nowrap;">
+              <%= amount %> <%= currency %>
+            </div>
+            <div>
+              <span style="display:inline-block;padding:0.15rem 0.5rem;border-radius:999px;font-size:0.72rem;font-weight:700;background:rgba(<%= isPaid ? '16,185,129' : isOpen ? '251,191,36' : '100,116,139' %>,0.15);color:<%= statusColor %>;">
+                <%= statusText %>
+              </span>
+            </div>
+            <div style="display:flex;gap:0.35rem;">
+              <% if (inv.pdfUrl) { %>
+                <a href="<%= inv.pdfUrl %>" target="_blank" rel="noopener" title="Ladda ner som PDF"
+                   aria-label="Ladda ner faktura <%= inv.number || '' %> som PDF"
+                   style="padding:0.3rem 0.55rem;background:rgba(99,102,241,0.12);color:#a5b4fc;text-decoration:none;border-radius:6px;font-size:0.78rem;font-weight:600;border:1px solid rgba(99,102,241,0.25);">
+                  PDF
+                </a>
+              <% } %>
+              <% if (inv.hostedUrl) { %>
+                <a href="<%= inv.hostedUrl %>" target="_blank" rel="noopener" title="Öppna i Stripe"
+                   aria-label="Visa faktura <%= inv.number || '' %> i webbläsaren"
+                   style="padding:0.3rem 0.55rem;background:rgba(255,255,255,0.04);color:#cbd5e1;text-decoration:none;border-radius:6px;font-size:0.78rem;font-weight:600;border:1px solid rgba(255,255,255,0.1);">
+                  Visa
+                </a>
+              <% } %>
+            </div>
+          </div>
+        <% }); %>
+      </div>
+      <p style="color:#64748b;font-size:0.75rem;margin:1rem 0 0;text-align:center;">
+        Visar upp till 24 senaste. Äldre finns i Stripe-portalen.
+      </p>
+    </div>
+    <% } else if (role === 'premium' || role === 'pro') { %>
+    <!-- Empty state för premium/pro-users som inte har fakturor än (ny trial/nyss börjat) -->
+    <div class="success-card" style="margin-top:1.5rem;">
+      <h2 style="color:#f1f5f9;margin:0 0 0.5rem;font-size:1.15rem;">📄 Fakturor & kvitton</h2>
+      <p style="color:#94a3b8;margin:0;font-size:0.9rem;line-height:1.5;">
+        Inga fakturor än — du är antingen i trial-period eller har precis börjat.
+        När din första betalning har gått igenom dyker kvittot upp här automatiskt.
+      </p>
+    </div>
+    <% } %>
+
     <!-- GDPR: data-export — Artikel 20 rätt till portabilitet -->
     <div class="success-card" style="margin-top:1.5rem;">
       <h2 style="color:#f1f5f9;margin:0 0 0.5rem;font-size:1.15rem;">🗂️ Ladda ner min data</h2>

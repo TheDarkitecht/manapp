@@ -2298,8 +2298,49 @@ app.post('/account/delete', requireLogin, blockWhenImpersonating, deleteLimiter,
 
 // ── Mitt konto — byt lösenord ────────────────────────────────────────────────
 
-app.get('/account', requireLogin, (req, res) => {
+// Stripe invoice-cache: per customerId, 5 min TTL. Sparar API-hits vid
+// refreshes av /account. Enkel Map — räcker för current skala.
+const invoiceCache = new Map();
+const INVOICE_CACHE_TTL_MS = 5 * 60 * 1000;
+
+async function getCachedStripeInvoices(customerId) {
+  if (!customerId || !stripe) return [];
+  const cached = invoiceCache.get(customerId);
+  if (cached && Date.now() - cached.fetchedAt < INVOICE_CACHE_TTL_MS) {
+    return cached.invoices;
+  }
+  try {
+    const result = await stripe.invoices.list({ customer: customerId, limit: 24 });
+    const simplified = result.data.map(inv => ({
+      id:        inv.id,
+      number:    inv.number,
+      createdAt: new Date(inv.created * 1000).toISOString(),
+      amountPaid: inv.amount_paid,
+      amountDue:  inv.amount_due,
+      currency:  inv.currency,
+      status:    inv.status,
+      description: (inv.lines?.data?.[0]?.description) || '',
+      hostedUrl: inv.hosted_invoice_url,
+      pdfUrl:    inv.invoice_pdf,
+      periodStart: inv.period_start ? new Date(inv.period_start * 1000).toISOString() : null,
+      periodEnd:   inv.period_end   ? new Date(inv.period_end   * 1000).toISOString() : null,
+    }));
+    invoiceCache.set(customerId, { invoices: simplified, fetchedAt: Date.now() });
+    return simplified;
+  } catch (err) {
+    console.error('Stripe invoices fetch failed:', err.message);
+    return [];
+  }
+}
+
+app.get('/account', requireLogin, async (req, res) => {
   const user = findUserById(req.session.userId);
+  // Hämta Stripe-fakturor endast om user har stripe_customer_id (premium/pro/
+  // ex-betalande). Fail-safe: om API går sönder visas tom lista.
+  let invoices = [];
+  if (user?.stripe_customer_id) {
+    invoices = await getCachedStripeInvoices(user.stripe_customer_id);
+  }
   res.render('account', {
     username:         req.session.username,
     role:             req.session.role,
@@ -2308,6 +2349,7 @@ app.get('/account', requireLogin, (req, res) => {
     pwOk:             req.query.pwOk === '1',
     trialCancelled:   req.query.trialCancelled === '1',
     trialCancelError: req.query.trialCancelError || null,
+    invoices,
     csrfToken:        generateCsrfToken(req),
   });
 });
