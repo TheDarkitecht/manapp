@@ -109,6 +109,35 @@
     <!-- Loggade handlingar -->
     <div class="lb-history">
       <h2>Tidigare loggat</h2>
+
+      <% if (actions.length > 0) { %>
+        <!-- Filter-rad: datum + kategori + fritext. Alla filter är klient-side. -->
+        <div class="lb-filter-row" style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:1rem;align-items:center;">
+          <input type="search" id="lbSearch" placeholder="🔍 Sök i anteckningar…"
+                 oninput="filterLoggbok()" aria-label="Sök i loggade handlingar"
+                 style="flex:1;min-width:180px;padding:0.55rem 0.85rem;background:rgba(255,255,255,0.04);color:#f1f5f9;border:1px solid rgba(255,255,255,0.1);border-radius:8px;font-size:0.85rem;" />
+
+          <select id="lbCatFilter" onchange="filterLoggbok()" aria-label="Filtrera efter kategori"
+                  style="padding:0.55rem 0.85rem;background:rgba(255,255,255,0.04);color:#f1f5f9;border:1px solid rgba(255,255,255,0.1);border-radius:8px;font-size:0.85rem;cursor:pointer;">
+            <option value="">Alla kategorier</option>
+            <% categories.forEach(function(c) { %>
+              <option value="<%= c.id %>"><%= c.icon %> <%= c.name %></option>
+            <% }); %>
+          </select>
+
+          <select id="lbDateFilter" onchange="filterLoggbok()" aria-label="Filtrera efter tidsintervall"
+                  style="padding:0.55rem 0.85rem;background:rgba(255,255,255,0.04);color:#f1f5f9;border:1px solid rgba(255,255,255,0.1);border-radius:8px;font-size:0.85rem;cursor:pointer;">
+            <option value="all">Alla datum</option>
+            <option value="today">Idag</option>
+            <option value="7d">Senaste 7 dagar</option>
+            <option value="30d">Senaste 30 dagar</option>
+            <option value="90d">Senaste 90 dagar</option>
+          </select>
+
+          <span id="lbResultCount" aria-live="polite" style="font-size:0.78rem;color:#94a3b8;min-width:60px;"></span>
+        </div>
+      <% } %>
+
       <% if (!actions.length) { %>
         <div class="empty-state">
           <div class="empty-state-icon">📓</div>
@@ -120,7 +149,10 @@
         <div class="lb-list">
           <% actions.forEach(function(a) { %>
             <% const cat = categories.find(c => c.id === a.category); %>
-            <div class="lb-item">
+            <div class="lb-item"
+                 data-category="<%= a.category %>"
+                 data-date="<%= a.created_at ? a.created_at.slice(0,10) : '' %>"
+                 data-search="<%= ((cat ? cat.name : a.category) + ' ' + (a.note || '')).toLowerCase().replace(/"/g, '&quot;') %>">
               <div class="lb-item-icon"><%= cat ? cat.icon : '✨' %></div>
               <div class="lb-item-body">
                 <div class="lb-item-title">
@@ -207,6 +239,44 @@
       // Animate in
       requestAnimationFrame(() => toast.classList.add('flash-toast-enter'));
     })();
+
+    // ── Loggbok filter: kategori + datum + fritext ──────────────────────
+    function filterLoggbok() {
+      const search = (document.getElementById('lbSearch')?.value || '').toLowerCase().trim();
+      const cat    = document.getElementById('lbCatFilter')?.value || '';
+      const dateF  = document.getElementById('lbDateFilter')?.value || 'all';
+
+      // Beräkna datumtröskel
+      const now = new Date();
+      const today = now.toISOString().slice(0, 10);
+      const dateThreshold = (function() {
+        if (dateF === 'today') return today;
+        if (dateF === '7d')  { const d = new Date(now); d.setDate(d.getDate() - 7);  return d.toISOString().slice(0,10); }
+        if (dateF === '30d') { const d = new Date(now); d.setDate(d.getDate() - 30); return d.toISOString().slice(0,10); }
+        if (dateF === '90d') { const d = new Date(now); d.setDate(d.getDate() - 90); return d.toISOString().slice(0,10); }
+        return null; // all
+      })();
+
+      const items = document.querySelectorAll('.lb-item');
+      let visible = 0;
+      items.forEach(function(item) {
+        const itemCat   = item.dataset.category || '';
+        const itemDate  = item.dataset.date || '';
+        const itemText  = item.dataset.search || '';
+
+        let show = true;
+        if (cat && itemCat !== cat) show = false;
+        if (show && search && !itemText.includes(search)) show = false;
+        if (show && dateThreshold) {
+          if (dateF === 'today' && itemDate !== today) show = false;
+          else if (dateF !== 'today' && itemDate < dateThreshold) show = false;
+        }
+        item.style.display = show ? '' : 'none';
+        if (show) visible++;
+      });
+      const counter = document.getElementById('lbResultCount');
+      if (counter) counter.textContent = (visible === items.length || items.length === 0) ? '' : visible + ' av ' + items.length;
+    }
   </script>
 
   <script src="/heartbeat.js" defer></script>
