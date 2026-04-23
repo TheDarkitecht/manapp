@@ -97,10 +97,21 @@
             <div style="font-size:0.75rem;color:#94a3b8;text-transform:uppercase;letter-spacing:0.05em;">Betalande</div>
           </div>
           <div style="text-align:center;">
-            <div style="font-size:1.75rem;font-weight:800;color:#34d399;"><%= referralStats.paid %></div>
-            <div style="font-size:0.75rem;color:#94a3b8;text-transform:uppercase;letter-spacing:0.05em;">Mån. gratis</div>
+            <div style="font-size:1.75rem;font-weight:800;color:#34d399;"><%= referralStats.credits ? referralStats.credits.earned : 0 %></div>
+            <div style="font-size:0.75rem;color:#94a3b8;text-transform:uppercase;letter-spacing:0.05em;">Mån. intjänade</div>
           </div>
         </div>
+
+        <% if (referralStats.credits && referralStats.credits.pending > 0) { %>
+          <div style="margin-top:1rem;padding:0.85rem 1rem;background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.25);border-radius:10px;">
+            <div style="color:#34d399;font-weight:700;font-size:0.9rem;margin-bottom:0.25rem;">
+              ✨ Du har <%= referralStats.credits.pending %> gratismånad<%= referralStats.credits.pending === 1 ? '' : 'er' %> att tillgodoräkna dig
+            </div>
+            <div style="color:#94a3b8;font-size:0.78rem;">
+              Joakim drar av detta från nästa faktura. Ingen åtgärd behövs från dig — det syns automatiskt när det är tid att fakturera.
+            </div>
+          </div>
+        <% } %>
 
         <% if (referralStats.referrals && referralStats.referrals.length) { %>
           <div style="margin-top:1.25rem;padding-top:1rem;border-top:1px solid rgba(255,255,255,0.06);">

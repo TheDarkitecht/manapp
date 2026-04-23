@@ -238,6 +238,14 @@ async function initDatabase() {
     "ALTER TABLE users ADD COLUMN referrer_id   INTEGER",
     "CREATE UNIQUE INDEX IF NOT EXISTS idx_users_referral_code ON users(referral_code) WHERE referral_code IS NOT NULL",
     "CREATE INDEX IF NOT EXISTS idx_users_referrer_id          ON users(referrer_id)",
+    // Referral reward automation:
+    //  referral_credit_granted (per-referred-user flag) — 1 när referrern krediterats
+    //    hindrar dubbel-kreditering om användaren cancel:ar och re-subscribe:ar
+    //  referral_credits_earned (per-referrer kumulativ) — total antal intjänade gratismånader
+    //  referral_credits_redeemed (per-referrer kumulativ) — antal som Joakim markerat utbetalda
+    "ALTER TABLE users ADD COLUMN referral_credit_granted    INTEGER NOT NULL DEFAULT 0",
+    "ALTER TABLE users ADD COLUMN referral_credits_earned    INTEGER NOT NULL DEFAULT 0",
+    "ALTER TABLE users ADD COLUMN referral_credits_redeemed  INTEGER NOT NULL DEFAULT 0",
     // Page-view tracking index
     "CREATE INDEX IF NOT EXISTS idx_page_views_user_date ON page_views(user_id, visited_at DESC)",
     "CREATE INDEX IF NOT EXISTS idx_page_views_path      ON page_views(path)",
@@ -951,18 +959,85 @@ function setReferrerForUser(userId, referrerId) {
 
 /**
  * Hämta statistik om en användares referrals.
- * Returnerar: totalReferrals, paidReferrals (premium/pro), totalMonthsEarned.
+ * Returnerar: totalReferrals, paidReferrals, credits earned/redeemed/pending.
  */
 function getReferralStats(userId) {
   const allRefs = rowsQuery(`
-    SELECT id, username, role, created_at FROM users WHERE referrer_id = ? ORDER BY created_at DESC
+    SELECT id, username, role, created_at, referral_credit_granted FROM users WHERE referrer_id = ? ORDER BY created_at DESC
   `, [userId]);
   const paid = allRefs.filter(r => r.role === 'premium' || r.role === 'pro' || r.role === 'admin');
+
+  // Credits — dessa uppdateras automatiskt av Stripe-webhook när en referred user upgraderar
+  const userRow = findUserById(userId);
+  const earned    = userRow?.referral_credits_earned    || 0;
+  const redeemed  = userRow?.referral_credits_redeemed  || 0;
+  const pending   = Math.max(0, earned - redeemed);
+
   return {
     total: allRefs.length,
     paid: paid.length,
     referrals: allRefs.slice(0, 20), // visa senaste 20
+    credits: { earned, redeemed, pending },
   };
+}
+
+/**
+ * Kreditera en referrer med en gratis månad. Anropas från Stripe-webhook
+ * när den REFERRED användaren upgraderar till premium eller pro för första
+ * gången. Idempotent via referral_credit_granted-flaggan på den refererade.
+ */
+function grantReferralCreditIfEligible(referredUserId) {
+  const referred = findUserById(referredUserId);
+  if (!referred) return { granted: false, reason: 'user not found' };
+  if (!referred.referrer_id) return { granted: false, reason: 'no referrer' };
+  if (referred.referral_credit_granted) return { granted: false, reason: 'already granted' };
+  if (referred.referrer_id === referred.id) return { granted: false, reason: 'self-referral' };
+
+  // Atomisk: markera som granted + öka referrerns counter
+  try {
+    db.run('BEGIN TRANSACTION');
+    db.run('UPDATE users SET referral_credit_granted = 1 WHERE id = ? AND referral_credit_granted = 0', [referred.id]);
+    db.run('UPDATE users SET referral_credits_earned = referral_credits_earned + 1 WHERE id = ?', [referred.referrer_id]);
+    db.run('COMMIT');
+    saveDb();
+    console.log(`🎁 Referral-credit: user ${referred.referrer_id} tjänade 1 gratis månad (via ${referred.username})`);
+    return { granted: true, referrerId: referred.referrer_id };
+  } catch (err) {
+    db.run('ROLLBACK');
+    console.error('grantReferralCreditIfEligible failed:', err.message);
+    return { granted: false, reason: err.message };
+  }
+}
+
+/**
+ * Admin-åtgärd: markera N credits som utbetalda till en referrer.
+ * Kallas när Joakim manuellt har applicerat en Stripe-kupong eller
+ * credit på användarens nästa faktura.
+ */
+function markReferralCreditsRedeemed(userId, count) {
+  if (!userId || !Number.isFinite(count) || count <= 0) return false;
+  db.run(
+    'UPDATE users SET referral_credits_redeemed = referral_credits_redeemed + ? WHERE id = ?',
+    [count, userId]
+  );
+  saveDb();
+  return true;
+}
+
+/**
+ * Admin-översikt: alla referrers med pending credits.
+ * Användas för att se vilka som ska krediteras.
+ */
+function getUsersWithPendingReferralCredits() {
+  return rowsQuery(`
+    SELECT id, username, email, role,
+           referral_credits_earned,
+           referral_credits_redeemed,
+           (referral_credits_earned - referral_credits_redeemed) AS pending
+    FROM users
+    WHERE referral_credits_earned > referral_credits_redeemed
+    ORDER BY pending DESC, referral_credits_earned DESC
+  `);
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -1653,4 +1728,5 @@ module.exports = {
   PRO_CALL_LIMIT_PER_MONTH,
   // Referral
   getOrCreateReferralCode, findUserByReferralCode, setReferrerForUser, getReferralStats,
+  grantReferralCreditIfEligible, markReferralCreditsRedeemed, getUsersWithPendingReferralCredits,
 };

@@ -31,6 +31,7 @@ const {
   getProCallAnalysesForUser, canProUserUploadCall, deleteProCallAnalysis,
   PRO_CALL_LIMIT_PER_MONTH,
   getOrCreateReferralCode, findUserByReferralCode, setReferrerForUser, getReferralStats,
+  grantReferralCreditIfEligible, markReferralCreditsRedeemed, getUsersWithPendingReferralCredits,
 } = require('./database');
 const gamification = require('./gamification');
 const emails = require('./emails');
@@ -217,6 +218,19 @@ app.post('/webhook', express.raw({ type: 'application/json' }), async (req, res)
       // Store Stripe customer ID for future webhook lookups
       if (sess.customer) setStripeCustomerId(userId, sess.customer);
       console.log(`✅ User ${userId} upgraded to ${tier}`);
+
+      // ── Auto-referral-reward: om den här användaren refererades av någon
+      // och detta är deras första upgrade, kreditera referrern 1 gratis månad.
+      // Idempotent via referral_credit_granted-flaggan i DB.
+      try {
+        const result = grantReferralCreditIfEligible(userId);
+        if (result.granted) {
+          console.log(`🎁 Referrer ${result.referrerId} fick 1 gratis månad krediterad`);
+        }
+      } catch (err) {
+        // Logga men låt inte fel här påverka upgrade-flödet
+        console.error('Referral credit error:', err.message);
+      }
     }
   }
 
@@ -2231,6 +2245,27 @@ app.post('/admin/users/:id/email', requireLogin, requireAdmin, verifyCsrf, async
     console.error('Admin email error:', err.message);
   }
   res.redirect('/admin');
+});
+
+// ── Admin: referral credits-översikt + markera utbetalda ─────────────────────
+
+app.get('/admin/referral-credits', requireLogin, requireAdmin, (req, res) => {
+  const pending = getUsersWithPendingReferralCredits();
+  res.render('admin-referral-credits', {
+    username: req.session.username,
+    pending,
+    csrfToken: generateCsrfToken(req),
+    saved: req.query.saved === '1',
+  });
+});
+
+app.post('/admin/users/:id/redeem-credits', requireLogin, requireAdmin, verifyCsrf, (req, res) => {
+  const targetId = Number(req.params.id);
+  const count    = Number(req.body.count);
+  if (Number.isFinite(targetId) && Number.isFinite(count) && count > 0) {
+    markReferralCreditsRedeemed(targetId, count);
+  }
+  res.redirect('/admin/referral-credits?saved=1');
 });
 
 // ── Admin CSV export ──────────────────────────────────────────────────────────
