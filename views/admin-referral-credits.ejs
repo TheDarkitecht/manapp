@@ -89,7 +89,9 @@
 </head>
 <body class="block-page">
 
-  <main class="rc-wrap">
+  <a href="#main-content" class="skip-to-main">Hoppa till innehåll</a>
+
+  <main id="main-content" class="rc-wrap">
 
     <div class="rc-nav">
       <a href="/admin">← Admin</a>
@@ -106,7 +108,7 @@
     </div>
 
     <% if (saved) { %>
-      <div class="rc-saved">✓ Credit markerad som utbetald</div>
+      <div class="rc-saved" role="status" aria-live="polite">✓ Credit markerad som utbetald</div>
     <% } %>
 
     <div class="rc-card">

@@ -23,7 +23,7 @@
 
     <h1>Inställningar</h1>
     <% if (saved) { %>
-      <div class="lb-saved">✓ Inställning sparad</div>
+      <div class="lb-saved" role="status" aria-live="polite">✓ Inställning sparad</div>
     <% } %>
 
     <form method="POST" action="/installningar" class="settings-form">

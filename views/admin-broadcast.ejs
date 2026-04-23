@@ -60,7 +60,9 @@
 </head>
 <body class="block-page">
 
-  <main class="bc-wrap">
+  <a href="#main-content" class="skip-to-main">Hoppa till innehåll</a>
+
+  <main id="main-content" class="bc-wrap">
 
     <div class="bc-nav">
       <a href="/admin">← Admin</a>
@@ -77,13 +79,13 @@
       </p>
 
       <% if (sent !== null) { %>
-        <div class="bc-alert <%= failed > 0 ? 'bc-alert-warn' : 'bc-alert-success' %>">
+        <div role="status" aria-live="polite" class="bc-alert<%= failed > 0 ? 'bc-alert-warn' : 'bc-alert-success' %>">
           ✓ Broadcast skickad: <strong><%= sent %></strong> levererade<% if (failed > 0) { %>, <strong><%= failed %></strong> misslyckades (se server-loggen för detaljer)<% } %>.
         </div>
       <% } %>
 
       <% if (error) { %>
-        <div class="bc-alert bc-alert-error">
+        <div role="status" aria-live="polite" class="bc-alertbc-alert-error">
           <% if (error === 'ratelimit') { %>🔒 För många broadcasts senaste timmen. Vänta en stund.
           <% } else if (error === 'missing') { %>⚠️ Ämne och meddelande krävs.
           <% } else if (error === 'no_resend') { %>⚠️ RESEND_API_KEY är inte konfigurerad — mejl kan inte skickas.

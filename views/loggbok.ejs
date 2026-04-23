@@ -26,7 +26,7 @@
       <h1>📓 Loggboken</h1>
       <p>Här loggar du verkliga säljhandlingar — samtal, möten, LinkedIn-poster, affärer. Det är <strong>verklig handling</strong>, inte konsumtion, som bygger dig.</p>
       <% if (saved) { %>
-        <div class="lb-saved">✓ Handling loggad</div>
+        <div class="lb-saved" role="status" aria-live="polite">✓ Handling loggad</div>
       <% } %>
       <% if (actions && actions.length > 0) { %>
         <div style="margin-top:0.75rem;">

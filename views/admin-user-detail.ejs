@@ -164,7 +164,9 @@
 </head>
 <body class="block-page">
 
-  <main class="ud-wrap">
+  <a href="#main-content" class="skip-to-main">Hoppa till innehåll</a>
+
+  <main id="main-content" class="ud-wrap">
 
     <div class="ud-nav">
       <a href="/admin">← Admin</a>
@@ -177,7 +179,7 @@
     <!-- Header -->
     <div class="ud-header">
       <div class="ud-header-left">
-        <div class="ud-avatar"><%= profile.user.username.charAt(0).toUpperCase() %></div>
+        <div class="ud-avatar" aria-hidden="true"><%= profile.user.username.charAt(0).toUpperCase() %></div>
         <div style="min-width:0;flex:1;">
           <h1>
             <%= profile.user.username %>
@@ -272,11 +274,12 @@
     <div class="section-card">
       <h2>Aktivitet senaste 30 dagar</h2>
       <p class="section-desc">Sidvisningar per dag. Klicka en stapel för datum (tooltip).</p>
-      <div class="spark">
+      <div class="spark" role="img" aria-label="Aktivitet senaste 30 dagar, stapeldiagram">
         <% profile.dailyActivity.forEach(function(d) { %>
           <div class="spark-bar"
                style="height: <%= Math.max(2, (d.views / maxView) * 100) %>%;"
-               title="<%= d.day %>: <%= d.views %> visningar, <%= Math.round(d.time_ms / 60000) %>min"></div>
+               title="<%= d.day %>: <%= d.views %> visningar, <%= Math.round(d.time_ms / 60000) %>min"
+               aria-label="<%= d.day %>: <%= d.views %> visningar"></div>
         <% }); %>
       </div>
     </div>

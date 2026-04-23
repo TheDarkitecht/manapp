@@ -96,9 +96,9 @@
 </head>
 <body class="learn-page">
 
-  <div class="err-wrap">
-    <div class="err-card">
-      <div class="err-icon"><%= icon %></div>
+  <main class="err-wrap" role="main">
+    <div class="err-card" role="alert" aria-live="polite">
+      <div class="err-icon" aria-hidden="true"><%= icon %></div>
       <span class="err-code"><%= status %> · <%= codeLabel %></span>
       <h1><%= heading %></h1>
       <p><%= body %></p>
@@ -120,7 +120,7 @@
         <% } %>
       </div>
     </div>
-  </div>
+  </main>
 
 </body>
 </html>
