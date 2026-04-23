@@ -28,6 +28,7 @@ const {
   logPageView, updateLastPageViewDuration, cleanupOldPageViews, flushAnalytics,
   sessionGet, sessionSet, sessionDestroy, sessionCleanupExpired,
   markStripeEventProcessed, cleanupOldStripeEvents,
+  getAdminNotesForUser, addAdminNote, deleteAdminNote,
   createProCallAnalysis, updateProCallAnalysis, getProCallAnalysis,
   getProCallAnalysesForUser, canProUserUploadCall, deleteProCallAnalysis,
   PRO_CALL_LIMIT_PER_MONTH,
@@ -2303,8 +2304,28 @@ app.get('/admin/user/:id', requireLogin, requireAdmin, (req, res) => {
     username: req.session.username,
     profile,
     blockTitles,
+    adminNotes: getAdminNotesForUser(targetId),
+    noteSaved: req.query.noteSaved === '1',
+    noteDeleted: req.query.noteDeleted === '1',
     csrfToken: generateCsrfToken(req),
   });
+});
+
+// ── Admin notes: skapa + radera ───────────────────────────────────────────────
+app.post('/admin/users/:id/notes', requireLogin, requireAdmin, verifyCsrf, (req, res) => {
+  const targetId = Number(req.params.id);
+  if (!Number.isFinite(targetId)) return res.redirect('/admin');
+  const adminId = req.session.impersonatedBy?.adminUserId || req.session.userId;
+  const result = addAdminNote(targetId, adminId, req.body.content || '');
+  if (!result.ok) return res.redirect(`/admin/user/${targetId}#notes`);
+  res.redirect(`/admin/user/${targetId}?noteSaved=1#notes`);
+});
+
+app.post('/admin/users/:id/notes/:noteId/delete', requireLogin, requireAdmin, verifyCsrf, (req, res) => {
+  const targetId = Number(req.params.id);
+  const noteId = Number(req.params.noteId);
+  if (Number.isFinite(noteId)) deleteAdminNote(noteId);
+  res.redirect(`/admin/user/${targetId}?noteDeleted=1#notes`);
 });
 
 // ── Heartbeat: klient POST:ar var 30:e sek för att uppdatera duration_ms ─────

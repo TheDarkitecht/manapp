@@ -351,6 +351,60 @@
       </div>
     </div>
 
+    <!-- Admin notes (interna) -->
+    <div class="section-card" id="notes" style="border-color:rgba(251,191,36,0.25);background:linear-gradient(145deg, rgba(251,191,36,0.04), #0f172a);">
+      <h2>📝 Interna admin-anteckningar</h2>
+      <p class="section-desc">
+        Syns ALDRIG för användaren. Exkluderas från GDPR-export. Använd för
+        support-kontext ("ringde om faktura 12 mars"), observationer eller reminders.
+      </p>
+
+      <% if (typeof noteSaved !== 'undefined' && noteSaved) { %>
+        <div role="status" aria-live="polite" style="padding:0.65rem 0.85rem;background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.25);border-radius:8px;color:#34d399;font-size:0.85rem;font-weight:600;margin-bottom:1rem;">✓ Anteckning sparad</div>
+      <% } %>
+      <% if (typeof noteDeleted !== 'undefined' && noteDeleted) { %>
+        <div role="status" aria-live="polite" style="padding:0.65rem 0.85rem;background:rgba(100,116,139,0.1);border:1px solid rgba(100,116,139,0.25);border-radius:8px;color:#94a3b8;font-size:0.85rem;font-weight:600;margin-bottom:1rem;">✓ Anteckning raderad</div>
+      <% } %>
+
+      <form method="POST" action="/admin/users/<%= profile.user.id %>/notes" style="margin-bottom:1.25rem;">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+        <label for="note-content" style="display:block;margin-bottom:0.4rem;color:#a5b4fc;font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;">Lägg till anteckning</label>
+        <textarea name="content" id="note-content" rows="3" maxlength="5000" required
+                  placeholder="Ex: Ringde 12 mars om faktura. Löste sig. Verkar engagerad, ev. företags-prospect."
+                  style="width:100%;padding:0.75rem 1rem;background:rgba(0,0,0,0.25);color:#f1f5f9;border:1px solid rgba(255,255,255,0.12);border-radius:8px;font-family:inherit;font-size:0.88rem;box-sizing:border-box;resize:vertical;line-height:1.5;"></textarea>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:0.5rem;">
+          <span style="color:#64748b;font-size:0.75rem;">Max 5000 tecken. Ingen redigering — radera + lägg till ny om du behöver ändra.</span>
+          <button type="submit" style="padding:0.55rem 1rem;background:linear-gradient(135deg,#fbbf24,#f59e0b);color:#0f172a;border:none;border-radius:8px;font-weight:700;font-size:0.85rem;cursor:pointer;">Spara anteckning</button>
+        </div>
+      </form>
+
+      <% if (typeof adminNotes !== 'undefined' && adminNotes && adminNotes.length) { %>
+        <div style="border-top:1px solid rgba(255,255,255,0.06);padding-top:1rem;">
+          <% adminNotes.forEach(function(note) { %>
+            <div style="padding:0.85rem 0;border-bottom:1px solid rgba(255,255,255,0.05);">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem;gap:0.75rem;flex-wrap:wrap;">
+                <div style="color:#94a3b8;font-size:0.78rem;">
+                  <strong style="color:#fbbf24;"><%= note.admin_username || 'Admin' %></strong>
+                  · <span style="font-variant-numeric:tabular-nums;"><%= note.created_at ? note.created_at.slice(0,16).replace('T',' ') : '' %></span>
+                </div>
+                <form method="POST" action="/admin/users/<%= profile.user.id %>/notes/<%= note.id %>/delete" style="margin:0;"
+                      onsubmit="return confirm('Radera denna anteckning? Kan inte ångras.')">
+                  <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+                  <button type="submit" aria-label="Radera anteckning" title="Radera anteckning"
+                          style="background:none;border:none;color:#64748b;font-size:0.85rem;cursor:pointer;padding:0.2rem 0.4rem;">🗑</button>
+                </form>
+              </div>
+              <div style="color:#cbd5e1;font-size:0.9rem;line-height:1.5;white-space:pre-wrap;word-wrap:break-word;"><%= note.content %></div>
+            </div>
+          <% }); %>
+        </div>
+      <% } else { %>
+        <div style="color:#64748b;font-style:italic;text-align:center;padding:0.75rem 0;font-size:0.85rem;">
+          Inga anteckningar än. Skriv den första ovan.
+        </div>
+      <% } %>
+    </div>
+
     <!-- Timeline -->
     <div class="section-card">
       <h2>Senaste aktivitet</h2>

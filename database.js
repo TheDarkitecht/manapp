@@ -192,6 +192,21 @@ async function initDatabase() {
     )
   `);
 
+  // Admin notes per user — interna support-anteckningar. Syns ALDRIG för
+  // användaren själv och exkluderas från GDPR-export (de är admin-noteringar
+  // om användaren, inte användarens egna data).
+  db.run(`
+    CREATE TABLE IF NOT EXISTS admin_user_notes (
+      id              INTEGER PRIMARY KEY AUTOINCREMENT,
+      target_user_id  INTEGER NOT NULL,
+      admin_user_id   INTEGER NOT NULL,
+      content         TEXT    NOT NULL,
+      created_at      TEXT    NOT NULL DEFAULT (datetime('now')),
+      FOREIGN KEY (target_user_id) REFERENCES users(id),
+      FOREIGN KEY (admin_user_id)  REFERENCES users(id)
+    )
+  `);
+
   // Page-view tracking (for admin analytics: tid aktiv, mest besökta sidor, funnel)
   // duration_ms fylls i när nästa page_view från samma user loggas (client-side heartbeat uppdaterar senast-aktiva)
   db.run(`
@@ -251,6 +266,8 @@ async function initDatabase() {
     "CREATE INDEX IF NOT EXISTS idx_page_views_path      ON page_views(path)",
     // Session store index
     "CREATE INDEX IF NOT EXISTS idx_sessions_expires     ON sessions(expires_at)",
+    // Admin notes index (för snabb lookup per target user)
+    "CREATE INDEX IF NOT EXISTS idx_admin_notes_target   ON admin_user_notes(target_user_id, created_at DESC)",
   ];
   migrations.forEach(sql => { try { db.run(sql); } catch (_) {} });
 
@@ -473,6 +490,8 @@ function _deleteUserRows(userId) {
     db.run('DELETE FROM pro_call_analyses   WHERE user_id = ?', [userId]);
     // Analytics
     db.run('DELETE FROM page_views          WHERE user_id = ?', [userId]);
+    // Admin notes ABOUT this user (och admin-noteringar de själva skrivit om andra)
+    db.run('DELETE FROM admin_user_notes    WHERE target_user_id = ? OR admin_user_id = ?', [userId, userId]);
     // Sessions (logga ut aktiva sessioner)
     db.run('DELETE FROM sessions            WHERE data LIKE ?', [`%"userId":${userId}%`]);
     // Referrer-länk: om någon hänvisats av den raderade, null:a referrer_id
@@ -1497,6 +1516,36 @@ function markStripeEventProcessed(eventId, eventType) {
   }
 }
 
+// ── Admin notes per user ──────────────────────────────────────────────────────
+
+function getAdminNotesForUser(targetUserId) {
+  // JOIN med users för att få admin-namnet direkt i SELECT
+  return rowsQuery(`
+    SELECT n.id, n.content, n.created_at, n.admin_user_id,
+           u.username AS admin_username
+    FROM admin_user_notes n
+    LEFT JOIN users u ON u.id = n.admin_user_id
+    WHERE n.target_user_id = ?
+    ORDER BY n.created_at DESC
+  `, [targetUserId]);
+}
+
+function addAdminNote(targetUserId, adminUserId, content) {
+  const clean = (content || '').trim().slice(0, 5000);
+  if (!clean) return { ok: false, error: 'Tom anteckning' };
+  db.run(
+    'INSERT INTO admin_user_notes (target_user_id, admin_user_id, content) VALUES (?, ?, ?)',
+    [targetUserId, adminUserId, clean]
+  );
+  saveDb();
+  return { ok: true };
+}
+
+function deleteAdminNote(noteId) {
+  db.run('DELETE FROM admin_user_notes WHERE id = ?', [noteId]);
+  saveDb();
+}
+
 function cleanupOldStripeEvents() {
   // Behåll 90 dagars event-historik för debugging. Äldre events retries
   // Stripe inte efter ~3 dagar så 90 är mer än nog.
@@ -1909,6 +1958,8 @@ module.exports = {
   sessionGet, sessionSet, sessionDestroy, sessionCleanupExpired,
   // Stripe idempotency
   markStripeEventProcessed, cleanupOldStripeEvents,
+  // Admin notes
+  getAdminNotesForUser, addAdminNote, deleteAdminNote,
   // Pro-tier
   createProCallAnalysis, updateProCallAnalysis, getProCallAnalysis,
   getProCallAnalysesForUser, countProCallAnalysesThisMonth,
