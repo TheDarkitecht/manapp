@@ -90,11 +90,18 @@ function formatFileSize(bytes) {
 // ═══════════════════════════════════════════════════════════════════════════
 
 module.exports = function createCallsRouter(deps) {
-  const { requireLogin, requireAdmin, verifyCsrf, generateCsrfToken } = deps;
+  const {
+    requireLogin,
+    requireCIAccess,
+    requireAdminForDestructive,
+    verifyCsrf,
+    generateCsrfToken,
+  } = deps;
   const router = express.Router();
 
-  // Alla routes kräver admin
-  router.use(requireLogin, requireAdmin);
+  // Alla routes kräver inloggning + CI-access (admin eller på CI_ALLOWED_USER_IDS).
+  // Destruktiva routes (radera, retry) dubbelkräver admin — se respektive handler.
+  router.use(requireLogin, requireCIAccess);
 
   // ── Dashboard ─────────────────────────────────────────────────────────────
   router.get('/', (req, res) => {
@@ -253,8 +260,8 @@ module.exports = function createCallsRouter(deps) {
     });
   });
 
-  // ── Retry failed job ─────────────────────────────────────────────────────
-  router.post('/worker/retry/:id', verifyCsrf, (req, res) => {
+  // ── Retry failed job (admin-only) ───────────────────────────────────────
+  router.post('/worker/retry/:id', requireAdminForDestructive, verifyCsrf, (req, res) => {
     const jobId = parseInt(req.params.id, 10);
     if (!jobId) return res.redirect('/admin/calls');
     const job = db.getCallJob(jobId);
@@ -373,9 +380,11 @@ module.exports = function createCallsRouter(deps) {
     const full = db.getCallJobFull(jobId);
     if (!full) return res.redirect('/admin/calls');
     const runs = db.listCallAnalysisRuns(jobId);
+    const isAdmin = req.session?.role === 'admin' || req.session?.impersonatedBy?.role === 'admin';
     res.render('admin/calls/detail', {
       username:         req.session.username,
       role:             req.session.role,
+      isAdmin,
       job:              full.job,
       transcript:       full.transcript,
       analysis:         full.analysis,
@@ -388,8 +397,8 @@ module.exports = function createCallsRouter(deps) {
     });
   });
 
-  // ── Radera ──────────────────────────────────────────────────────────────
-  router.post('/:id/delete', verifyCsrf, async (req, res) => {
+  // ── Radera (admin-only) ─────────────────────────────────────────────────
+  router.post('/:id/delete', requireAdminForDestructive, verifyCsrf, async (req, res) => {
     const jobId = parseInt(req.params.id, 10);
     if (!jobId) return res.redirect('/admin/calls');
     const storageKey = db.deleteCallJob(jobId);

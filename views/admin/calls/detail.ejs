@@ -44,17 +44,19 @@
         <% if (job.storage_key) { %>
           <a class="ci-btn ci-btn-secondary" href="/admin/calls/audio/<%= job.id %>" target="_blank" rel="noopener">🔊 Spela upp</a>
         <% } %>
-        <% if (job.status === 'failed') { %>
+        <% if (isAdmin && job.status === 'failed') { %>
           <form method="POST" action="/admin/calls/worker/retry/<%= job.id %>" style="display:inline;">
             <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
             <button type="submit" class="ci-btn ci-btn-secondary">↻ Försök igen</button>
           </form>
         <% } %>
-        <form method="POST" action="/admin/calls/<%= job.id %>/delete" style="display:inline;"
-              onsubmit="return confirm('Radera detta samtal? Transkript, analys och ljudfil raderas permanent.');">
-          <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
-          <button type="submit" class="ci-btn ci-btn-danger">🗑 Radera</button>
-        </form>
+        <% if (isAdmin) { %>
+          <form method="POST" action="/admin/calls/<%= job.id %>/delete" style="display:inline;"
+                onsubmit="return confirm('Radera detta samtal? Transkript, analys och ljudfil raderas permanent.');">
+            <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+            <button type="submit" class="ci-btn ci-btn-danger">🗑 Radera</button>
+          </form>
+        <% } %>
       </div>
     </div>
 
