@@ -303,11 +303,80 @@ function isReengagementEligible(user, prefs, lastActivity) {
   return daysInactive;
 }
 
+/**
+ * Block-completion-mejl: fires när en user klarar ett block för första gången.
+ * Gratuleras + visas nästa block (om det finns) med CTA-länk.
+ *
+ * @param {object} opts
+ * @param {string} opts.username
+ * @param {object} opts.block         — { id, title, icon, index }
+ * @param {object|null} opts.nextBlock — { id, title, icon, index } eller null om sista
+ * @param {number} opts.totalDone     — hur många block de klarat nu
+ * @param {number} opts.totalBlocks   — totalt antal i kursen (20)
+ * @param {string} opts.baseUrl
+ * @param {string} opts.unsubscribeUrl
+ * @param {boolean} opts.isFreeTierEnd — true om user är free och just klarade sista gratis-blocket
+ */
+function buildBlockCompletion({ username, block, nextBlock, totalDone, totalBlocks, baseUrl, unsubscribeUrl, isFreeTierEnd }) {
+  const pct = Math.round((totalDone / totalBlocks) * 100);
+  const nextCtaUrl = nextBlock ? `${baseUrl}/learn/${nextBlock.id}` : `${baseUrl}/dashboard`;
+
+  const milestone = isFreeTierEnd
+    ? `<div style="margin:24px 0;padding:16px 20px;background:rgba(251,191,36,0.15);border:1px solid rgba(251,191,36,0.4);border-radius:12px;color:#fef3c7;">
+         <strong style="color:#fbbf24;">🎉 Du har klarat hela gratis-tiern!</strong><br>
+         <span style="font-size:14px;">Block 3 och framåt är där det skruvas upp — invändningshantering, mental styrka, AI-verktyg. 199 kr/mån, ingen bindningstid.</span>
+       </div>`
+    : '';
+
+  const nextBlockHtml = nextBlock
+    ? `<div style="margin:24px 0;padding:20px;background:rgba(99,102,241,0.1);border:1px solid rgba(99,102,241,0.3);border-radius:12px;">
+         <div style="color:#a5b4fc;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px;">Nästa upp</div>
+         <div style="color:#f1f5f9;font-size:17px;font-weight:700;margin-bottom:8px;">${nextBlock.icon || ''} Block ${nextBlock.index}: ${nextBlock.title}</div>
+         <a href="${nextCtaUrl}" style="display:inline-block;padding:12px 22px;margin-top:8px;background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;text-decoration:none;border-radius:10px;font-weight:700;font-size:14px;">Öppna Block ${nextBlock.index} →</a>
+       </div>`
+    : `<div style="margin:24px 0;padding:20px;background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.3);border-radius:12px;text-align:center;">
+         <div style="font-size:32px;margin-bottom:8px;">🏆</div>
+         <div style="color:#34d399;font-size:17px;font-weight:700;">Du har klarat alla 20 block!</div>
+         <div style="color:#cbd5e1;font-size:14px;margin-top:4px;">Gå tillbaka till dashboarden och se ditt certifikat.</div>
+       </div>`;
+
+  const content = `
+<h1 style="color:#f1f5f9;font-size:24px;margin:0 0 16px;">Grymt ${username}!</h1>
+<p style="color:#cbd5e1;font-size:16px;line-height:1.6;margin:0 0 16px;">
+  Du klarade precis <strong style="color:#f1f5f9;">${block.icon || ''} Block ${block.index}: ${block.title}</strong>.
+  Det är din ${ordinal(totalDone)} bemästrade block av ${totalBlocks} — <strong style="color:#a5b4fc;">${pct}%</strong> av hela kursen klar.
+</p>
+
+<div style="margin:20px 0;padding:14px;background:rgba(255,255,255,0.03);border-radius:10px;">
+  <div style="height:8px;background:rgba(255,255,255,0.06);border-radius:4px;overflow:hidden;">
+    <div style="height:100%;width:${pct}%;background:linear-gradient(90deg,#6366f1,#8b5cf6);border-radius:4px;"></div>
+  </div>
+  <div style="color:#94a3b8;font-size:12px;text-align:center;margin-top:6px;">${totalDone} av ${totalBlocks} block klara</div>
+</div>
+
+${milestone}
+${nextBlockHtml}
+
+<p style="color:#94a3b8;font-size:13px;line-height:1.5;margin:24px 0 0;">
+  Tips: Öva det du just lärt dig genom att rollspela med Jocke,
+  göra ett verkligt uppdrag och reflektera — det är där skicklighet byggs.
+</p>
+  `;
+
+  return emailShell(content, unsubscribeUrl);
+}
+
+function ordinal(n) {
+  // Enkel svensk ordinal: 1:a, 2:a, 3:e, 4:e, ... — vi kör numerisk för enkelhet
+  return `${n}:e`;
+}
+
 module.exports = {
   createUnsubscribeToken,
   verifyUnsubscribeToken,
   buildWeeklyDigest,
   buildReengagement,
+  buildBlockCompletion,
   isDigestEligible,
   isReengagementEligible,
 };

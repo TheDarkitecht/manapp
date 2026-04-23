@@ -1275,7 +1275,7 @@ app.post('/learn/:id/ova/:rpid/klar', requireLogin, verifyCsrf, (req, res) => {
 
 // ── Quiz result — save score to DB ───────────────────────────────────────────
 
-app.post('/quiz-result', requireLogin, quizLimiter, verifyCsrf, (req, res) => {
+app.post('/quiz-result', requireLogin, quizLimiter, verifyCsrf, async (req, res) => {
   const { blockId, score, total } = req.body;
   if (!blockId || score === undefined || total === undefined) return res.json({ ok: false });
   const scoreNum = parseInt(score);
@@ -1289,8 +1289,52 @@ app.post('/quiz-result', requireLogin, quizLimiter, verifyCsrf, (req, res) => {
   // Allow: free blocks (accessible to all) OR premium/admin users
   const hasAccess = FREE_BLOCK_IDS.includes(block.id) || isPremiumOrHigher(req.session.role);
   if (!hasAccess) return res.json({ ok: false });
-  saveQuizResult(req.session.userId, blockId, scoreNum, totalNum);
+
+  const result = saveQuizResult(req.session.userId, blockId, scoreNum, totalNum);
+  // Svara direkt — mail triggas fire-and-forget så användaren inte väntar
   res.json({ ok: true });
+
+  // ── Block-completion-mejl: fire ENDAST vid första-gångs-pass ─────────────
+  // Idempotent via firstCompletion-flaggan från saveQuizResult
+  if (!result.firstCompletion || !resend) return;
+  try {
+    const user = findUserById(req.session.userId);
+    if (!user?.email) return;
+    const prefs = getUserPreferences(req.session.userId);
+    if (prefs.email_retention === false) return; // respektera opt-out
+
+    const blockIndex = salesBlocks.findIndex(b => b.id === blockId);
+    const nextBlockRaw = salesBlocks[blockIndex + 1];
+    const totalDone = getCompletedBlockCount(req.session.userId);
+
+    // Om user är free och nästa block är premium → flagga som "free-tier-end"
+    const isFreeTierEnd = req.session.role === 'free' &&
+                          FREE_BLOCK_IDS.includes(blockId) &&
+                          nextBlockRaw && !FREE_BLOCK_IDS.includes(nextBlockRaw.id);
+
+    const baseUrl = process.env.APP_URL || `${req.protocol}://${req.get('host')}`;
+    const unsubToken = emails.createUnsubscribeToken(user.id);
+    const unsubUrl   = `${baseUrl}/unsubscribe/${unsubToken}`;
+
+    await resend.emails.send({
+      from:    RESEND_FROM,
+      to:      user.email,
+      subject: `🎯 Grymt, ${user.username}! Du klarade Block ${blockIndex + 1}`,
+      html:    emails.buildBlockCompletion({
+        username:      user.username,
+        block:         { id: block.id, title: block.title, icon: block.icon, index: blockIndex + 1 },
+        nextBlock:     nextBlockRaw ? { id: nextBlockRaw.id, title: nextBlockRaw.title, icon: nextBlockRaw.icon, index: blockIndex + 2 } : null,
+        totalDone,
+        totalBlocks:   salesBlocks.length,
+        baseUrl,
+        unsubscribeUrl: unsubUrl,
+        isFreeTierEnd,
+      }),
+    });
+    console.log(`📧 Block-completion-mejl skickat till ${user.email} (block ${block.id})`);
+  } catch (err) {
+    console.error('Block completion email failed:', err.message);
+  }
 });
 
 // ── Retention: cron digest + unsubscribe ───────────────────────────────────

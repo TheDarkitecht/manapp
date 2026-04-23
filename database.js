@@ -559,8 +559,15 @@ function getBlockProgress(userId) {
 
 function saveQuizResult(userId, blockId, score, total) {
   const completed = score >= Math.ceil(total * 0.6) ? 1 : 0; // 60% to pass
-  // completed_at: set to now if passing, NULL if failing (consistent with completed flag)
   const completedAt = completed ? new Date().toISOString() : null;
+
+  // Kolla befintligt status för att detektera FÖRSTA-GÅNGS-completion
+  // (används för att trigga block-completion-mejl idempotent).
+  const before = db.prepare('SELECT completed FROM block_progress WHERE user_id = ? AND block_id = ?');
+  before.bind([userId, blockId]);
+  const wasCompletedBefore = before.step() ? (before.getAsObject().completed === 1) : false;
+  before.free();
+
   db.run(`
     INSERT INTO block_progress (user_id, block_id, completed, quiz_score, quiz_total, completed_at)
     VALUES (?, ?, ?, ?, ?, ?)
@@ -571,6 +578,11 @@ function saveQuizResult(userId, blockId, score, total) {
       completed_at = excluded.completed_at
   `, [userId, blockId, completed, score, total, completedAt]);
   saveDb();
+
+  return {
+    completed: completed === 1,
+    firstCompletion: completed === 1 && !wasCompletedBefore,
+  };
 }
 
 function getCompletedBlockCount(userId) {
