@@ -4044,3 +4044,200 @@ body.dash-page {
 
 /* Skip-to-main always shows focus ring on :focus too */
 .skip-to-main:focus { outline: 2px solid #fff; outline-offset: 3px; }
+
+
+/* ==========================================================================
+   BUTTON SYSTEM — .btn + BEM-modifiers
+   ==========================================================================
+
+   Enhetligt system för nya/migrerade knappar. Använder tokens från
+   tokens.css. Befintliga äldre klasser (.auth-btn, .lp-btn-primary, .jc-btn,
+   .rp-btn-primary, .success-btn, .btn-logout, .btn-new-note, .btn-cancel,
+   .btn-delete, .btn-del, .btn-email) är kvar orörda för att undvika
+   regressioner — migrera dem i separat pass när möjligt.
+
+   Användning:
+     <button class="btn btn--primary">Spara</button>
+     <a class="btn btn--ghost btn--sm" href="/tillbaka">Tillbaka</a>
+     <button class="btn btn--danger btn--icon" aria-label="Ta bort">✕</button>
+
+   Varianter (roll):    primary / secondary / ghost / success / danger / warning / link
+   Storlekar:           --sm / (default) / --lg / --xl
+   Modifiers:           --full (bredd) / --icon (kvadrat) / --pill (rund)
+   Tillstånd:           :disabled, .is-disabled, .btn--disabled
+   ========================================================================== */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.7rem 1.25rem;
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  font-family: inherit;
+  font-size: 0.95rem;
+  font-weight: 600;
+  line-height: 1.2;
+  text-align: center;
+  text-decoration: none;
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+  transition:
+    transform var(--transition-fast),
+    box-shadow var(--transition-base),
+    background var(--transition-base),
+    border-color var(--transition-base),
+    color var(--transition-base);
+}
+
+.btn:active { transform: translateY(1px); }
+
+.btn:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+/* ── Varianter (roll) ────────────────────────────────────────────────── */
+
+.btn--primary {
+  background: var(--gradient-primary);
+  color: var(--color-text-on-primary);
+}
+.btn--primary:hover:not(:disabled):not(.is-disabled) {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-primary-glow);
+}
+
+.btn--secondary {
+  background: var(--color-overlay-06);
+  color: var(--color-text);
+  border-color: var(--color-border-strong);
+}
+.btn--secondary:hover:not(:disabled):not(.is-disabled) {
+  background: var(--color-overlay-08);
+  border-color: var(--color-primary-a30);
+}
+
+.btn--ghost {
+  background: transparent;
+  color: var(--color-text-muted);
+  border-color: var(--color-border);
+}
+.btn--ghost:hover:not(:disabled):not(.is-disabled) {
+  color: var(--color-text);
+  background: var(--color-primary-a05);
+  border-color: var(--color-primary-a30);
+}
+
+.btn--success {
+  background: linear-gradient(135deg, var(--color-success), var(--color-success-soft));
+  color: var(--color-text-on-primary);
+}
+.btn--success:hover:not(:disabled):not(.is-disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 30px var(--color-success-a30);
+}
+
+.btn--danger {
+  background: var(--color-danger);
+  color: var(--color-text-on-primary);
+  border-color: transparent;
+}
+.btn--danger:hover:not(:disabled):not(.is-disabled) {
+  background: var(--color-danger-strong);
+  transform: translateY(-1px);
+}
+
+.btn--warning {
+  background: linear-gradient(135deg, var(--color-warning), var(--color-warning-strong));
+  color: var(--color-bg-ink);
+}
+.btn--warning:hover:not(:disabled):not(.is-disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 30px var(--color-warning-a20);
+}
+
+.btn--link {
+  padding: 0;
+  background: none;
+  border: none;
+  color: var(--color-primary-soft);
+  font-weight: 500;
+}
+.btn--link:hover:not(:disabled):not(.is-disabled) {
+  color: var(--color-primary-softer);
+  text-decoration: underline;
+}
+
+/* ── Storlekar ───────────────────────────────────────────────────────── */
+
+.btn--sm {
+  padding: 0.45rem 0.85rem;
+  font-size: 0.8rem;
+  border-radius: var(--radius-sm);
+}
+
+.btn--lg {
+  padding: 1rem 2rem;
+  font-size: 1.05rem;
+  border-radius: var(--radius-lg);
+}
+
+.btn--xl {
+  padding: 1.15rem 2.5rem;
+  font-size: 1.1rem;
+  border-radius: var(--radius-lg);
+}
+
+/* ── Modifiers ───────────────────────────────────────────────────────── */
+
+.btn--full { width: 100%; }
+
+.btn--icon {
+  padding: 0.5rem;
+  aspect-ratio: 1;
+  min-width: 2.25rem;
+}
+.btn--icon.btn--sm { padding: 0.35rem; min-width: 1.85rem; }
+.btn--icon.btn--lg { padding: 0.7rem; min-width: 2.75rem; }
+
+.btn--pill { border-radius: var(--radius-pill); }
+
+/* ── Tillstånd ───────────────────────────────────────────────────────── */
+
+.btn:disabled,
+.btn.is-disabled,
+.btn--disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+.btn:disabled:hover,
+.btn.is-disabled:hover,
+.btn--disabled:hover {
+  transform: none;
+  box-shadow: none;
+}
+
+/* Loading state — visuell indikator (behöver ingen JS) */
+.btn.is-loading {
+  pointer-events: none;
+  opacity: 0.7;
+  position: relative;
+}
+.btn.is-loading::after {
+  content: "";
+  width: 0.9em;
+  height: 0.9em;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: btn-spin 0.6s linear infinite;
+  margin-left: 0.25rem;
+}
+@keyframes btn-spin {
+  to { transform: rotate(360deg); }
+}
