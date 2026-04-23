@@ -171,6 +171,15 @@ async function initDatabase() {
     )
   `);
 
+  // Session-store (ersätter MemoryStore så användare inte loggas ut vid redeploy)
+  db.run(`
+    CREATE TABLE IF NOT EXISTS sessions (
+      sid        TEXT    PRIMARY KEY,
+      data       TEXT    NOT NULL,
+      expires_at INTEGER NOT NULL
+    )
+  `);
+
   // Page-view tracking (for admin analytics: tid aktiv, mest besökta sidor, funnel)
   // duration_ms fylls i när nästa page_view från samma user loggas (client-side heartbeat uppdaterar senast-aktiva)
   db.run(`
@@ -220,6 +229,8 @@ async function initDatabase() {
     // Page-view tracking index
     "CREATE INDEX IF NOT EXISTS idx_page_views_user_date ON page_views(user_id, visited_at DESC)",
     "CREATE INDEX IF NOT EXISTS idx_page_views_path      ON page_views(path)",
+    // Session store index
+    "CREATE INDEX IF NOT EXISTS idx_sessions_expires     ON sessions(expires_at)",
   ];
   migrations.forEach(sql => { try { db.run(sql); } catch (_) {} });
 
@@ -1190,6 +1201,64 @@ function updateLastPageViewDuration(userId, durationMs) {
   }
 }
 
+// ── Session-store primitives ──────────────────────────────────────────────────
+// Används av SqlJsSessionStore-klassen i server.js. Returnerar plain JSON så
+// express-session kan konsumera det; all serialisering sker i store-wrapper.
+
+function sessionGet(sid) {
+  try {
+    const s = db.prepare('SELECT data, expires_at FROM sessions WHERE sid = ?');
+    s.bind([sid]);
+    if (s.step()) {
+      const row = s.getAsObject();
+      s.free();
+      if (row.expires_at < Date.now()) {
+        // Utgången — rensa synkront
+        db.run('DELETE FROM sessions WHERE sid = ?', [sid]);
+        _markAnalyticsDirty();
+        return null;
+      }
+      return row.data;
+    }
+    s.free();
+    return null;
+  } catch (err) {
+    console.error('sessionGet failed:', err.message);
+    return null;
+  }
+}
+
+function sessionSet(sid, data, expiresAt) {
+  try {
+    db.run(
+      `INSERT INTO sessions (sid, data, expires_at) VALUES (?, ?, ?)
+       ON CONFLICT(sid) DO UPDATE SET data = excluded.data, expires_at = excluded.expires_at`,
+      [sid, data, expiresAt]
+    );
+    _markAnalyticsDirty(); // batchas — sessions är skrivtunga
+  } catch (err) {
+    console.error('sessionSet failed:', err.message);
+  }
+}
+
+function sessionDestroy(sid) {
+  try {
+    db.run('DELETE FROM sessions WHERE sid = ?', [sid]);
+    _markAnalyticsDirty();
+  } catch (err) {
+    console.error('sessionDestroy failed:', err.message);
+  }
+}
+
+function sessionCleanupExpired() {
+  try {
+    db.run('DELETE FROM sessions WHERE expires_at < ?', [Date.now()]);
+    saveDb();
+  } catch (err) {
+    console.error('sessionCleanupExpired failed:', err.message);
+  }
+}
+
 /**
  * Rensa gamla page_views (retention = 90 dagar). Körs från cron i server.js.
  * Håller tabellen liten så queries förblir snabba och disken inte fylls.
@@ -1398,6 +1467,8 @@ module.exports = {
   getFunnelMetrics,
   // Page-view tracking
   logPageView, updateLastPageViewDuration, cleanupOldPageViews, flushAnalytics,
+  // Session store
+  sessionGet, sessionSet, sessionDestroy, sessionCleanupExpired,
   // Pro-tier
   createProCallAnalysis, updateProCallAnalysis, getProCallAnalysis,
   getProCallAnalysesForUser, countProCallAnalysesThisMonth,

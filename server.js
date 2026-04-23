@@ -25,6 +25,7 @@ const {
   getAllUsersWithEmail,
   getAdminAnalytics, getUserAnalyticsProfile, getFunnelMetrics,
   logPageView, updateLastPageViewDuration, cleanupOldPageViews, flushAnalytics,
+  sessionGet, sessionSet, sessionDestroy, sessionCleanupExpired,
   createProCallAnalysis, updateProCallAnalysis, getProCallAnalysis,
   getProCallAnalysesForUser, canProUserUploadCall, deleteProCallAnalysis,
   PRO_CALL_LIMIT_PER_MONTH,
@@ -283,13 +284,46 @@ app.set('view engine', 'ejs');
 
 const isProd = process.env.NODE_ENV === 'production' || !!process.env.RAILWAY_ENVIRONMENT;
 
+// ── SQL.js-backed session store ────────────────────────────────────────────
+// Utan detta använder express-session default MemoryStore — alla användare
+// loggas ut på varje Railway-deploy. Den här storen persisterar sessions i
+// samma sql.js-DB som resten av datan, så sessions överlever redeploy.
+class SqlJsSessionStore extends session.Store {
+  constructor() { super(); }
+  get(sid, cb) {
+    try {
+      const data = sessionGet(sid);
+      if (!data) return cb(null, null);
+      cb(null, JSON.parse(data));
+    } catch (err) { cb(err); }
+  }
+  set(sid, sessionData, cb) {
+    try {
+      // maxAge i cookie är default 8h — använd samma för expires_at
+      const ttlMs = (sessionData.cookie && sessionData.cookie.maxAge) || 1000 * 60 * 60 * 8;
+      const expiresAt = Date.now() + ttlMs;
+      sessionSet(sid, JSON.stringify(sessionData), expiresAt);
+      cb && cb(null);
+    } catch (err) { cb && cb(err); }
+  }
+  destroy(sid, cb) {
+    try { sessionDestroy(sid); cb && cb(null); } catch (err) { cb && cb(err); }
+  }
+  touch(sid, sessionData, cb) {
+    // "Rör" sessionen — förlänger expires_at utan att ändra data
+    this.set(sid, sessionData, cb);
+  }
+}
+
 app.use(session({
+  store:  new SqlJsSessionStore(),
   name:   'sid',  // don't leak 'connect.sid' as the session cookie name
   secret: process.env.SESSION_SECRET || 'change-in-production',
   resave: false,
   saveUninitialized: false,
+  rolling: true,  // uppdatera expires_at på varje request (keeps them logged in while active)
   cookie: {
-    maxAge:   1000 * 60 * 60 * 8, // 8 hours
+    maxAge:   1000 * 60 * 60 * 24 * 30, // 30 dagar — bara förlängs när de används aktivt
     httpOnly: true,
     secure:   isProd,             // HTTPS-only in production
     sameSite: 'lax',              // CSRF mitigation
@@ -2713,6 +2747,10 @@ async function startServer() {
   // och håller admin-analytics-queries snabba. Körs vid uppstart + dagligen.
   cleanupOldPageViews();
   setInterval(cleanupOldPageViews, 24 * 60 * 60 * 1000);
+
+  // Clean up utgångna sessions — körs var 6:e timme
+  sessionCleanupExpired();
+  setInterval(sessionCleanupExpired, 6 * 60 * 60 * 1000);
 
   // Graceful shutdown: flusha analytics-buffer innan processen dör.
   // Railway skickar SIGTERM vid redeploy — utan detta förloras analytics i flight.
