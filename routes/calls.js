@@ -70,6 +70,19 @@ function makeBatchId() {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
 }
 
+// ── UTF-8 fix för filnamn ──────────────────────────────────────────────────
+// Multer dekodar multipart-filename som Latin-1 per default (busenkla Node-
+// bugg). Svenska tecken blir mojibake: "tävling" → "tÃ¤vling". Reverse:
+// re-tolka bytes som UTF-8. Säker no-op om filnamnet redan är ASCII.
+function decodeFilename(name) {
+  if (!name) return name;
+  try {
+    return Buffer.from(name, 'latin1').toString('utf8');
+  } catch (_) {
+    return name;
+  }
+}
+
 // ── Format-helpers för views ───────────────────────────────────────────────
 function formatDuration(sec) {
   if (!sec && sec !== 0) return '—';
@@ -197,13 +210,16 @@ module.exports = function createCallsRouter(deps) {
 
     for (const file of files) {
       let jobId = null;
+      // Multer returnerar filnamnet som Latin-1 — konvertera till UTF-8 så
+      // svenska tecken (å/ä/ö) sparas korrekt i DB och i R2-storage_key.
+      const cleanName = decodeFilename(file.originalname);
       try {
         // 1. Skapa jobb som 'uploading' — worker pollar bara 'pending', så
         //    detta håller workern borta tills storage_key är säkert satt.
         //    Förhindrar race där worker plockar jobbet innan R2-put är klar.
         jobId = db.createCallJob(req.session.userId, {
           batch_id:          batchId,
-          original_name:     file.originalname,
+          original_name:     cleanName,
           file_size:         file.size,
           mime_type:         file.mimetype,
           title:             null,
@@ -215,7 +231,7 @@ module.exports = function createCallsRouter(deps) {
         // 2. Läs buffer från disk, lagra i R2/final disk
         const buffer = fs.readFileSync(file.path);
         const { storageKey } = await storage.putAudio(jobId, buffer, {
-          filename: file.originalname,
+          filename: cleanName,
           mimeType: file.mimetype,
         });
 
