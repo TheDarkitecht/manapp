@@ -23,7 +23,8 @@ const {
   getUserPreferences, setUserPreferences,
   getDailyChallenge, saveDailyChallenge, completeDailyChallenge,
   getAllUsersWithEmail,
-  getAdminAnalytics,
+  getAdminAnalytics, getUserAnalyticsProfile, getFunnelMetrics,
+  logPageView, updateLastPageViewDuration,
   createProCallAnalysis, updateProCallAnalysis, getProCallAnalysis,
   getProCallAnalysesForUser, canProUserUploadCall, deleteProCallAnalysis,
   PRO_CALL_LIMIT_PER_MONTH,
@@ -304,6 +305,17 @@ app.use((req, res, next) => {
       req.session.pendingReferralCode = ref.toUpperCase();
       req.session.referralCapturedAt = Date.now();
     }
+  }
+  next();
+});
+
+// ── Page-view tracker: logga sidbesök för inloggade (admin analytics) ─────────
+// Skippa assets, api-endpoints och health-checks. Bara "riktiga" sidor.
+const PAGE_VIEW_SKIP = /^\/(style\.css|gamification\.css|pro\.css|favicon|robots|sitemap|_|heartbeat|ping|stripe-webhook|admin\/analytics-api)/i;
+app.use((req, res, next) => {
+  if (req.method === 'GET' && req.session && req.session.userId && !PAGE_VIEW_SKIP.test(req.path)) {
+    // Fire-and-forget: blockera aldrig requesten
+    try { logPageView(req.session.userId, req.path); } catch (_) {}
   }
   next();
 });
@@ -1976,15 +1988,46 @@ app.get('/admin', requireLogin, requireAdmin, (req, res) => {
 
 app.get('/admin/analytics', requireLogin, requireAdmin, (req, res) => {
   const analytics = getAdminAnalytics();
+  const funnel = getFunnelMetrics();
   // Berika blockEngagement med block-titlar för läsbarhet
   const blockTitles = {};
   salesBlocks.forEach((b, i) => { blockTitles[b.id] = { title: b.title, index: i + 1, icon: b.icon }; });
   res.render('admin-analytics', {
     username: req.session.username,
     analytics,
+    funnel,
     blockTitles,
     totalBlocks: salesBlocks.length,
   });
+});
+
+// ── Admin: djupdyk på enskild användare ──────────────────────────────────────
+// Visar hela beteendeprofilen: journey-stats, tid aktiv, top-sidor, timeline, referrals.
+app.get('/admin/user/:id', requireLogin, requireAdmin, (req, res) => {
+  const targetId = Number(req.params.id);
+  if (!Number.isFinite(targetId)) return res.redirect('/admin');
+  const profile = getUserAnalyticsProfile(targetId);
+  if (!profile) return res.redirect('/admin');
+  // Berika timeline-block-ids med titlar
+  const blockTitles = {};
+  salesBlocks.forEach((b, i) => { blockTitles[b.id] = { title: b.title, index: i + 1, icon: b.icon }; });
+  res.render('admin-user-detail', {
+    username: req.session.username,
+    profile,
+    blockTitles,
+    csrfToken: generateCsrfToken(req),
+  });
+});
+
+// ── Heartbeat: klient POST:ar var 60:e sek för att uppdatera duration_ms ─────
+// Body: { durationMs: antal ms sedan sidan laddades }. Ingen CSRF — idempotent nonce.
+app.post('/heartbeat', (req, res) => {
+  if (!req.session || !req.session.userId) return res.status(204).end();
+  const d = Number(req.body && req.body.durationMs);
+  if (Number.isFinite(d) && d > 0 && d < 7200000) {
+    try { updateLastPageViewDuration(req.session.userId, d); } catch (_) {}
+  }
+  res.status(204).end();
 });
 
 app.post('/admin/users/:id/role', requireLogin, requireAdmin, verifyCsrf, (req, res) => {

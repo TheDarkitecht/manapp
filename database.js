@@ -171,6 +171,19 @@ async function initDatabase() {
     )
   `);
 
+  // Page-view tracking (for admin analytics: tid aktiv, mest besökta sidor, funnel)
+  // duration_ms fylls i när nästa page_view från samma user loggas (client-side heartbeat uppdaterar senast-aktiva)
+  db.run(`
+    CREATE TABLE IF NOT EXISTS page_views (
+      id          INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id     INTEGER NOT NULL,
+      path        TEXT    NOT NULL,
+      visited_at  TEXT    NOT NULL DEFAULT (datetime('now')),
+      duration_ms INTEGER,
+      FOREIGN KEY (user_id) REFERENCES users(id)
+    )
+  `);
+
   // Migration: add new columns if they don't exist yet.
   // SQLite doesn't support "ADD COLUMN IF NOT EXISTS" so we catch errors.
   const migrations = [
@@ -204,6 +217,9 @@ async function initDatabase() {
     "ALTER TABLE users ADD COLUMN referrer_id   INTEGER",
     "CREATE UNIQUE INDEX IF NOT EXISTS idx_users_referral_code ON users(referral_code) WHERE referral_code IS NOT NULL",
     "CREATE INDEX IF NOT EXISTS idx_users_referrer_id          ON users(referrer_id)",
+    // Page-view tracking index
+    "CREATE INDEX IF NOT EXISTS idx_page_views_user_date ON page_views(user_id, visited_at DESC)",
+    "CREATE INDEX IF NOT EXISTS idx_page_views_path      ON page_views(path)",
   ];
   migrations.forEach(sql => { try { db.run(sql); } catch (_) {} });
 
@@ -1098,6 +1114,215 @@ function getAdminAnalytics() {
   };
 }
 
+// ── Page-view tracking & user analytics ───────────────────────────────────────
+
+/**
+ * Logga page-view. Kallas från middleware i server.js på GET-requests
+ * för inloggade användare (endast "content"-paths, ej /style.css etc.).
+ */
+function logPageView(userId, path) {
+  if (!userId || !path) return;
+  try {
+    db.run(
+      'INSERT INTO page_views (user_id, path, visited_at) VALUES (?, ?, datetime(\'now\'))',
+      [userId, path.slice(0, 500)]
+    );
+    // Persistens skippas här för prestanda — saveDb() körs ändå regelbundet från andra writes.
+    // Alternativt: write-buffer men keep-it-simple.
+  } catch (err) {
+    // Tyst fel — analytics får aldrig ta ner appen
+    console.error('logPageView failed:', err.message);
+  }
+}
+
+/**
+ * Uppdaterar duration_ms för senaste page_view. Kallas från heartbeat-endpoint
+ * (klient POST:ar var 60:e sekund så vi vet att de fortfarande är där).
+ */
+function updateLastPageViewDuration(userId, durationMs) {
+  if (!userId || !Number.isFinite(durationMs) || durationMs < 0) return;
+  try {
+    // Hitta senaste page_view för användaren och sätt duration
+    db.run(
+      `UPDATE page_views
+       SET duration_ms = ?
+       WHERE id = (
+         SELECT id FROM page_views
+         WHERE user_id = ?
+         ORDER BY visited_at DESC
+         LIMIT 1
+       )`,
+      [Math.min(durationMs, 7200000), userId] // cap 2h per page
+    );
+  } catch (err) {
+    console.error('updateLastPageViewDuration failed:', err.message);
+  }
+}
+
+/**
+ * Komplett beteendeprofil för en enskild användare.
+ * Används av /admin/user/:id.
+ */
+function getUserAnalyticsProfile(userId) {
+  const user = findUserById(userId);
+  if (!user) return null;
+
+  const scalar = (sql, params = []) => {
+    const s = db.prepare(sql);
+    if (params.length) s.bind(params);
+    s.step();
+    const r = s.getAsObject();
+    s.free();
+    return r;
+  };
+  const rows = (sql, params = []) => {
+    const s = db.prepare(sql);
+    if (params.length) s.bind(params);
+    const out = [];
+    while (s.step()) out.push(s.getAsObject());
+    s.free();
+    return out;
+  };
+
+  // Journey
+  const blocksOpened   = scalar('SELECT COUNT(*) AS n FROM block_progress WHERE user_id = ?', [userId]).n;
+  const blocksPassed   = scalar('SELECT COUNT(*) AS n FROM block_progress WHERE user_id = ? AND completed = 1', [userId]).n;
+  const avgQuizPct     = scalar('SELECT AVG(CASE WHEN quiz_total > 0 THEN (CAST(quiz_score AS FLOAT)/quiz_total)*100 ELSE NULL END) AS n FROM block_progress WHERE user_id = ?', [userId]).n || 0;
+  const roleplayCount  = scalar('SELECT COUNT(*) AS n FROM user_roleplays WHERE user_id = ?', [userId]).n;
+  const reflectionCount= scalar('SELECT COUNT(*) AS n FROM user_reflections WHERE user_id = ?', [userId]).n;
+  const missionStarted = scalar('SELECT COUNT(*) AS n FROM user_missions WHERE user_id = ?', [userId]).n;
+  const missionDone    = scalar('SELECT COUNT(*) AS n FROM user_missions WHERE user_id = ? AND completed_at IS NOT NULL', [userId]).n;
+  const actionsLogged  = scalar('SELECT COUNT(*) AS n, COALESCE(SUM(count),0) AS units FROM user_actions WHERE user_id = ?', [userId]);
+  const challengesDone = scalar('SELECT COUNT(*) AS n FROM daily_challenges WHERE user_id = ? AND completed_at IS NOT NULL', [userId]).n;
+  const proCalls       = scalar('SELECT COUNT(*) AS n FROM pro_call_analyses WHERE user_id = ?', [userId]).n;
+
+  // Session: total tid aktiv (summa av duration_ms på page_views)
+  const sessionStats = scalar(
+    `SELECT COALESCE(SUM(duration_ms), 0) AS total_ms,
+            COUNT(*) AS page_views,
+            MIN(visited_at) AS first_seen,
+            MAX(visited_at) AS last_seen
+     FROM page_views WHERE user_id = ?`,
+    [userId]
+  );
+
+  // Top-besökta sidor (top 10)
+  const topPages = rows(
+    `SELECT path, COUNT(*) AS visits, COALESCE(SUM(duration_ms),0) AS time_ms
+     FROM page_views WHERE user_id = ?
+     GROUP BY path
+     ORDER BY time_ms DESC, visits DESC
+     LIMIT 10`,
+    [userId]
+  );
+
+  // Aktivitet per dag senaste 30 dagar (för sparkline)
+  const dailyActivity = rows(
+    `SELECT DATE(visited_at) AS day, COUNT(*) AS views,
+            COALESCE(SUM(duration_ms),0) AS time_ms
+     FROM page_views
+     WHERE user_id = ? AND visited_at > datetime('now', '-30 days')
+     GROUP BY DATE(visited_at)
+     ORDER BY day ASC`,
+    [userId]
+  );
+
+  // Referrals gjorda (bakåtlänk — andra users med referrer_id = userId)
+  const referralsMade = rows(
+    `SELECT id, username, role, created_at FROM users WHERE referrer_id = ? ORDER BY created_at DESC`,
+    [userId]
+  );
+
+  // Timeline: senaste 30 event över alla tabeller
+  const timeline = rows(
+    `SELECT 'quiz' AS type, block_id AS detail,
+            CASE WHEN completed = 1 THEN 'klarade provet' ELSE 'startade' END AS label,
+            completed_at AS at
+       FROM block_progress WHERE user_id = ? AND completed_at IS NOT NULL
+     UNION ALL
+     SELECT 'roleplay', block_id || '/' || roleplay_id, 'rollspel',     completed_at FROM user_roleplays    WHERE user_id = ?
+     UNION ALL
+     SELECT 'reflection', block_id,                    'reflektion',   created_at   FROM user_reflections  WHERE user_id = ?
+     UNION ALL
+     SELECT 'mission_start', block_id,                 'startade uppdrag', started_at   FROM user_missions WHERE user_id = ?
+     UNION ALL
+     SELECT 'mission_done', block_id,                  'klarade uppdrag',  completed_at FROM user_missions WHERE user_id = ? AND completed_at IS NOT NULL
+     UNION ALL
+     SELECT 'action', category,                        'loggade aktion',   created_at FROM user_actions    WHERE user_id = ?
+     UNION ALL
+     SELECT 'pro_call', COALESCE(title,'samtal'),      'laddade upp samtal', created_at FROM pro_call_analyses WHERE user_id = ?
+     ORDER BY at DESC
+     LIMIT 30`,
+    [userId, userId, userId, userId, userId, userId, userId]
+  );
+
+  // Referrer (om någon värvat dem)
+  let referrer = null;
+  if (user.referrer_id) {
+    referrer = scalar('SELECT id, username FROM users WHERE id = ?', [user.referrer_id]);
+  }
+
+  return {
+    user,
+    referrer,
+    journey: {
+      blocksOpened,
+      blocksPassed,
+      avgQuizPct: Math.round(avgQuizPct),
+      roleplays: roleplayCount,
+      reflections: reflectionCount,
+      missionsStarted: missionStarted,
+      missionsDone: missionDone,
+      actionsLogged: actionsLogged.n,
+      actionUnits: actionsLogged.units,
+      challengesDone,
+      proCalls,
+    },
+    session: {
+      totalMs:   sessionStats.total_ms,
+      pageViews: sessionStats.page_views,
+      firstSeen: sessionStats.first_seen,
+      lastSeen:  sessionStats.last_seen,
+    },
+    topPages,
+    dailyActivity,
+    referralsMade,
+    timeline,
+  };
+}
+
+/**
+ * Funnel-metrics: hur många användare når varje steg i onboarding?
+ * Registrerad → öppnat block → klarat första provet → gjort första reflektionen → loggat första aktionen → blivit premium
+ */
+function getFunnelMetrics() {
+  const s = (sql) => { const st = db.prepare(sql); st.step(); const r = st.getAsObject(); st.free(); return r; };
+
+  const registered     = s('SELECT COUNT(*) AS n FROM users').n;
+  const openedBlock    = s('SELECT COUNT(DISTINCT user_id) AS n FROM block_progress').n;
+  const passedFirst    = s('SELECT COUNT(DISTINCT user_id) AS n FROM block_progress WHERE completed = 1').n;
+  const firstReflect   = s('SELECT COUNT(DISTINCT user_id) AS n FROM user_reflections').n;
+  const firstAction    = s('SELECT COUNT(DISTINCT user_id) AS n FROM user_actions').n;
+  const firstRoleplay  = s('SELECT COUNT(DISTINCT user_id) AS n FROM user_roleplays').n;
+  const firstMission   = s('SELECT COUNT(DISTINCT user_id) AS n FROM user_missions WHERE completed_at IS NOT NULL').n;
+  const becamePremium  = s("SELECT COUNT(*) AS n FROM users WHERE role IN ('premium','pro','admin')").n;
+  const becamePro      = s("SELECT COUNT(*) AS n FROM users WHERE role IN ('pro','admin')").n;
+
+  const pct = (n) => registered > 0 ? Math.round((n / registered) * 100) : 0;
+
+  return [
+    { key: 'registered',     label: 'Registrerad',              count: registered,    pct: 100 },
+    { key: 'openedBlock',    label: 'Öppnade ett block',        count: openedBlock,   pct: pct(openedBlock) },
+    { key: 'passedFirst',    label: 'Klarade ett prov',         count: passedFirst,   pct: pct(passedFirst) },
+    { key: 'firstRoleplay',  label: 'Gjorde ett rollspel',      count: firstRoleplay, pct: pct(firstRoleplay) },
+    { key: 'firstReflect',   label: 'Skrev en reflektion',      count: firstReflect,  pct: pct(firstReflect) },
+    { key: 'firstMission',   label: 'Klarade ett uppdrag',      count: firstMission,  pct: pct(firstMission) },
+    { key: 'firstAction',    label: 'Loggade en aktion',        count: firstAction,   pct: pct(firstAction) },
+    { key: 'becamePremium',  label: 'Blev Premium eller högre', count: becamePremium, pct: pct(becamePremium) },
+    { key: 'becamePro',      label: 'Blev Pro eller högre',     count: becamePro,     pct: pct(becamePro) },
+  ];
+}
+
 // ── Exports ───────────────────────────────────────────────────────────────────
 
 module.exports = {
@@ -1125,6 +1350,10 @@ module.exports = {
   getAllUsersWithEmail,
   // Admin analytics
   getAdminAnalytics,
+  getUserAnalyticsProfile,
+  getFunnelMetrics,
+  // Page-view tracking
+  logPageView, updateLastPageViewDuration,
   // Pro-tier
   createProCallAnalysis, updateProCallAnalysis, getProCallAnalysis,
   getProCallAnalysesForUser, countProCallAnalysesThisMonth,

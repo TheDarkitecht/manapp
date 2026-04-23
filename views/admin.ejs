@@ -96,10 +96,10 @@
               <tr data-search="<%= (u.username + ' ' + (u.email||'')).toLowerCase() %>">
                 <td class="td-id"><%= u.id %></td>
                 <td>
-                  <div class="user-cell">
+                  <a href="/admin/user/<%= u.id %>" class="user-cell" style="display:flex;align-items:center;gap:0.5rem;text-decoration:none;color:inherit;" title="Öppna beteendeprofil för <%= u.username %>">
                     <div class="user-avatar"><%= u.username[0].toUpperCase() %></div>
-                    <span><%= u.username %></span>
-                  </div>
+                    <span style="color:#a5b4fc;border-bottom:1px dashed rgba(165,180,252,0.3);"><%= u.username %></span>
+                  </a>
                 </td>
                 <td class="td-email"><%= u.email || '—' %></td>
                 <td>

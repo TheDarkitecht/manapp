@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin — <%= profile.user.username %></title>
+  <meta name="robots" content="noindex" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>👤</text></svg>" />
+  <link rel="stylesheet" href="/style.css" />
+  <link rel="stylesheet" href="/gamification.css" />
+  <style>
+    .ud-wrap { max-width: 1200px; margin: 0 auto; padding: 2rem 1.25rem; }
+    .ud-nav {
+      display: flex; gap: 0.75rem; align-items: center; margin-bottom: 1.5rem;
+      font-size: 0.9rem;
+    }
+    .ud-nav a { color: #a5b4fc; text-decoration: none; }
+    .ud-nav a:hover { text-decoration: underline; }
+    .ud-nav .sep { color: #475569; }
+
+    .ud-header {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 1.5rem; flex-wrap: wrap; margin-bottom: 2rem;
+      padding: 1.5rem; border-radius: 14px;
+      background: linear-gradient(145deg, #1e293b, #0f172a);
+      border: 1px solid rgba(255,255,255,0.08);
+    }
+    .ud-header-left { display: flex; align-items: center; gap: 1.25rem; flex: 1; min-width: 0; }
+    .ud-avatar {
+      width: 72px; height: 72px; border-radius: 50%;
+      background: linear-gradient(135deg, #6366f1, #8b5cf6);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.75rem; font-weight: 800; color: #fff;
+      flex-shrink: 0;
+    }
+    .ud-header h1 { margin: 0; color: #f1f5f9; font-size: 1.4rem; word-break: break-all; }
+    .ud-header .meta { color: #94a3b8; font-size: 0.85rem; margin-top: 0.25rem; }
+    .ud-role {
+      display: inline-block; padding: 0.25rem 0.65rem; border-radius: 999px;
+      font-size: 0.75rem; font-weight: 700; margin-left: 0.5rem;
+    }
+    .ud-role-free    { background: rgba(100,116,139,0.15); color: #94a3b8; }
+    .ud-role-premium { background: rgba(34,197,94,0.15);   color: #4ade80; }
+    .ud-role-pro     { background: rgba(251,191,36,0.15);  color: #fbbf24; }
+    .ud-role-admin   { background: rgba(239,68,68,0.15);   color: #f87171; }
+
+    .kpi-grid {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 0.85rem; margin-bottom: 2rem;
+    }
+    .kpi-card {
+      padding: 1rem 1.25rem;
+      background: linear-gradient(145deg, #1e293b, #0f172a);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 12px;
+    }
+    .kpi-label {
+      font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.08em;
+      color: #a5b4fc; font-weight: 700; margin-bottom: 0.35rem;
+    }
+    .kpi-value {
+      font-size: 1.6rem; font-weight: 800; color: #f1f5f9; line-height: 1;
+      font-variant-numeric: tabular-nums;
+    }
+    .kpi-sub { font-size: 0.75rem; color: #94a3b8; margin-top: 0.35rem; }
+
+    .ud-grid {
+      display: grid; grid-template-columns: 1fr 1fr;
+      gap: 1.25rem; margin-bottom: 1.5rem;
+    }
+    @media (max-width: 760px) { .ud-grid { grid-template-columns: 1fr; } }
+
+    .section-card {
+      background: linear-gradient(145deg, #1e293b, #0f172a);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 14px; padding: 1.25rem 1.5rem; margin-bottom: 1.25rem;
+    }
+    .section-card h2 {
+      margin: 0 0 0.25rem; color: #f1f5f9; font-size: 1rem;
+    }
+    .section-desc {
+      color: #94a3b8; font-size: 0.8rem; margin: 0 0 1rem;
+    }
+
+    .ud-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+    .ud-table th, .ud-table td {
+      padding: 0.55rem 0.5rem; text-align: left;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+    }
+    .ud-table th {
+      font-weight: 700; color: #a5b4fc; text-transform: uppercase;
+      letter-spacing: 0.05em; font-size: 0.72rem;
+    }
+    .ud-table td { color: #cbd5e1; }
+    .ud-table tr:last-child td { border-bottom: none; }
+
+    .timeline-item {
+      display: grid; grid-template-columns: 110px 90px 1fr;
+      gap: 0.5rem; padding: 0.55rem 0;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+      font-size: 0.85rem; color: #cbd5e1;
+    }
+    .timeline-item:last-child { border-bottom: none; }
+    .timeline-item .time { color: #64748b; font-variant-numeric: tabular-nums; font-size: 0.78rem; }
+    .timeline-item .type {
+      display: inline-block; padding: 0.15rem 0.55rem; border-radius: 999px;
+      font-size: 0.7rem; font-weight: 700; text-align: center;
+      background: rgba(99,102,241,0.12); color: #a5b4fc;
+    }
+    .timeline-item .type-quiz         { background: rgba(16,185,129,0.12); color: #34d399; }
+    .timeline-item .type-roleplay     { background: rgba(139,92,246,0.12); color: #c4b5fd; }
+    .timeline-item .type-reflection   { background: rgba(251,191,36,0.12); color: #fbbf24; }
+    .timeline-item .type-mission_done { background: rgba(34,197,94,0.18);  color: #4ade80; }
+    .timeline-item .type-mission_start{ background: rgba(59,130,246,0.12); color: #60a5fa; }
+    .timeline-item .type-action       { background: rgba(244,114,182,0.12); color: #f472b6; }
+    .timeline-item .type-pro_call     { background: rgba(251,191,36,0.18); color: #fbbf24; }
+
+    .bar-row {
+      display: grid; grid-template-columns: 1fr 70px;
+      gap: 0.5rem; align-items: center; margin-bottom: 0.5rem;
+      font-size: 0.85rem; color: #cbd5e1;
+    }
+    .bar-track {
+      height: 6px; background: rgba(255,255,255,0.05); border-radius: 3px; overflow: hidden;
+    }
+    .bar-fill {
+      height: 100%; background: linear-gradient(90deg, #6366f1, #8b5cf6); border-radius: 3px;
+    }
+    .bar-path { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .bar-value { text-align: right; color: #a5b4fc; font-weight: 700; font-size: 0.8rem; }
+
+    .empty-state {
+      color: #64748b; font-style: italic; padding: 1rem 0; text-align: center;
+      font-size: 0.85rem;
+    }
+
+    .spark {
+      display: grid; grid-auto-flow: column; grid-auto-columns: 1fr;
+      gap: 2px; height: 50px; margin-top: 0.5rem;
+      align-items: end;
+    }
+    .spark-bar {
+      background: linear-gradient(180deg, #8b5cf6, #6366f1);
+      border-radius: 2px 2px 0 0;
+      min-height: 2px;
+    }
+    .spark-bar:hover { background: linear-gradient(180deg, #a5b4fc, #818cf8); }
+
+    .ud-actions {
+      display: flex; gap: 0.5rem; flex-wrap: wrap;
+    }
+    .ud-actions form { margin: 0; }
+    .ud-btn {
+      padding: 0.5rem 0.85rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1);
+      background: rgba(255,255,255,0.04); color: #cbd5e1; font-size: 0.82rem;
+      cursor: pointer; text-decoration: none; display: inline-block;
+    }
+    .ud-btn:hover { border-color: rgba(99,102,241,0.4); color: #f1f5f9; }
+    .ud-btn-primary {
+      background: linear-gradient(135deg, #6366f1, #8b5cf6);
+      color: #fff; border: none;
+    }
+  </style>
+</head>
+<body class="block-page">
+
+  <main class="ud-wrap">
+
+    <div class="ud-nav">
+      <a href="/admin">← Admin</a>
+      <span class="sep">/</span>
+      <a href="/admin/analytics">Analytics</a>
+      <span class="sep">/</span>
+      <span style="color:#cbd5e1;"><%= profile.user.username %></span>
+    </div>
+
+    <!-- Header -->
+    <div class="ud-header">
+      <div class="ud-header-left">
+        <div class="ud-avatar"><%= profile.user.username.charAt(0).toUpperCase() %></div>
+        <div style="min-width:0;flex:1;">
+          <h1>
+            <%= profile.user.username %>
+            <span class="ud-role ud-role-<%= profile.user.role %>">
+              <%= profile.user.role === 'pro' ? '⚡ Pro' : profile.user.role === 'premium' ? '✓ Premium' : profile.user.role === 'admin' ? 'Admin' : 'Gratis' %>
+            </span>
+          </h1>
+          <div class="meta">
+            <%= profile.user.email || '(ingen e-post)' %>
+          </div>
+          <div class="meta">
+            Registrerad <%= profile.user.created_at ? profile.user.created_at.slice(0,10) : '?' %> ·
+            Senast inloggad <%= profile.user.last_login ? profile.user.last_login.slice(0,10) : 'aldrig' %>
+            <% if (profile.referrer) { %>
+              · Värvad av <a href="/admin/user/<%= profile.referrer.id %>" style="color:#fbbf24;"><%= profile.referrer.username %></a>
+            <% } %>
+          </div>
+        </div>
+      </div>
+      <div class="ud-actions">
+        <a href="/admin" class="ud-btn">← Tillbaka</a>
+      </div>
+    </div>
+
+    <!-- KPI-kort: engagemangsöversikt -->
+    <div class="kpi-grid">
+      <div class="kpi-card">
+        <div class="kpi-label">Tid aktiv totalt</div>
+        <div class="kpi-value">
+          <%
+            const min = Math.round(profile.session.totalMs / 60000);
+            const h   = Math.floor(min / 60);
+            const m   = min % 60;
+          %>
+          <%= h > 0 ? h + 'h ' : '' %><%= m %>m
+        </div>
+        <div class="kpi-sub"><%= profile.session.pageViews %> sidvisningar</div>
+      </div>
+
+      <div class="kpi-card">
+        <div class="kpi-label">Block klarade</div>
+        <div class="kpi-value"><%= profile.journey.blocksPassed %></div>
+        <div class="kpi-sub">av <%= profile.journey.blocksOpened %> öppnade · snitt quiz <%= profile.journey.avgQuizPct %>%</div>
+      </div>
+
+      <div class="kpi-card">
+        <div class="kpi-label">Rollspel</div>
+        <div class="kpi-value"><%= profile.journey.roleplays %></div>
+        <div class="kpi-sub">samtal med Jocke</div>
+      </div>
+
+      <div class="kpi-card">
+        <div class="kpi-label">Reflektioner</div>
+        <div class="kpi-value"><%= profile.journey.reflections %></div>
+        <div class="kpi-sub">skrivna</div>
+      </div>
+
+      <div class="kpi-card">
+        <div class="kpi-label">Uppdrag klarade</div>
+        <div class="kpi-value"><%= profile.journey.missionsDone %></div>
+        <div class="kpi-sub">av <%= profile.journey.missionsStarted %> startade</div>
+      </div>
+
+      <div class="kpi-card">
+        <div class="kpi-label">Loggbok-actions</div>
+        <div class="kpi-value"><%= profile.journey.actionsLogged %></div>
+        <div class="kpi-sub"><%= profile.journey.actionUnits %> enheter · <%= profile.journey.challengesDone %> challenges klarade</div>
+      </div>
+
+      <% if (profile.user.role === 'pro' || profile.user.role === 'admin') { %>
+      <div class="kpi-card">
+        <div class="kpi-label">Pro-samtal</div>
+        <div class="kpi-value"><%= profile.journey.proCalls %></div>
+        <div class="kpi-sub">uppladdade för AI-analys</div>
+      </div>
+      <% } %>
+
+      <div class="kpi-card">
+        <div class="kpi-label">Värvade</div>
+        <div class="kpi-value"><%= profile.referralsMade.length %></div>
+        <div class="kpi-sub">
+          <% const paidRefs = profile.referralsMade.filter(r => ['premium','pro','admin'].includes(r.role)).length; %>
+          varav <%= paidRefs %> betalande
+        </div>
+      </div>
+    </div>
+
+    <!-- Sparkline: aktivitet senaste 30 dagar -->
+    <% if (profile.dailyActivity.length) {
+      const maxView = Math.max(...profile.dailyActivity.map(d => d.views), 1);
+    %>
+    <div class="section-card">
+      <h2>Aktivitet senaste 30 dagar</h2>
+      <p class="section-desc">Sidvisningar per dag. Klicka en stapel för datum (tooltip).</p>
+      <div class="spark">
+        <% profile.dailyActivity.forEach(function(d) { %>
+          <div class="spark-bar"
+               style="height: <%= Math.max(2, (d.views / maxView) * 100) %>%;"
+               title="<%= d.day %>: <%= d.views %> visningar, <%= Math.round(d.time_ms / 60000) %>min"></div>
+        <% }); %>
+      </div>
+    </div>
+    <% } %>
+
+    <div class="ud-grid">
+      <!-- Top-besökta sidor -->
+      <div class="section-card">
+        <h2>Mest tid på</h2>
+        <p class="section-desc">Top 10 sidor rankat efter total tid (eller besök om duration saknas).</p>
+        <% if (profile.topPages.length) { %>
+          <% const maxTime = Math.max(...profile.topPages.map(p => p.time_ms || p.visits * 60000), 1); %>
+          <% profile.topPages.forEach(function(p) {
+               const effTime = p.time_ms || 0;
+               const effMin  = Math.max(1, Math.round(effTime / 60000));
+          %>
+            <div class="bar-row">
+              <div>
+                <div class="bar-path" title="<%= p.path %>"><%= p.path %></div>
+                <div class="bar-track">
+                  <div class="bar-fill" style="width: <%= Math.min(100, (effTime / maxTime) * 100) %>%;"></div>
+                </div>
+              </div>
+              <div class="bar-value">
+                <%= effTime > 0 ? effMin + 'm' : p.visits + 'x' %>
+              </div>
+            </div>
+          <% }); %>
+        <% } else { %>
+          <div class="empty-state">Inga sidvisningar loggade ännu (tracking startar när sidan deployas).</div>
+        <% } %>
+      </div>
+
+      <!-- Värvade personer -->
+      <div class="section-card">
+        <h2>Värvade</h2>
+        <p class="section-desc">Personer som registrerade sig via den här användarens referral-kod.</p>
+        <% if (profile.referralsMade.length) { %>
+          <table class="ud-table">
+            <thead>
+              <tr><th>Användarnamn</th><th>Roll</th><th>Registrerad</th></tr>
+            </thead>
+            <tbody>
+              <% profile.referralsMade.forEach(function(r) { %>
+                <tr>
+                  <td><a href="/admin/user/<%= r.id %>" style="color:#a5b4fc;"><%= r.username %></a></td>
+                  <td>
+                    <span class="ud-role ud-role-<%= r.role %>">
+                      <%= r.role === 'pro' ? '⚡ Pro' : r.role === 'premium' ? '✓ Premium' : r.role === 'admin' ? 'Admin' : 'Gratis' %>
+                    </span>
+                  </td>
+                  <td style="color:#64748b;font-size:0.8rem;"><%= r.created_at ? r.created_at.slice(0,10) : '?' %></td>
+                </tr>
+              <% }); %>
+            </tbody>
+          </table>
+        <% } else { %>
+          <div class="empty-state">Inga värvade ännu.</div>
+        <% } %>
+      </div>
+    </div>
+
+    <!-- Timeline -->
+    <div class="section-card">
+      <h2>Senaste aktivitet</h2>
+      <p class="section-desc">Kronologisk tidslinje över användarens 30 senaste händelser.</p>
+      <% if (profile.timeline.length) { %>
+        <% profile.timeline.forEach(function(ev) {
+             const when = ev.at ? ev.at.slice(0,16).replace('T',' ') : '?';
+             const bt = blockTitles[ev.detail];
+             const detailLabel = bt ? `Block ${bt.index}: ${bt.title}` : ev.detail;
+        %>
+          <div class="timeline-item">
+            <span class="time"><%= when %></span>
+            <span class="type type-<%= ev.type %>"><%= ev.label %></span>
+            <span><%= detailLabel %></span>
+          </div>
+        <% }); %>
+      <% } else { %>
+        <div class="empty-state">Ingen aktivitet ännu.</div>
+      <% } %>
+    </div>
+
+  </main>
+
+</body>
+</html>

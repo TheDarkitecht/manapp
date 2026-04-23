@@ -183,6 +183,45 @@
       <% } %>
     </div>
 
+    <!-- ═══ FUNNEL ═══ -->
+    <% if (typeof funnel !== 'undefined' && funnel && funnel.length) { %>
+    <div class="section-card">
+      <h2>🔻 Onboarding-funnel</h2>
+      <p class="section-desc">Hur långt användare kommer från registrering till betalande kund. Varje steg = kumulativ konvertering från "Registrerad".</p>
+      <% funnel.forEach(function(step, idx) {
+        const prev = idx > 0 ? funnel[idx - 1].count : null;
+        const dropPct = (prev && prev > 0 && prev > step.count) ? Math.round(((prev - step.count) / prev) * 100) : 0;
+        const barColor = step.pct >= 70 ? '#34d399' : step.pct >= 40 ? '#fbbf24' : step.pct >= 15 ? '#fb923c' : '#f87171';
+      %>
+        <div style="margin-bottom:0.75rem;">
+          <div style="display:flex;justify-content:space-between;font-size:0.88rem;color:#cbd5e1;margin-bottom:0.25rem;">
+            <span><strong><%= step.label %></strong>
+              <% if (dropPct > 0) { %>
+                <span style="color:#f87171;font-size:0.75rem;margin-left:0.5rem;">↓ <%= dropPct %>% tappade</span>
+              <% } %>
+            </span>
+            <span style="font-variant-numeric:tabular-nums;color:#a5b4fc;font-weight:700;">
+              <%= step.count %> · <%= step.pct %>%
+            </span>
+          </div>
+          <div style="height:10px;background:rgba(255,255,255,0.05);border-radius:5px;overflow:hidden;">
+            <div style="height:100%;width:<%= step.pct %>%;background:<%= barColor %>;border-radius:5px;transition:width 0.5s ease;"></div>
+          </div>
+        </div>
+      <% }); %>
+      <%
+        const regStep = funnel.find(f => f.key === 'registered');
+        const premiumStep = funnel.find(f => f.key === 'becamePremium');
+        const blockStep = funnel.find(f => f.key === 'openedBlock');
+      %>
+      <% if (regStep && blockStep && regStep.count > 0 && (blockStep.pct < 50)) { %>
+        <div class="insight">⚠️ Mer än halva registrerade öppnar aldrig ett block. Fokusera onboarding: auto-redirect till första blocket efter registrering?</div>
+      <% } else if (premiumStep && premiumStep.pct >= 15) { %>
+        <div class="insight">🎉 Stark gratis→premium-konvertering (<%= premiumStep.pct %>%). Bench-mark för SaaS är 2-5%.</div>
+      <% } %>
+    </div>
+    <% } %>
+
     <!-- ═══ AKTIVITET-TOTALS ═══ -->
     <div class="section-card">
       <h2>⚡ Aktivitet — totalt över alla användare</h2>
@@ -314,7 +353,7 @@
           <div class="recent-item">
             <span class="r-type"><%= r.type %></span>
             <span class="r-detail"><%= r.detail %></span>
-            <span class="r-user">#<%= r.user_id %></span>
+            <a class="r-user" href="/admin/user/<%= r.user_id %>" style="color:#a5b4fc;text-decoration:none;">#<%= r.user_id %></a>
             <span class="r-date"><%= r.created_at ? new Date(r.created_at).toLocaleString('sv-SE', { dateStyle: 'short', timeStyle: 'short' }) : '' %></span>
           </div>
         <% }); %>
