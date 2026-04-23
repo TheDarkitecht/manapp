@@ -368,6 +368,9 @@ async function initDatabase() {
     // Prompt-iteration: historik per samtal + senaste per version
     "ALTER TABLE call_analyses ADD COLUMN prompt_version TEXT",
     "CREATE INDEX IF NOT EXISTS idx_call_analysis_runs_job   ON call_analysis_runs(job_id, created_at DESC)",
+    // Metodik-val per jobb (vilken säljstil samtalet ska bedömas mot).
+    // Sätts vid upload; worker läser det när jobbet processas.
+    "ALTER TABLE call_jobs ADD COLUMN prompt_version TEXT",
   ];
   migrations.forEach(sql => { try { db.run(sql); } catch (_) {} });
 
@@ -2140,11 +2143,11 @@ function getFunnelMetrics() {
  * conditions där worker hinner plocka upp jobbet INNAN storage_key är satt.
  * Caller MÅSTE uppgradera till 'pending' efter att putAudio() lyckats.
  */
-function createCallJob(userId, { batch_id, original_name, storage_key, file_size, mime_type, title, status }) {
+function createCallJob(userId, { batch_id, original_name, storage_key, file_size, mime_type, title, status, prompt_version }) {
   db.run(
-    `INSERT INTO call_jobs (user_id, batch_id, original_name, storage_key, file_size, mime_type, title, status)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-    [userId, batch_id || null, original_name, storage_key || null, file_size || null, mime_type || null, title || null, status || 'uploading']
+    `INSERT INTO call_jobs (user_id, batch_id, original_name, storage_key, file_size, mime_type, title, status, prompt_version)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [userId, batch_id || null, original_name, storage_key || null, file_size || null, mime_type || null, title || null, status || 'uploading', prompt_version || null]
   );
   const s = db.prepare('SELECT last_insert_rowid() AS id');
   s.step();
@@ -2181,7 +2184,7 @@ function updateCallJob(jobId, updates) {
  */
 function claimNextPendingCallJob() {
   const s = db.prepare(`
-    SELECT id, user_id, batch_id, original_name, storage_key, file_size, mime_type, title
+    SELECT id, user_id, batch_id, original_name, storage_key, file_size, mime_type, title, prompt_version
     FROM call_jobs
     WHERE status = 'pending'
     ORDER BY created_at ASC
@@ -2258,7 +2261,7 @@ function listCallJobs({ statusFilter = null, batchId = null, limit = 100, offset
 
   const s = db.prepare(`
     SELECT j.id, j.user_id, j.batch_id, j.original_name, j.title, j.status, j.error,
-           j.created_at, j.started_at, j.completed_at, j.file_size,
+           j.created_at, j.started_at, j.completed_at, j.file_size, j.prompt_version,
            t.duration_sec, t.word_count
     FROM call_jobs j
     LEFT JOIN call_transcripts t ON t.job_id = j.id

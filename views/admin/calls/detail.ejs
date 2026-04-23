@@ -90,23 +90,26 @@
     <section class="ci-section">
       <header class="ci-section-header">
         <h2>🎯 Jockes feedback
-          <% if (analysis.prompt_version) { %>
-            <span class="ci-version-pill" title="Körd med prompt-version <%= analysis.prompt_version %>"><%= analysis.prompt_version %></span>
+          <% if (analysis.prompt_version) {
+               const currentMethod = promptVersions.find(v => v.id === analysis.prompt_version);
+               const methodLabel = currentMethod ? currentMethod.name : analysis.prompt_version; %>
+            <span class="ci-version-pill" title="Analyserad mot metodik: <%= methodLabel %>"><%= methodLabel %></span>
           <% } %>
         </h2>
         <% if (transcript && transcript.text) { %>
           <form method="POST" action="/admin/calls/<%= job.id %>/reanalyze" class="ci-reanalyze-form"
                 onsubmit="return confirmReanalyze(this);">
             <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
-            <label class="visually-hidden" for="promptVersion">Prompt-version</label>
+            <label class="visually-hidden" for="promptVersion">Metodik</label>
             <select name="promptVersion" id="promptVersion" class="ci-version-select">
+              <option value="" disabled selected>Re-analysera mot…</option>
               <% promptVersions.forEach(function(v) { %>
                 <option value="<%= v.id %>" <%= analysis.prompt_version === v.id ? 'disabled' : '' %>>
-                  <%= v.name %><%= v.isActive ? ' (aktiv)' : '' %>
+                  <%= v.name %><%= analysis.prompt_version === v.id ? ' (aktuell)' : '' %>
                 </option>
               <% }); %>
             </select>
-            <button type="submit" class="ci-btn ci-btn-secondary">↻ Re-analysera</button>
+            <button type="submit" class="ci-btn ci-btn-secondary">↻ Kör</button>
           </form>
         <% } %>
       </header>
@@ -114,17 +117,19 @@
     </section>
     <% } %>
 
-    <!-- Historik: tidigare körningar -->
+    <!-- Historik: tidigare körningar mot olika metodiker -->
     <% if (runs && runs.length > 1) { %>
     <section class="ci-section">
       <header class="ci-section-header">
-        <h2>🕰 Tidigare körningar (<%= runs.length %>)</h2>
+        <h2>🕰 Tidigare analyser (<%= runs.length %>)</h2>
       </header>
       <ul class="ci-run-list">
-        <% runs.forEach(function(r, i) { %>
+        <% runs.forEach(function(r, i) {
+             const runMethod = promptVersions.find(v => v.id === r.prompt_version);
+             const runLabel = runMethod ? runMethod.name : r.prompt_version; %>
           <li class="ci-run-row <%= i === 0 ? 'is-latest' : '' %>">
             <a href="/admin/calls/<%= job.id %>/run/<%= r.id %>" class="ci-run-link">
-              <span class="ci-version-pill"><%= r.prompt_version %></span>
+              <span class="ci-version-pill"><%= runLabel %></span>
               <span class="ci-run-time"><%= r.created_at %></span>
               <span class="ci-run-chars"><%= r.chars %> tecken</span>
               <% if (i === 0) { %><span class="ci-run-latest-badge">senaste</span><% } %>
@@ -132,7 +137,7 @@
           </li>
         <% }); %>
       </ul>
-      <p class="ci-hint">Klicka på en körning för att se dess feedback. Senaste visas alltid ovan.</p>
+      <p class="ci-hint">Klicka på en analys för att se feedback mot just den metodiken. Senaste visas alltid ovan.</p>
     </section>
     <% } %>
 
@@ -175,9 +180,12 @@
   <script>
     function confirmReanalyze(form) {
       const sel = form.querySelector('select[name="promptVersion"]');
-      const version = sel.value;
+      if (!sel.value) {
+        alert('Välj en metodik att re-analysera mot.');
+        return false;
+      }
       const name = sel.options[sel.selectedIndex].textContent.trim();
-      if (!confirm(`Re-analysera detta samtal med "${name}"?\n\nTar 20-60 sekunder. Tidigare feedback sparas i historiken.`)) {
+      if (!confirm(`Re-analysera detta samtal mot "${name}"?\n\nTar 20–60 sekunder. Tidigare analys sparas i historiken.`)) {
         return false;
       }
       const btn = form.querySelector('button[type="submit"]');

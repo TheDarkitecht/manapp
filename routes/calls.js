@@ -132,10 +132,12 @@ module.exports = function createCallsRouter(deps) {
   // ── Upload-form ──────────────────────────────────────────────────────────
   router.get('/upload', (req, res) => {
     res.render('admin/calls/upload', {
-      username:   req.session.username,
-      role:       req.session.role,
-      r2Enabled:  storage.isR2Enabled(),
-      csrfToken:  generateCsrfToken(req),
+      username:        req.session.username,
+      role:            req.session.role,
+      r2Enabled:       storage.isR2Enabled(),
+      methodologies:   prompts.list(),
+      defaultMethodology: prompts.DEFAULT_VERSION_ID,
+      csrfToken:       generateCsrfToken(req),
     });
   });
 
@@ -176,6 +178,12 @@ module.exports = function createCallsRouter(deps) {
     const created = [];
     const errors  = [];
 
+    // Metodik-val: user valde i dropdown. Validera att den finns och är aktiv,
+    // annars fall tillbaka till default (undviker att ogiltig value bryter processing).
+    const requestedMethodology = (req.body.methodology || '').trim();
+    const methodologyCfg = prompts.get(requestedMethodology);
+    const methodologyId = methodologyCfg ? methodologyCfg.id : prompts.DEFAULT_VERSION_ID;
+
     for (const file of files) {
       let jobId = null;
       try {
@@ -183,12 +191,13 @@ module.exports = function createCallsRouter(deps) {
         //    detta håller workern borta tills storage_key är säkert satt.
         //    Förhindrar race där worker plockar jobbet innan R2-put är klar.
         jobId = db.createCallJob(req.session.userId, {
-          batch_id:      batchId,
-          original_name: file.originalname,
-          file_size:     file.size,
-          mime_type:     file.mimetype,
-          title:         null,
-          status:        'uploading',
+          batch_id:       batchId,
+          original_name:  file.originalname,
+          file_size:      file.size,
+          mime_type:      file.mimetype,
+          title:          null,
+          status:         'uploading',
+          prompt_version: methodologyId,
         });
 
         // 2. Läs buffer från disk, lagra i R2/final disk

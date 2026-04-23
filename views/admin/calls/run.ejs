@@ -15,7 +15,7 @@
 
   <nav class="learn-nav">
     <a href="/admin/calls/<%= job.id %>" class="learn-nav-back">← Till samtalet</a>
-    <span class="learn-nav-title">🕰 Historisk körning (<%= run.prompt_version %>)</span>
+    <span class="learn-nav-title">🕰 <%= versionCfg ? versionCfg.name : run.prompt_version %></span>
     <span class="learn-nav-user"><%= username %></span>
   </nav>
 
@@ -23,14 +23,14 @@
 
     <div class="ci-detail-header">
       <div class="ci-detail-meta">
-        <h1>Körning #<%= run.id %> — <%= run.prompt_version %></h1>
+        <h1>Analys #<%= run.id %> — <%= versionCfg ? versionCfg.name : run.prompt_version %></h1>
         <div class="ci-meta-row">
-          <span class="ci-version-pill"><%= run.prompt_version %></span>
           <% if (versionCfg) { %>
-            <span><strong><%= versionCfg.name %></strong></span>
+            <span class="ci-version-pill"><%= versionCfg.name %></span>
             <span style="color:#64748b;"><%= versionCfg.description %></span>
           <% } else { %>
-            <span style="color:#fbbf24;">⚠️ Version <%= run.prompt_version %> finns inte längre i config (borttagen eller omdöpt)</span>
+            <span class="ci-version-pill"><%= run.prompt_version %></span>
+            <span style="color:#fbbf24;">⚠️ Metodiken "<%= run.prompt_version %>" finns inte längre i config (borttagen eller omdöpt)</span>
           <% } %>
         </div>
         <div class="ci-meta-row">
@@ -46,7 +46,7 @@
 
     <section class="ci-section">
       <header class="ci-section-header">
-        <h2>🎯 Feedback (denna körning)</h2>
+        <h2>🎯 Feedback (analyserad mot <%= versionCfg ? versionCfg.name : run.prompt_version %>)</h2>
       </header>
       <article class="ci-analysis" id="analysisContent"><%= run.analysis || '' %></article>
     </section>

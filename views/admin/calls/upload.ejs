@@ -44,6 +44,22 @@
       <form method="POST" action="/admin/calls/upload" enctype="multipart/form-data" id="bulkForm">
         <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
 
+        <!-- Metodik-val: vilken säljstil ska samtalen analyseras mot? -->
+        <div class="ci-methodology-picker">
+          <label for="methodology" class="ci-methodology-label">
+            <strong>Vilken metodik analyseras detta mot?</strong>
+            <span class="ci-methodology-help">Olika säljstilar har olika kriterier — välj den som matchar projektet. Du kan re-analysera senare mot en annan metodik.</span>
+          </label>
+          <select name="methodology" id="methodology" required class="ci-methodology-select">
+            <% methodologies.forEach(function(m) { %>
+              <option value="<%= m.id %>" <%= m.id === defaultMethodology ? 'selected' : '' %>>
+                <%= m.name %>
+              </option>
+            <% }); %>
+          </select>
+          <p class="ci-methodology-desc" id="methodologyDesc"></p>
+        </div>
+
         <label class="ci-dropzone" id="dropZone">
           <input type="file" name="audio" id="fileInput" accept="audio/*" multiple required />
           <div class="ci-dz-icon">🎙️</div>
@@ -70,7 +86,23 @@
   </main>
 
   <script>
+    // Metodik-beskrivningar (synkade med services/prompts/feedback.js .description)
+    const methodologyDescriptions = {
+      <% methodologies.forEach(function(m, i) { %>
+        <%= JSON.stringify(m.id) %>: <%- JSON.stringify(m.description) %><%= i < methodologies.length - 1 ? ',' : '' %>
+      <% }); %>
+    };
+
     (function(){
+      const methodologySelect = document.getElementById('methodology');
+      const methodologyDesc = document.getElementById('methodologyDesc');
+      function updateDesc() {
+        const id = methodologySelect.value;
+        methodologyDesc.textContent = methodologyDescriptions[id] || '';
+      }
+      methodologySelect.addEventListener('change', updateDesc);
+      updateDesc();
+
       const input = document.getElementById('fileInput');
       const label = document.getElementById('dzLabel');
       const form = document.getElementById('bulkForm');
