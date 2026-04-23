@@ -183,6 +183,62 @@
       <% } %>
     </div>
 
+    <!-- ═══ COHORT RETENTION ═══ -->
+    <% if (typeof cohorts !== 'undefined' && cohorts && cohorts.length) { %>
+    <div class="section-card">
+      <h2>📅 Cohort retention</h2>
+      <p class="section-desc">
+        För varje registreringsvecka — hur många procent är fortfarande aktiva vecka 0/1/2/3/4 efter signup?
+        Klassisk cohort-grid: fallande värden = aktivationsproblem; platt kurva = sticky produkt.
+      </p>
+      <% if (cohorts[0].signups < 3) { %>
+        <div class="insight">💡 Tidigt för cohort-data — meningsfullt när varje vecka har 3+ signups. Kom tillbaka när volymen växt.</div>
+      <% } %>
+      <div style="overflow-x:auto;">
+        <table class="analytics-table" style="min-width:560px;">
+          <thead>
+            <tr>
+              <th>Cohort-vecka</th>
+              <th class="num">Signups</th>
+              <th class="num">V0</th>
+              <th class="num">V1</th>
+              <th class="num">V2</th>
+              <th class="num">V3</th>
+              <th class="num">V4</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% cohorts.forEach(function(c) { %>
+              <tr>
+                <td>
+                  <strong><%= c.cohortWeek %></strong>
+                  <div style="color:#64748b;font-size:0.75rem;"><%= c.cohortStart %></div>
+                </td>
+                <td class="num"><%= c.signups %></td>
+                <% c.pcts.forEach(function(p, i) {
+                  // Heat-map-färg: högre % = grönare
+                  const color = p >= 70 ? '#34d399'
+                              : p >= 40 ? '#fbbf24'
+                              : p >= 15 ? '#fb923c'
+                              : p > 0   ? '#f87171'
+                              : '#475569';
+                  const bg = p > 0 ? `background:rgba(${p>=70?'16,185,129':p>=40?'251,191,36':p>=15?'251,146,60':'239,68,68'},${Math.min(0.25, p/100 * 0.3 + 0.05)});` : '';
+                %>
+                  <td class="num" style="color:<%= color %>;<%= bg %>"><%= p %>%</td>
+                <% }); %>
+              </tr>
+            <% }); %>
+          </tbody>
+        </table>
+      </div>
+      <div class="insight" style="margin-top:1rem;">
+        💡 <strong>Läsguide:</strong> V0 = aktiva samma vecka som signup (bör vara ~100%).
+        V1-V4 visar faktisk retention. Bra SaaS-benchmark: V1 ≥ 40%, V4 ≥ 15%.
+        Om V1 faller snabbt → onboarding behöver ses över.
+      </div>
+    </div>
+    <% } %>
+
     <!-- ═══ FUNNEL ═══ -->
     <% if (typeof funnel !== 'undefined' && funnel && funnel.length) { %>
     <div class="section-card">

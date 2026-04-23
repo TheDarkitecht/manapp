@@ -23,7 +23,7 @@ const {
   getUserPreferences, setUserPreferences,
   getDailyChallenge, saveDailyChallenge, completeDailyChallenge,
   getAllUsersWithEmail, getUsersForBroadcast,
-  getAdminAnalytics, getUserAnalyticsProfile, getFunnelMetrics, getUserDataExport,
+  getAdminAnalytics, getUserAnalyticsProfile, getFunnelMetrics, getUserDataExport, getCohortRetention,
   logPageView, updateLastPageViewDuration, cleanupOldPageViews, flushAnalytics,
   sessionGet, sessionSet, sessionDestroy, sessionCleanupExpired,
   markStripeEventProcessed, cleanupOldStripeEvents,
@@ -1935,6 +1935,35 @@ app.get('/loggbok', requireLogin, (req, res) => {
   });
 });
 
+// ── Loggbok CSV-export — användaren laddar ner egen data ─────────────────────
+// Separat från /account/export.json (full GDPR-dump) — detta är bara Loggboken,
+// i tabular format för Excel/Sheets. Användbart för egna analys-dashboards.
+app.get('/loggbok/export.csv', requireLogin, (req, res) => {
+  const actions = getUserActions(req.session.userId, 10000);
+  // CSV-escape: dubbla "-tecken och wrappa fält som innehåller , eller " eller \n
+  const esc = (v) => {
+    if (v === null || v === undefined) return '';
+    const s = String(v);
+    if (/[",\n]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
+    return s;
+  };
+  const header = ['date', 'time', 'category', 'count', 'note', 'block_id'].join(',');
+  const rows = actions.map(a => {
+    const dt = a.created_at ? new Date(a.created_at) : null;
+    const date = dt ? dt.toISOString().slice(0, 10) : '';
+    const time = dt ? dt.toISOString().slice(11, 19) : '';
+    return [esc(date), esc(time), esc(a.category), esc(a.count), esc(a.note), esc(a.block_id)].join(',');
+  });
+  const csv = '\ufeff' + [header, ...rows].join('\n'); // BOM för Excel utf-8
+
+  const timestamp = new Date().toISOString().slice(0, 10);
+  const filename  = `loggbok-${req.session.username}-${timestamp}.csv`;
+  res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+  res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+  res.setHeader('Cache-Control', 'no-store');
+  res.send(csv);
+});
+
 app.post('/loggbok', requireLogin, verifyCsrf, (req, res) => {
   const { category, count, note, block_id } = req.body;
   const cat = gamification.ACTION_CATEGORIES.find(c => c.id === category);
@@ -2146,6 +2175,7 @@ app.get('/admin', requireLogin, requireAdmin, (req, res) => {
 app.get('/admin/analytics', requireLogin, requireAdmin, (req, res) => {
   const analytics = getAdminAnalytics();
   const funnel = getFunnelMetrics();
+  const cohorts = getCohortRetention();
   // Berika blockEngagement med block-titlar för läsbarhet
   const blockTitles = {};
   salesBlocks.forEach((b, i) => { blockTitles[b.id] = { title: b.title, index: i + 1, icon: b.icon }; });
@@ -2153,6 +2183,7 @@ app.get('/admin/analytics', requireLogin, requireAdmin, (req, res) => {
     username: req.session.username,
     analytics,
     funnel,
+    cohorts,
     blockTitles,
     totalBlocks: salesBlocks.length,
   });

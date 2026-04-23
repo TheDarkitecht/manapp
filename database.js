@@ -1698,6 +1698,75 @@ function getUserDataExport(userId) {
   };
 }
 
+/**
+ * Cohort retention: för varje registreringsvecka, visa vilken andel av
+ * användare som var aktiva vecka 0 (signup-vecka), 1, 2, 3, 4 efter signup.
+ *
+ * "Aktiv" = någon meningsfull händelse i någon event-tabell under den veckan.
+ * Visar senaste 8 cohort-veckor (om så mycket data finns).
+ */
+function getCohortRetention() {
+  // Find cohort-veckor: alla veckor där någon registrerade sig, senaste 8.
+  // SQLite saknar native WEEK-funktion, så vi använder strftime('%Y-W%W').
+  const cohorts = rowsQuery(`
+    SELECT strftime('%Y-W%W', created_at) AS cohort_week,
+           DATE(created_at, 'weekday 0', '-6 days') AS cohort_start,
+           COUNT(*) AS signups
+    FROM users
+    WHERE created_at IS NOT NULL
+    GROUP BY cohort_week
+    ORDER BY cohort_week DESC
+    LIMIT 8
+  `);
+
+  // För varje cohort: beräkna active-count per vecka sedan signup (vecka 0-4)
+  const enriched = cohorts.map(c => {
+    // Hämta alla user_ids i cohorten
+    const userIds = rowsQuery(
+      `SELECT id FROM users WHERE strftime('%Y-W%W', created_at) = ?`,
+      [c.cohort_week]
+    ).map(r => r.id);
+
+    if (!userIds.length) {
+      return { ...c, weeks: [0, 0, 0, 0, 0] };
+    }
+
+    // Per vecka sedan cohort_start: räkna DISTINCT user_ids som hade aktivitet
+    // Aktivitet = user_actions, user_reflections, user_roleplays, user_missions, block_progress
+    // OBS sql.js har inte IN-parametrisering för arrays, bygger därför inline safe strängar
+    const idsInline = userIds.join(',');
+    const weeks = [0, 1, 2, 3, 4].map(weekNum => {
+      const startOffset = weekNum * 7;
+      const endOffset   = (weekNum + 1) * 7;
+      const sql = `
+        SELECT COUNT(DISTINCT user_id) AS active FROM (
+          SELECT user_id, created_at AS at FROM user_actions
+          UNION ALL SELECT user_id, created_at FROM user_reflections
+          UNION ALL SELECT user_id, completed_at FROM user_roleplays
+          UNION ALL SELECT user_id, started_at FROM user_missions
+          UNION ALL SELECT user_id, completed_at FROM block_progress WHERE completed_at IS NOT NULL
+          UNION ALL SELECT user_id, visited_at FROM page_views
+        )
+        WHERE user_id IN (${idsInline})
+          AND at BETWEEN date(?, '+' || ? || ' days') AND date(?, '+' || ? || ' days')
+      `;
+      const r = rowsQuery(sql, [c.cohort_start, startOffset, c.cohort_start, endOffset])[0];
+      return r?.active || 0;
+    });
+
+    return {
+      cohortWeek: c.cohort_week,
+      cohortStart: c.cohort_start,
+      signups: c.signups,
+      weeks, // [vecka0_active, vecka1, vecka2, vecka3, vecka4]
+      pcts:  weeks.map(n => c.signups > 0 ? Math.round((n / c.signups) * 100) : 0),
+    };
+  });
+
+  // Returnera med senaste cohorten överst
+  return enriched;
+}
+
 function getFunnelMetrics() {
   const s = (sql) => { const st = db.prepare(sql); st.step(); const r = st.getAsObject(); st.free(); return r; };
 
@@ -1756,6 +1825,7 @@ module.exports = {
   getUserAnalyticsProfile,
   getFunnelMetrics,
   getUserDataExport,
+  getCohortRetention,
   // Page-view tracking
   logPageView, updateLastPageViewDuration, cleanupOldPageViews, flushAnalytics,
   // Session store

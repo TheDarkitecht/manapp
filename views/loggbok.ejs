@@ -28,6 +28,15 @@
       <% if (saved) { %>
         <div class="lb-saved">✓ Handling loggad</div>
       <% } %>
+      <% if (actions && actions.length > 0) { %>
+        <div style="margin-top:0.75rem;">
+          <a href="/loggbok/export.csv"
+             style="display:inline-flex;align-items:center;gap:0.35rem;padding:0.45rem 0.9rem;background:rgba(99,102,241,0.1);color:#a5b4fc;border:1px solid rgba(99,102,241,0.25);border-radius:8px;text-decoration:none;font-size:0.82rem;font-weight:600;"
+             title="Ladda ner all din loggade aktivitet som CSV (Excel/Sheets)">
+            ⬇ Exportera CSV
+          </a>
+        </div>
+      <% } %>
     </div>
 
     <!-- Statistik -->
