@@ -2242,12 +2242,14 @@ app.post('/account/delete', requireLogin, blockWhenImpersonating, deleteLimiter,
 app.get('/account', requireLogin, (req, res) => {
   const user = findUserById(req.session.userId);
   res.render('account', {
-    username:  req.session.username,
-    role:      req.session.role,
-    email:     user?.email || '',
-    pwError:   req.query.pwError || null,
-    pwOk:      req.query.pwOk === '1',
-    csrfToken: generateCsrfToken(req),
+    username:         req.session.username,
+    role:             req.session.role,
+    email:            user?.email || '',
+    pwError:          req.query.pwError || null,
+    pwOk:             req.query.pwOk === '1',
+    trialCancelled:   req.query.trialCancelled === '1',
+    trialCancelError: req.query.trialCancelError || null,
+    csrfToken:        generateCsrfToken(req),
   });
 });
 
@@ -3162,6 +3164,52 @@ app.post('/billing/portal', requireLogin, blockWhenImpersonating, verifyCsrf, as
   } catch (err) {
     console.error('Billing portal error:', err.message);
     res.redirect('/dashboard');
+  }
+});
+
+// ── 1-klick avbryt Pro-trial — utan Stripe-portal-bounce ─────────────────────
+// Användaren i trial klickar "Avbryt trial" → vi cancel:ar subscriptionen
+// direkt via Stripe API. Webhook customer.subscription.deleted sköter sen
+// DB-uppdateringen (role='free' + clearProTrial).
+app.post('/pro/cancel-trial', requireLogin, blockWhenImpersonating, verifyCsrf, async (req, res) => {
+  const user = findUserById(req.session.userId);
+  if (!user?.stripe_customer_id) {
+    return res.redirect('/account?trialCancelError=no_customer');
+  }
+  if (!user.pro_trial_end_at || new Date(user.pro_trial_end_at) < new Date()) {
+    // Ingen aktiv trial — kanske redan gått ut eller aldrig startat
+    return res.redirect('/account?trialCancelError=no_trial');
+  }
+
+  try {
+    // Hitta den trialing-subscriptionen för customer:n
+    const subs = await stripe.subscriptions.list({
+      customer: user.stripe_customer_id,
+      status:   'trialing',
+      limit:    10,
+    });
+    if (!subs.data.length) {
+      return res.redirect('/account?trialCancelError=no_subscription');
+    }
+
+    // Cancel alla trialing-subs (borde bara vara 1, men defensive)
+    for (const sub of subs.data) {
+      await stripe.subscriptions.cancel(sub.id);
+    }
+
+    // Webhook customer.subscription.deleted kommer att fire:a inom sekunder
+    // och uppdatera role='free' + clearProTrial. Vi snabb-uppdaterar UI:t
+    // för att inte ha "trial aktiv"-banner kvar i raceconditions-fönstret.
+    try { clearProTrial(user.id); } catch (_) {}
+    req.session.role = 'free';
+
+    audit(req, 'trial.cancel', { id: user.id, username: user.username });
+    console.log(`🛑 User ${user.id} avbröt Pro-trial innan konvertering`);
+
+    res.redirect('/account?trialCancelled=1');
+  } catch (err) {
+    console.error('Cancel trial error:', err.message);
+    res.redirect('/account?trialCancelError=stripe');
   }
 });
 

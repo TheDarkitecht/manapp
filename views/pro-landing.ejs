@@ -87,7 +87,8 @@
             <div style="color:#fbbf24;font-weight:800;font-size:0.95rem;margin-bottom:0.2rem;">🎁 Du är i gratis-trial — <%= proTrial.hoursLeft %>h kvar</div>
             <div style="color:#cbd5e1;font-size:0.82rem;">Trial slutar <strong><%= proTrial.endsAtDate %></strong>. Sen debiteras 599 kr/mån om du inte avbryter.</div>
           </div>
-          <form method="POST" action="/billing/portal" style="margin:0;">
+          <form method="POST" action="/pro/cancel-trial" style="margin:0;"
+                onsubmit="return confirm('Avbryt Pro-trialen nu? Ingen debitering sker.');">
             <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
             <button type="submit" style="padding:0.55rem 1rem;background:rgba(255,255,255,0.08);color:#f1f5f9;border:1px solid rgba(255,255,255,0.15);border-radius:8px;font-weight:600;font-size:0.82rem;cursor:pointer;">Avbryt trial</button>
           </form>

@@ -93,15 +93,28 @@
       <p style="color:#cbd5e1;margin:0 0 1.25rem;font-size:0.9rem;line-height:1.5;">
         <strong><%= proTrial.hoursLeft %> timmar kvar</strong> — slutar <%= proTrial.endsAtDate %>.
         Om du inte avbryter innan dess debiteras ditt kort <strong>599 kr</strong> för första månaden.
-        Du kan avbryta när som helst utan kostnad via Stripe-portalen.
+        Ett klick nedan avbryter direkt utan kostnad.
       </p>
-      <form method="POST" action="/billing/portal" style="margin:0;">
+      <form method="POST" action="/pro/cancel-trial" style="margin:0;"
+            onsubmit="return confirm('Avbryt Pro-trialen nu? Du får tillbaka gratis-status direkt och ingen debitering sker.');">
         <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
         <button type="submit" style="padding:0.75rem 1.25rem;background:rgba(239,68,68,0.12);color:#fca5a5;border:1px solid rgba(239,68,68,0.3);border-radius:10px;font-weight:600;font-size:0.9rem;cursor:pointer;">
           Avbryt trial nu →
         </button>
       </form>
     </div>
+    <% } %>
+
+    <!-- Flash-meddelande efter cancel-trial -->
+    <% if (typeof trialCancelled !== 'undefined' && trialCancelled) { %>
+      <div role="status" aria-live="polite" style="margin-top:1rem;padding:1rem 1.25rem;background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.3);border-radius:10px;color:#34d399;font-size:0.9rem;">
+        ✓ Pro-trialen är avbruten. Ingen debitering kommer att ske. Tack för att du testade!
+      </div>
+    <% } %>
+    <% if (typeof trialCancelError !== 'undefined' && trialCancelError) { %>
+      <div role="alert" aria-live="assertive" style="margin-top:1rem;padding:1rem 1.25rem;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);border-radius:10px;color:#fca5a5;font-size:0.9rem;">
+        ⚠️ Kunde inte avbryta trialen automatiskt. Öppna Stripe-portalen nedan och avbryt manuellt — eller mejla info@joakimjaksen.se så hjälper vi dig.
+      </div>
     <% } %>
 
     <!-- Stripe customer portal — self-serve cancel, uppdatera kort, ladda ner kvitton -->
