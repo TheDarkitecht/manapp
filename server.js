@@ -2617,8 +2617,77 @@ app.get('/admin/broadcast', requireLogin, requireAdmin, (req, res) => {
     csrfToken: generateCsrfToken(req),
     sent: req.query.sent ? parseInt(req.query.sent) : null,
     failed: req.query.failed ? parseInt(req.query.failed) : null,
+    testSent: req.query.testSent === '1',
     error: req.query.error || null,
   });
+});
+
+// ── Broadcast preview: render HTML utan att skicka (öppnas i ny tab) ─────────
+// Låter admin se exakt hur mejlet kommer se ut INNAN det skickas till 100+ users.
+// Spar från typos, brutna länkar, kass formatering som hamnar i inboxar.
+app.post('/admin/broadcast/preview', requireLogin, requireAdmin, verifyCsrf, (req, res) => {
+  const subject = (req.body.subject || '').trim().slice(0, 200);
+  const body    = (req.body.body    || '').trim().slice(0, 20000);
+  if (!subject || !body) {
+    return res.status(400).send('<h1>Ämne och meddelande krävs</h1><p><a href="/admin/broadcast">← Tillbaka</a></p>');
+  }
+  const baseUrl = process.env['APP_URL'] || `${req.protocol}://${req.get('host')}`;
+  const previewUnsubUrl = `${baseUrl}/unsubscribe/PREVIEW-TOKEN-EJ-GILTIG`;
+  const previewUsername = req.session.username || 'Testanvändare';
+  const html = buildBroadcastEmail({
+    username: previewUsername,
+    body,
+    unsubUrl: previewUnsubUrl,
+    subject,
+  });
+  // Lägg till en icke-skickad-banner högst upp så det är tydligt att det är preview
+  const previewBanner = `
+    <div style="position:sticky;top:0;background:#fbbf24;color:#0f172a;padding:0.85rem 1.5rem;text-align:center;font-family:-apple-system,sans-serif;font-weight:700;font-size:14px;z-index:9999;box-shadow:0 2px 8px rgba(0,0,0,0.15);">
+      👁️ FÖRHANDSGRANSKNING — detta är inte skickat. Mottagarnamn i previewen: "${previewUsername}".
+      <a href="javascript:window.close()" style="margin-left:1rem;color:#0f172a;text-decoration:underline;">Stäng</a>
+    </div>
+  `;
+  res.setHeader('Content-Type', 'text/html; charset=utf-8');
+  res.send(previewBanner + html);
+});
+
+// ── Broadcast test-send: skicka endast till admin:ens egen email ─────────────
+// Perfekt final-check innan mass-send — du får mejlet i din riktiga inbox
+// och ser hur det ser ut i Gmail/Outlook/klient.
+app.post('/admin/broadcast/test', requireLogin, requireAdmin, verifyCsrf, async (req, res) => {
+  if (!resend) {
+    return res.redirect('/admin/broadcast?error=no_resend');
+  }
+  const admin = findUserById(req.session.userId);
+  if (!admin?.email) {
+    return res.redirect('/admin/broadcast?error=no_admin_email');
+  }
+  const subject = (req.body.subject || '').trim().slice(0, 200);
+  const body    = (req.body.body    || '').trim().slice(0, 20000);
+  if (!subject || !body) {
+    return res.redirect('/admin/broadcast?error=missing');
+  }
+  const baseUrl = process.env['APP_URL'] || `${req.protocol}://${req.get('host')}`;
+  try {
+    const unsubToken = emails.createUnsubscribeToken(admin.id);
+    const unsubUrl   = `${baseUrl}/unsubscribe/${unsubToken}`;
+    await resend.emails.send({
+      from:    RESEND_FROM,
+      to:      admin.email,
+      subject: '[TEST] ' + subject,
+      html:    buildBroadcastEmail({
+        username: admin.first_name || admin.username,
+        body,
+        unsubUrl,
+        subject,
+      }),
+    });
+    audit(req, 'broadcast.test_send', null, { subject: subject.slice(0, 100) });
+    res.redirect('/admin/broadcast?testSent=1');
+  } catch (err) {
+    console.error('Broadcast test send error:', err.message);
+    res.redirect('/admin/broadcast?error=send_failed');
+  }
 });
 
 app.post('/admin/broadcast', requireLogin, requireAdmin, broadcastLimiter, verifyCsrf, async (req, res) => {

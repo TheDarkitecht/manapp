@@ -79,8 +79,14 @@
       </p>
 
       <% if (sent !== null) { %>
-        <div role="status" aria-live="polite" class="bc-alert<%= failed > 0 ? 'bc-alert-warn' : 'bc-alert-success' %>">
+        <div role="status" aria-live="polite" class="bc-alert<%= failed > 0 ? ' bc-alert-warn' : ' bc-alert-success' %>">
           ✓ Broadcast skickad: <strong><%= sent %></strong> levererade<% if (failed > 0) { %>, <strong><%= failed %></strong> misslyckades (se server-loggen för detaljer)<% } %>.
+        </div>
+      <% } %>
+
+      <% if (typeof testSent !== 'undefined' && testSent) { %>
+        <div role="status" aria-live="polite" class="bc-alert bc-alert-success">
+          ✓ Test-mejl skickat till din egen adress. Kolla inboxen (och spam-mappen)!
         </div>
       <% } %>
 
@@ -126,15 +132,41 @@
           </div>
         </div>
 
-        <button type="submit" class="bc-submit"
-                onclick="return confirm('Skicka detta mejl till valt segment? Kan inte ångras.');">
-          📤 Skicka broadcast
-        </button>
+        <!-- Trestegsraket: preview → test-send → broadcast. Uppmuntrar att
+             aldrig skicka blint till 100+ users utan att verifiera copyn. -->
+        <div style="display:flex;gap:0.6rem;flex-wrap:wrap;align-items:center;padding-top:0.5rem;border-top:1px solid rgba(255,255,255,0.06);">
+          <!-- Steg 1: Förhandsgranska (öppnar i ny tab, inget skickas) -->
+          <button type="submit" formaction="/admin/broadcast/preview" formtarget="_blank"
+                  style="padding:0.7rem 1.1rem;background:rgba(99,102,241,0.12);color:#a5b4fc;border:1px solid rgba(99,102,241,0.3);border-radius:10px;font-weight:600;font-size:0.88rem;cursor:pointer;">
+            👁️ Förhandsgranska
+          </button>
+
+          <!-- Steg 2: Skicka till mig själv (se i riktig email-klient) -->
+          <button type="submit" formaction="/admin/broadcast/test"
+                  onclick="return confirm('Skicka test-mejl ENDAST till din egen email?');"
+                  style="padding:0.7rem 1.1rem;background:rgba(251,191,36,0.12);color:#fbbf24;border:1px solid rgba(251,191,36,0.3);border-radius:10px;font-weight:600;font-size:0.88rem;cursor:pointer;">
+            📧 Skicka till mig själv
+          </button>
+
+          <!-- Divider + steg 3 -->
+          <div style="flex:1;min-width:0;"></div>
+
+          <!-- Steg 3: Skicka broadcast till segment (live) -->
+          <button type="submit" class="bc-submit"
+                  onclick="return confirm('Skicka till valt segment? Detta kan INTE ångras. Rekommenderat: förhandsgranska först.');">
+            📤 Skicka broadcast
+          </button>
+        </div>
       </form>
     </div>
 
     <div style="margin-top:1.5rem;padding:1rem 1.25rem;background:rgba(99,102,241,0.05);border-left:3px solid #6366f1;border-radius:6px;color:#cbd5e1;font-size:0.85rem;line-height:1.55;">
-      💡 <strong>Best practice:</strong> testa först genom att sätta dig själv som enda mottagare (skicka till segment 'admin' via att flippa din egen roll) eller genom att välja "paid"-segmentet när du bara har dig själv som Premium. Resend kan inte ta tillbaka mejl.
+      💡 <strong>Rekommenderad workflow:</strong>
+      <ol style="margin:0.5rem 0 0;padding-left:1.25rem;color:#cbd5e1;">
+        <li><strong>Förhandsgranska</strong> — öppnar rendering i ny tab, se allt innan något skickas.</li>
+        <li><strong>Skicka till mig själv</strong> — verifiera i din riktiga email-klient (Gmail/Outlook). Kolla formatering, länkar, läsbarhet på mobil.</li>
+        <li><strong>Skicka broadcast</strong> — först nu går det ut till alla i segmentet. Resend kan inte ta tillbaka mejl.</li>
+      </ol>
     </div>
 
   </main>
