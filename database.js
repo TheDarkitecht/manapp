@@ -180,6 +180,17 @@ async function initDatabase() {
     )
   `);
 
+  // Stripe webhook idempotency — hindrar dubbelkörning om Stripe retries
+  // ett event (vilket de gör vid nätverksfel). Vi loggar event.id innan vi
+  // processerar; om den redan finns ignorerar vi eventet.
+  db.run(`
+    CREATE TABLE IF NOT EXISTS stripe_events (
+      event_id     TEXT    PRIMARY KEY,
+      event_type   TEXT    NOT NULL,
+      processed_at TEXT    NOT NULL DEFAULT (datetime('now'))
+    )
+  `);
+
   // Page-view tracking (for admin analytics: tid aktiv, mest besökta sidor, funnel)
   // duration_ms fylls i när nästa page_view från samma user loggas (client-side heartbeat uppdaterar senast-aktiva)
   db.run(`
@@ -1259,6 +1270,44 @@ function sessionCleanupExpired() {
   }
 }
 
+// ── Stripe webhook idempotency ────────────────────────────────────────────────
+
+/**
+ * Kontrollera + markera ett Stripe-event som processerat.
+ * Returns true om eventet är nytt (bör processeras), false om redan sett.
+ * Atomisk via INSERT OR IGNORE + changes().
+ */
+function markStripeEventProcessed(eventId, eventType) {
+  if (!eventId) return true; // ingen id = kan inte dedupa, processera
+  try {
+    // INSERT OR IGNORE — om PRIMARY KEY krockar sker inget och changes() = 0
+    db.run(
+      'INSERT OR IGNORE INTO stripe_events (event_id, event_type) VALUES (?, ?)',
+      [eventId, eventType || 'unknown']
+    );
+    const s = db.prepare('SELECT changes() AS n');
+    s.step();
+    const { n } = s.getAsObject();
+    s.free();
+    saveDb(); // Stripe events är sällsynta nog för direkt flush
+    return n > 0;
+  } catch (err) {
+    console.error('markStripeEventProcessed failed:', err.message);
+    return true; // vid fel, låt processeringen gå vidare hellre än blockera
+  }
+}
+
+function cleanupOldStripeEvents() {
+  // Behåll 90 dagars event-historik för debugging. Äldre events retries
+  // Stripe inte efter ~3 dagar så 90 är mer än nog.
+  try {
+    db.run("DELETE FROM stripe_events WHERE processed_at < datetime('now', '-90 days')");
+    saveDb();
+  } catch (err) {
+    console.error('cleanupOldStripeEvents failed:', err.message);
+  }
+}
+
 /**
  * Rensa gamla page_views (retention = 90 dagar). Körs från cron i server.js.
  * Håller tabellen liten så queries förblir snabba och disken inte fylls.
@@ -1408,6 +1457,59 @@ function getUserAnalyticsProfile(userId) {
  * Funnel-metrics: hur många användare når varje steg i onboarding?
  * Registrerad → öppnat block → klarat första provet → gjort första reflektionen → loggat första aktionen → blivit premium
  */
+/**
+ * GDPR Article 20: Right to data portability.
+ * Samlar ALL data som tillhör användaren i ett JSON-exportable objekt.
+ * Användaren kan ladda ner detta via /account/export.json.
+ */
+function getUserDataExport(userId) {
+  const user = findUserById(userId);
+  if (!user) return null;
+
+  const rows = (sql, params = []) => {
+    const s = db.prepare(sql);
+    if (params.length) s.bind(params);
+    const out = [];
+    while (s.step()) out.push(s.getAsObject());
+    s.free();
+    return out;
+  };
+
+  // Exponera INTE password_hash, pw_version, stripe_customer_id (kanslig data).
+  const profile = {
+    id:              user.id,
+    username:        user.username,
+    email:           user.email,
+    role:            user.role,
+    gdpr_accepted:   !!user.gdpr,
+    gdpr_accepted_at: user.gdpr_at,
+    created_at:      user.created_at,
+    last_login:      user.last_login,
+    referral_code:   user.referral_code,
+    referrer_id:     user.referrer_id,
+  };
+
+  return {
+    _meta: {
+      export_generated_at: new Date().toISOString(),
+      export_note:         'Detta är en komplett kopia av all data vi har om dig. Enligt GDPR Artikel 20 har du rätt att få ut denna i maskinläsbart format.',
+      contact:             'info@joakimjaksen.se',
+    },
+    profile,
+    block_progress:  rows('SELECT block_id, completed, quiz_score, quiz_total, completed_at FROM block_progress WHERE user_id = ?', [userId]),
+    reflections:     rows('SELECT block_id, prompt_idx, response, created_at FROM user_reflections WHERE user_id = ?', [userId]),
+    roleplays:       rows('SELECT block_id, roleplay_id, turn_count, completed_at FROM user_roleplays WHERE user_id = ?', [userId]),
+    missions:        rows('SELECT block_id, started_at, completed_at, progress, reflection FROM user_missions WHERE user_id = ?', [userId]),
+    actions_logged:  rows('SELECT category, count, note, block_id, created_at FROM user_actions WHERE user_id = ?', [userId]),
+    notes:           rows('SELECT id, content, created_at FROM notes WHERE user_id = ?', [userId]),
+    preferences:     rows('SELECT preferences, updated_at FROM user_preferences WHERE user_id = ?', [userId]),
+    daily_challenges:rows('SELECT date, challenge_data, completed_at FROM daily_challenges WHERE user_id = ?', [userId]),
+    pro_call_analyses: rows('SELECT id, title, duration_sec, status, created_at FROM pro_call_analyses WHERE user_id = ?', [userId]),
+    page_views:      rows('SELECT path, visited_at, duration_ms FROM page_views WHERE user_id = ? ORDER BY visited_at DESC', [userId]),
+    referrals_made:  rows('SELECT id AS referred_user_id, username, role, created_at FROM users WHERE referrer_id = ?', [userId]),
+  };
+}
+
 function getFunnelMetrics() {
   const s = (sql) => { const st = db.prepare(sql); st.step(); const r = st.getAsObject(); st.free(); return r; };
 
@@ -1465,10 +1567,13 @@ module.exports = {
   getAdminAnalytics,
   getUserAnalyticsProfile,
   getFunnelMetrics,
+  getUserDataExport,
   // Page-view tracking
   logPageView, updateLastPageViewDuration, cleanupOldPageViews, flushAnalytics,
   // Session store
   sessionGet, sessionSet, sessionDestroy, sessionCleanupExpired,
+  // Stripe idempotency
+  markStripeEventProcessed, cleanupOldStripeEvents,
   // Pro-tier
   createProCallAnalysis, updateProCallAnalysis, getProCallAnalysis,
   getProCallAnalysesForUser, countProCallAnalysesThisMonth,

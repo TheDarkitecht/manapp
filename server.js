@@ -23,9 +23,10 @@ const {
   getUserPreferences, setUserPreferences,
   getDailyChallenge, saveDailyChallenge, completeDailyChallenge,
   getAllUsersWithEmail,
-  getAdminAnalytics, getUserAnalyticsProfile, getFunnelMetrics,
+  getAdminAnalytics, getUserAnalyticsProfile, getFunnelMetrics, getUserDataExport,
   logPageView, updateLastPageViewDuration, cleanupOldPageViews, flushAnalytics,
   sessionGet, sessionSet, sessionDestroy, sessionCleanupExpired,
+  markStripeEventProcessed, cleanupOldStripeEvents,
   createProCallAnalysis, updateProCallAnalysis, getProCallAnalysis,
   getProCallAnalysesForUser, canProUserUploadCall, deleteProCallAnalysis,
   PRO_CALL_LIMIT_PER_MONTH,
@@ -195,6 +196,16 @@ app.post('/webhook', express.raw({ type: 'application/json' }), async (req, res)
   } catch (err) {
     console.error('Webhook signature failed:', err.message);
     return res.status(400).send(`Webhook Error: ${err.message}`);
+  }
+
+  // ── Idempotency: Stripe retries events vid nätverksfel. Utan dedup skulle
+  // samma checkout.session.completed kunna processeras N gånger, vilket
+  // blir fel när vi börjar ge ut referral-rewards eller skicka välkomstmejl
+  // som bi-effekt. Spara event.id; om redan sett — ignorera tyst (ack:a Stripe).
+  const isNewEvent = markStripeEventProcessed(event.id, event.type);
+  if (!isNewEvent) {
+    console.log(`⏭️  Skippar redan-processat Stripe-event ${event.id} (${event.type})`);
+    return res.json({ received: true, duplicate: true });
   }
 
   if (event.type === 'checkout.session.completed') {
@@ -2013,6 +2024,25 @@ app.get('/account', requireLogin, (req, res) => {
   });
 });
 
+// ── GDPR Artikel 20: Data portability ────────────────────────────────────────
+// Användaren kan ladda ner all sin data i maskinläsbart JSON-format.
+// Rate-limit: max 3 exporter per timme så vi inte exponerar tung DB-query.
+const dataExportLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 3,
+  handler: (req, res) => res.status(429).send('För många exportförfrågningar. Försök igen om en timme.'),
+});
+app.get('/account/export.json', requireLogin, dataExportLimiter, (req, res) => {
+  const data = getUserDataExport(req.session.userId);
+  if (!data) return res.status(404).send('Användarprofil hittades inte.');
+  const timestamp = new Date().toISOString().slice(0, 10);
+  const filename  = `min-data-${req.session.username}-${timestamp}.json`;
+  res.setHeader('Content-Type', 'application/json; charset=utf-8');
+  res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+  res.setHeader('Cache-Control', 'no-store');
+  res.send(JSON.stringify(data, null, 2));
+});
+
 app.post('/account/change-password', requireLogin, passwordChangeLimiter, verifyCsrf, async (req, res) => {
   const { currentPassword, newPassword, confirmPassword } = req.body;
   const user = findUserById(req.session.userId);
@@ -2670,34 +2700,42 @@ app.get('/health', (req, res) => {
 });
 
 // ── 404 handler ──────────────────────────────────────────────────────────────
+// Kontextmedveten: anonyma besökare länkas till landing, inloggade till dashboard.
 
 app.use((req, res) => {
-  res.status(404).send(`
-    <!DOCTYPE html>
-    <html lang="sv">
-    <head>
-      <meta charset="UTF-8" />
-      <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-      <title>404 — Joakim Jaksen</title>
-      <link rel="stylesheet" href="/style.css" />
-    </head>
-    <body class="learn-page" style="display:flex;align-items:center;justify-content:center;min-height:100vh;">
-      <div style="text-align:center;padding:2rem;">
-        <div style="font-size:4rem;margin-bottom:1rem;">🎯</div>
-        <h1 style="font-size:2rem;font-weight:900;color:#f1f5f9;margin-bottom:0.5rem;">404 — Sidan hittades inte</h1>
-        <p style="color:#64748b;margin-bottom:2rem;">Sidan du letar efter finns inte eller har flyttats.</p>
-        <a href="/dashboard" style="background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;padding:0.875rem 2rem;border-radius:10px;text-decoration:none;font-weight:600;">Till dashboarden →</a>
-      </div>
-    </body>
-    </html>
-  `);
+  const authenticated = !!(req.session && req.session.userId);
+  res.status(404).render('error', {
+    status:        404,
+    codeLabel:     'NOT FOUND',
+    icon:          '🔍',
+    heading:       'Sidan hittades inte',
+    body:          'Länken kan vara utgången, stavfel eller en sida som flyttats. Vi kan hjälpa dig hitta rätt.',
+    authenticated,
+    requestId:     null,
+  });
 });
 
 // ── Global error handler ─────────────────────────────────────────────────────
 
 app.use((err, req, res, _next) => {
   console.error('Unhandled error:', err);
-  res.status(500).send(`
+  const authenticated = !!(req.session && req.session.userId);
+  // Generera en kort request-id för supporten att referera till i loggar
+  const requestId = Math.random().toString(36).slice(2, 10);
+  console.error(`→ request-id ${requestId}`);
+  try {
+    return res.status(500).render('error', {
+      status:        500,
+      codeLabel:     'INTERNT FEL',
+      icon:          '⚠️',
+      heading:       'Något gick fel hos oss',
+      body:          'Inget du gjorde — felet är på vår sida och har loggats. Försök igen om en stund. Om problemet kvarstår, mejla oss request-id:t nedan.',
+      authenticated,
+      requestId,
+    });
+  } catch (_renderErr) {
+    // Fallback om själva template-renderingen smäller
+    res.status(500).send(`
     <!DOCTYPE html>
     <html lang="sv">
     <head>
@@ -2710,11 +2748,12 @@ app.use((err, req, res, _next) => {
         <div style="font-size:4rem;margin-bottom:1rem;">⚠️</div>
         <h1 style="font-size:1.75rem;font-weight:900;color:#f1f5f9;margin-bottom:0.5rem;">Något gick fel</h1>
         <p style="color:#64748b;margin-bottom:2rem;">Vi har loggat felet och tittar på det. Försök igen om en stund.</p>
-        <a href="/dashboard" style="background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;padding:0.875rem 2rem;border-radius:10px;text-decoration:none;font-weight:600;">Till dashboarden →</a>
+        <a href="/" style="background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;padding:0.875rem 2rem;border-radius:10px;text-decoration:none;font-weight:600;">Till startsidan →</a>
       </div>
     </body>
     </html>
-  `);
+    `);
+  }
 });
 
 // ── Start ─────────────────────────────────────────────────────────────────────
@@ -2760,6 +2799,10 @@ async function startServer() {
   // Clean up utgångna sessions — körs var 6:e timme
   sessionCleanupExpired();
   setInterval(sessionCleanupExpired, 6 * 60 * 60 * 1000);
+
+  // Clean up gamla Stripe-event-loggen (retention 90 dagar) — dagligen
+  cleanupOldStripeEvents();
+  setInterval(cleanupOldStripeEvents, 24 * 60 * 60 * 1000);
 
   // Graceful shutdown: flusha analytics-buffer innan processen dör.
   // Railway skickar SIGTERM vid redeploy — utan detta förloras analytics i flight.
