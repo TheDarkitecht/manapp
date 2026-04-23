@@ -1116,9 +1116,40 @@ function getAdminAnalytics() {
 
 // ── Page-view tracking & user analytics ───────────────────────────────────────
 
+// Dirty-flag + debounced persist för analytics-writes.
+// Vi vill inte saveDb() på varje page-view (för dyrt — hela DB skrivs om),
+// men vi måste säkerställa att data inte förloras vid Railway-redeploy.
+// Lösning: flagga "dirty" när analytics skriver, flusha var 30:e sekund
+// om något hänt. Dessutom flush vid process-exit (SIGTERM/SIGINT).
+let _analyticsDirty = false;
+let _flushTimer = null;
+
+function _markAnalyticsDirty() {
+  _analyticsDirty = true;
+  if (!_flushTimer) {
+    _flushTimer = setTimeout(() => {
+      if (_analyticsDirty) {
+        _analyticsDirty = false;
+        try { saveDb(); } catch (err) { console.error('Analytics flush failed:', err.message); }
+      }
+      _flushTimer = null;
+    }, 30_000);
+  }
+}
+
+/** Force-flush analytics writes. Kallas från SIGTERM-handler. */
+function flushAnalytics() {
+  if (_flushTimer) { clearTimeout(_flushTimer); _flushTimer = null; }
+  if (_analyticsDirty) {
+    _analyticsDirty = false;
+    try { saveDb(); } catch (err) { console.error('flushAnalytics failed:', err.message); }
+  }
+}
+
 /**
  * Logga page-view. Kallas från middleware i server.js på GET-requests
  * för inloggade användare (endast "content"-paths, ej /style.css etc.).
+ * Persistens batchas via _markAnalyticsDirty (30s debounce).
  */
 function logPageView(userId, path) {
   if (!userId || !path) return;
@@ -1127,8 +1158,7 @@ function logPageView(userId, path) {
       'INSERT INTO page_views (user_id, path, visited_at) VALUES (?, ?, datetime(\'now\'))',
       [userId, path.slice(0, 500)]
     );
-    // Persistens skippas här för prestanda — saveDb() körs ändå regelbundet från andra writes.
-    // Alternativt: write-buffer men keep-it-simple.
+    _markAnalyticsDirty();
   } catch (err) {
     // Tyst fel — analytics får aldrig ta ner appen
     console.error('logPageView failed:', err.message);
@@ -1137,7 +1167,7 @@ function logPageView(userId, path) {
 
 /**
  * Uppdaterar duration_ms för senaste page_view. Kallas från heartbeat-endpoint
- * (klient POST:ar var 60:e sekund så vi vet att de fortfarande är där).
+ * (klient POST:ar var 30:e sekund så vi vet att de fortfarande är där).
  */
 function updateLastPageViewDuration(userId, durationMs) {
   if (!userId || !Number.isFinite(durationMs) || durationMs < 0) return;
@@ -1154,8 +1184,22 @@ function updateLastPageViewDuration(userId, durationMs) {
        )`,
       [Math.min(durationMs, 7200000), userId] // cap 2h per page
     );
+    _markAnalyticsDirty();
   } catch (err) {
     console.error('updateLastPageViewDuration failed:', err.message);
+  }
+}
+
+/**
+ * Rensa gamla page_views (retention = 90 dagar). Körs från cron i server.js.
+ * Håller tabellen liten så queries förblir snabba och disken inte fylls.
+ */
+function cleanupOldPageViews() {
+  try {
+    db.run("DELETE FROM page_views WHERE visited_at < datetime('now', '-90 days')");
+    saveDb();
+  } catch (err) {
+    console.error('cleanupOldPageViews failed:', err.message);
   }
 }
 
@@ -1353,7 +1397,7 @@ module.exports = {
   getUserAnalyticsProfile,
   getFunnelMetrics,
   // Page-view tracking
-  logPageView, updateLastPageViewDuration,
+  logPageView, updateLastPageViewDuration, cleanupOldPageViews, flushAnalytics,
   // Pro-tier
   createProCallAnalysis, updateProCallAnalysis, getProCallAnalysis,
   getProCallAnalysesForUser, countProCallAnalysesThisMonth,

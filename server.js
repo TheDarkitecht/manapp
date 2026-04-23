@@ -24,7 +24,7 @@ const {
   getDailyChallenge, saveDailyChallenge, completeDailyChallenge,
   getAllUsersWithEmail,
   getAdminAnalytics, getUserAnalyticsProfile, getFunnelMetrics,
-  logPageView, updateLastPageViewDuration,
+  logPageView, updateLastPageViewDuration, cleanupOldPageViews, flushAnalytics,
   createProCallAnalysis, updateProCallAnalysis, getProCallAnalysis,
   getProCallAnalysesForUser, canProUserUploadCall, deleteProCallAnalysis,
   PRO_CALL_LIMIT_PER_MONTH,
@@ -312,12 +312,25 @@ app.use((req, res, next) => {
 // ── Page-view tracker: logga sidbesök för inloggade (admin analytics) ─────────
 // Skippa assets, api-endpoints och health-checks. Bara "riktiga" sidor.
 const PAGE_VIEW_SKIP = /^\/(style\.css|gamification\.css|pro\.css|favicon|robots|sitemap|_|heartbeat|ping|stripe-webhook|admin\/analytics-api)/i;
+// Botar/crawlers förorenar analytics med fake-aktivitet. Skippa dem.
+const BOT_UA = /bot|crawler|spider|slurp|bingpreview|headless|lighthouse|pagespeed|pingdom|uptimerobot|facebookexternalhit|curl|wget|python-requests|axios/i;
 app.use((req, res, next) => {
   if (req.method === 'GET' && req.session && req.session.userId && !PAGE_VIEW_SKIP.test(req.path)) {
-    // Fire-and-forget: blockera aldrig requesten
-    try { logPageView(req.session.userId, req.path); } catch (_) {}
+    const ua = req.get('User-Agent') || '';
+    if (!BOT_UA.test(ua)) {
+      // Fire-and-forget: blockera aldrig requesten
+      try { logPageView(req.session.userId, req.path); } catch (_) {}
+    }
   }
   next();
+});
+
+// Rate-limit heartbeat: en klient bör max skicka ~2/min (30s intervall), tillåt 10/min
+// för safety margin men stoppa spam/bots som försöker förorena analytics.
+const heartbeatLimiter = rateLimit({
+  windowMs: 60 * 1000, max: 10,
+  skipFailedRequests: true,
+  handler: (req, res) => res.status(204).end(), // tyst drop — inga error-logs
 });
 
 // ── Rate limiter — max 10 login attempts per 15 min per IP ───────────────────
@@ -2064,9 +2077,10 @@ app.get('/admin/user/:id', requireLogin, requireAdmin, (req, res) => {
   });
 });
 
-// ── Heartbeat: klient POST:ar var 60:e sek för att uppdatera duration_ms ─────
+// ── Heartbeat: klient POST:ar var 30:e sek för att uppdatera duration_ms ─────
 // Body: { durationMs: antal ms sedan sidan laddades }. Ingen CSRF — idempotent nonce.
-app.post('/heartbeat', (req, res) => {
+// Rate-limitad (10/min per IP) för att förhindra analytics-spam.
+app.post('/heartbeat', heartbeatLimiter, (req, res) => {
   if (!req.session || !req.session.userId) return res.status(204).end();
   const d = Number(req.body && req.body.durationMs);
   if (Number.isFinite(d) && d > 0 && d < 7200000) {
@@ -2694,6 +2708,21 @@ async function startServer() {
   // Clean up expired reset tokens on startup and every hour
   cleanupExpiredTokens();
   setInterval(cleanupExpiredTokens, 60 * 60 * 1000);
+
+  // Clean up page_views äldre än 90 dagar — hindrar obegränsad tillväxt
+  // och håller admin-analytics-queries snabba. Körs vid uppstart + dagligen.
+  cleanupOldPageViews();
+  setInterval(cleanupOldPageViews, 24 * 60 * 60 * 1000);
+
+  // Graceful shutdown: flusha analytics-buffer innan processen dör.
+  // Railway skickar SIGTERM vid redeploy — utan detta förloras analytics i flight.
+  const gracefulShutdown = (signal) => {
+    console.log(`\n${signal} mottaget — flushar analytics...`);
+    try { flushAnalytics(); } catch (err) { console.error('Shutdown flush error:', err.message); }
+    process.exit(0);
+  };
+  process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+  process.on('SIGINT',  () => gracefulShutdown('SIGINT'));
 
   app.listen(PORT, () => console.log(`✅ Server running at http://localhost:${PORT}`));
 }
