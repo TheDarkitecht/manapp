@@ -51,7 +51,10 @@
         <form method="POST" action="/login" class="auth-form" onsubmit="authLoading(this)">
           <div class="field-group">
             <label for="email">E-post</label>
-            <input type="email" id="email" name="email" placeholder="din@email.com" required autocomplete="email" autofocus />
+            <!-- type=text + inputmode=email: ger mobil-email-keyboard men
+                 blockerar inte "admin"-inlogg från browser-HTML5-validering.
+                 Backend accepterar email ELLER username. -->
+            <input type="text" id="email" name="email" placeholder="din@email.com" required autocomplete="email" inputmode="email" autocapitalize="none" spellcheck="false" autofocus />
           </div>
           <div class="field-group">
             <label for="password">Lösenord</label>
