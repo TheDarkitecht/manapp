@@ -1,6 +1,8 @@
 User-agent: *
 Allow: /
 Allow: /foretag
+Allow: /priser
+Allow: /pricing
 Allow: /register
 Allow: /bevis/
 

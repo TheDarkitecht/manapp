@@ -2368,6 +2368,14 @@ app.get('/foretag', (req, res) => {
   });
 });
 
+// ── Public /priser — SEO-indexerad pris-sida med rich-results ─────────────────
+app.get(['/priser', '/pricing'], (req, res) => {
+  res.render('priser', {
+    username: req.session?.username || null,
+    role:     req.session?.role || null,
+  });
+});
+
 // ── Chat ──────────────────────────────────────────────────────────────────────
 
 app.post('/chat', requireLogin, chatLimiter, verifyCsrf, async (req, res) => {
