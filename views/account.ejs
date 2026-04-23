@@ -79,6 +79,23 @@
       <a href="/dashboard" class="success-link">← Tillbaka till dashboard</a>
     </div>
 
+    <!-- Stripe customer portal — self-serve cancel, uppdatera kort, ladda ner kvitton -->
+    <% if (role === 'premium' || role === 'pro') { %>
+    <div class="success-card" style="margin-top:1.5rem;">
+      <h2 style="color:#f1f5f9;margin:0 0 0.5rem;font-size:1.15rem;">💳 Hantera prenumeration</h2>
+      <p style="color:#94a3b8;margin:0 0 1.25rem;font-size:0.9rem;line-height:1.5;">
+        Uppdatera betalkort, ladda ner kvitton, pausa eller säg upp —
+        allt via Stripes säkra kundportal.
+      </p>
+      <form method="POST" action="/billing/portal" style="margin:0;">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+        <button type="submit" style="padding:0.75rem 1.25rem;background:rgba(139,92,246,0.12);color:#c4b5fd;border:1px solid rgba(139,92,246,0.3);border-radius:10px;font-weight:600;font-size:0.9rem;cursor:pointer;">
+          Öppna Stripe-portalen →
+        </button>
+      </form>
+    </div>
+    <% } %>
+
     <!-- GDPR: data-export — Artikel 20 rätt till portabilitet -->
     <div class="success-card" style="margin-top:1.5rem;">
       <h2 style="color:#f1f5f9;margin:0 0 0.5rem;font-size:1.15rem;">🗂️ Ladda ner min data</h2>

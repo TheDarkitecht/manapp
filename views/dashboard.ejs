@@ -90,7 +90,7 @@
       <!-- Account section at bottom -->
       <div class="sidebar-section sidebar-account">
         <a href="/account" class="sidebar-link">🔐 Mitt konto</a>
-        <% if (role === 'premium') { %>
+        <% if (role === 'premium' || role === 'pro') { %>
           <form method="POST" action="/billing/portal" class="inline-form">
             <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
             <button type="submit" class="sidebar-billing-btn">Hantera prenumeration</button>
