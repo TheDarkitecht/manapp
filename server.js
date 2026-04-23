@@ -8,7 +8,7 @@ const Stripe    = require('stripe');
 const { Resend } = require('resend');
 const helmet    = require('helmet');
 const {
-  initDatabase, cleanupExpiredTokens, findUserByUsername, findUserByEmail, findUserById, createUser,
+  initDatabase, cleanupExpiredTokens, rotateDbBackups, findUserByUsername, findUserByEmail, findUserById, createUser,
   getAllUsers, setUserRole, deleteUser, deleteUserAccount, getUserStats,
   setStripeCustomerId, findUserByStripeCustomerId,
   updateLastLogin,
@@ -2824,6 +2824,12 @@ async function startServer() {
   // Clean up gamla Stripe-event-loggen (retention 90 dagar) — dagligen
   cleanupOldStripeEvents();
   setInterval(cleanupOldStripeEvents, 24 * 60 * 60 * 1000);
+
+  // Rotating DB-backups (users.db.backup.1-3) — skydd mot filkorruption.
+  // Körs 10 sek efter startup (ej omedelbart — låt DB-init stabilisera först)
+  // och sedan var 6:e timme. Total recovery-fönster: ~18 timmar med 3 snapshots.
+  setTimeout(() => rotateDbBackups(), 10_000);
+  setInterval(rotateDbBackups, 6 * 60 * 60 * 1000);
 
   // Graceful shutdown: flusha analytics-buffer innan processen dör.
   // Railway skickar SIGTERM vid redeploy — utan detta förloras analytics i flight.

@@ -343,6 +343,30 @@ function cleanupExpiredTokens() {
   } catch (_) {}
 }
 
+/**
+ * Rotating DB-backups. sql.js persisterar en ENDA fil — om den korruptas
+ * (disk error, SIGKILL mid-write, fs bug) förloras allt. Den här funktionen
+ * skapar rotating kopior: users.db.backup.1 (senaste), .2 (6h gammal), .3 (12h).
+ * Kallas från en 6-timmars cron i server.js.
+ */
+function rotateDbBackups() {
+  try {
+    if (!fs.existsSync(DB_PATH)) return;
+    // Roll .2 → .3, .1 → .2, current → .1
+    const backup3 = `${DB_PATH}.backup.3`;
+    const backup2 = `${DB_PATH}.backup.2`;
+    const backup1 = `${DB_PATH}.backup.1`;
+    if (fs.existsSync(backup2)) fs.renameSync(backup2, backup3);
+    if (fs.existsSync(backup1)) fs.renameSync(backup1, backup2);
+    fs.copyFileSync(DB_PATH, backup1);
+    // Spara filstorlek + tidsstämpel för logg
+    const stat = fs.statSync(backup1);
+    console.log(`📦 DB-backup rotated: ${backup1} (${Math.round(stat.size / 1024)} KB)`);
+  } catch (err) {
+    console.error('rotateDbBackups failed:', err.message);
+  }
+}
+
 // ── User queries ──────────────────────────────────────────────────────────────
 
 function findUserByUsername(username) {
@@ -1589,7 +1613,7 @@ function getFunnelMetrics() {
 // ── Exports ───────────────────────────────────────────────────────────────────
 
 module.exports = {
-  initDatabase, saveDb, cleanupExpiredTokens,
+  initDatabase, saveDb, cleanupExpiredTokens, rotateDbBackups,
   findUserByUsername, findUserByEmail, findUserById,
   createUser, getAllUsers, setUserRole, deleteUser, deleteUserAccount, getUserStats,
   setStripeCustomerId, findUserByStripeCustomerId,
