@@ -1,5 +1,9 @@
 User-agent: *
 Allow: /
+Allow: /foretag
+Allow: /register
+Allow: /bevis/
+
 Disallow: /dashboard
 Disallow: /admin
 Disallow: /learn
@@ -13,5 +17,11 @@ Disallow: /reset-password
 Disallow: /billing
 Disallow: /webhook
 Disallow: /health
+Disallow: /heartbeat
+Disallow: /pro
+Disallow: /installningar
+Disallow: /mina-framsteg
+Disallow: /loggbok
+Disallow: /sok
 
 Sitemap: https://www.joakimjaksen.se/sitemap.xml

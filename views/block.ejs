@@ -177,6 +177,18 @@
 
   <main id="main-content">
 
+  <!-- Välkomst-banner: visas första gången efter registrering -->
+  <% if (typeof welcome !== 'undefined' && welcome) { %>
+    <div role="status" style="margin:1rem 1.25rem;padding:1.25rem 1.5rem;background:linear-gradient(145deg, rgba(99,102,241,0.12), rgba(139,92,246,0.06));border:1px solid rgba(99,102,241,0.3);border-radius:14px;display:flex;align-items:center;gap:1rem;flex-wrap:wrap;">
+      <div style="font-size:2rem;flex-shrink:0;">🎯</div>
+      <div style="flex:1;min-width:200px;">
+        <div style="color:#f1f5f9;font-weight:800;font-size:1.05rem;margin-bottom:0.25rem;">Välkommen <%= username %> — du är inloggad!</div>
+        <div style="color:#cbd5e1;font-size:0.9rem;">Du är i <strong>Block 1 av 20</strong>. Läs teorin, gör provet, och bygg vidare. Gratis-block är 1 och 2 — resten låses upp med Premium.</div>
+      </div>
+      <button type="button" onclick="this.parentElement.style.display='none'" aria-label="Dölj" style="background:none;border:none;color:#94a3b8;font-size:1.25rem;cursor:pointer;padding:0.25rem 0.5rem;">✕</button>
+    </div>
+  <% } %>
+
   <!-- Subtil coach-hint — visas bara om systemet har något relevant att säga -->
   <% if (!isTeaser && typeof coachHint !== 'undefined' && coachHint) { %>
     <div class="coach-hint coach-hint-<%= coachHint.tone %>" role="status">

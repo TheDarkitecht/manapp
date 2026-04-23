@@ -712,6 +712,28 @@ app.post('/register', registerLimiter, async (req, res) => {
     console.error('Welcome email error:', emailErr.message);
   }
 
+  // ── Auto-login: spara steg 1 av onboarding-friktion ───────────────────────
+  // Industry standard — ingen mening att tvinga användaren att ange lösenordet direkt
+  // efter de just satt det. Bumpar "öppnade block"-funnel från ~50% till ~80%+.
+  const newUser = findUserById(result.userId);
+  if (newUser) {
+    req.session.regenerate((err) => {
+      if (err) {
+        return res.render('login', { error: null, registerError: null, turnstileSiteKey: TURNSTILE_SITE_KEY,
+          success: `Konto skapat! Logga in med ${username.trim()}.` });
+      }
+      req.session.userId    = newUser.id;
+      req.session.username  = newUser.username;
+      req.session.role      = newUser.role;
+      req.session.pwVersion = newUser.pw_version || 0;
+      updateLastLogin(newUser.id);
+      // Redirect till första gratis-blocket direkt — omedelbart värde
+      res.redirect('/learn/inledning?welcome=1');
+    });
+    return;
+  }
+
+  // Fallback om findUserById misslyckas
   res.render('login', { error: null, registerError: null, turnstileSiteKey: TURNSTILE_SITE_KEY,
     success: `Konto skapat! Välkommen ${username.trim()} — logga in med ditt användarnamn.` });
 });
@@ -979,6 +1001,7 @@ app.get('/learn/:id', requireLogin, (req, res) => {
     readTime,
     journey,
     coachHint,
+    welcome:      req.query.welcome === '1',
     csrfToken:    generateCsrfToken(req),
   });
 });
