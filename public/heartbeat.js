@@ -158,4 +158,129 @@
   } else {
     initImpersonateBanner();
   }
+
+  // ── Onboarding: NEW-badges + kontextuella tooltips ────────────────────────
+  // Klient-side, localStorage-persistens per browser. Respekterar user agency:
+  // aldrig auto-popup som blockerar, bara dots/arrows user kan ignorera.
+  //
+  // Två markörer att använda i EJS:
+  //   data-new-feature="pro-samtal"
+  //     → Pulserande gold-dot + "NY"-chip. Försvinner när user klickar länken
+  //       eller trycker på badgen.
+  //
+  //   data-onboarding-tip="Börja här — Block 1 är gratis"
+  //   data-onboarding-id="dashboard-blocks"
+  //     → Inline tooltip med pil som pekar på elementet. Auto-dismiss efter 8s
+  //       eller vid klick. Visas en gång per onboarding-id per browser.
+
+  // Inject CSS en gång per sida
+  if (!document.getElementById('jj-onboarding-css')) {
+    var ocss = document.createElement('style');
+    ocss.id = 'jj-onboarding-css';
+    ocss.textContent = [
+      '@keyframes jj-pulse { 0%,100%{transform:scale(1);opacity:1;} 50%{transform:scale(1.35);opacity:0.6;} }',
+      '.jj-new-badge { display:inline-flex;align-items:center;gap:4px;margin-left:6px;padding:2px 8px;background:rgba(251,191,36,0.18);color:#fbbf24;border:1px solid rgba(251,191,36,0.4);border-radius:999px;font-size:10px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;cursor:pointer;vertical-align:middle;}',
+      '.jj-new-badge::before { content:"";display:inline-block;width:6px;height:6px;border-radius:50%;background:#fbbf24;animation:jj-pulse 1.5s ease-in-out infinite;box-shadow:0 0 8px rgba(251,191,36,0.7);}',
+      '.jj-new-badge:hover { background:rgba(251,191,36,0.3); }',
+      '.jj-tooltip { position:absolute;z-index:9998;max-width:260px;padding:10px 14px;background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;border-radius:10px;font-size:13px;font-weight:600;line-height:1.4;box-shadow:0 8px 24px rgba(0,0,0,0.35),0 0 0 1px rgba(255,255,255,0.1);pointer-events:auto;animation:jj-tip-in 0.3s ease;cursor:pointer;}',
+      '.jj-tooltip::before { content:"";position:absolute;border:7px solid transparent;}',
+      '.jj-tooltip[data-pos="bottom"]::before { top:-14px;left:20px;border-bottom-color:#6366f1;}',
+      '.jj-tooltip[data-pos="top"]::before    { bottom:-14px;left:20px;border-top-color:#8b5cf6;}',
+      '.jj-tooltip .jj-tip-dismiss { opacity:0.7;font-size:10px;margin-top:4px;display:block;}',
+      '@keyframes jj-tip-in { from{opacity:0;transform:translateY(-6px);} to{opacity:1;transform:translateY(0);} }',
+    ].join('\n');
+    document.head.appendChild(ocss);
+  }
+
+  var ONBOARDING_STORAGE = 'jj-onboarding-v1';
+
+  function getDismissed() {
+    try { return JSON.parse(localStorage.getItem(ONBOARDING_STORAGE)) || {}; }
+    catch (_) { return {}; }
+  }
+
+  function setDismissed(key) {
+    try {
+      var d = getDismissed();
+      d[key] = Date.now();
+      localStorage.setItem(ONBOARDING_STORAGE, JSON.stringify(d));
+    } catch (_) {}
+  }
+
+  function initNewBadges() {
+    var dismissed = getDismissed();
+    document.querySelectorAll('[data-new-feature]').forEach(function (el) {
+      var feature = el.getAttribute('data-new-feature');
+      if (!feature) return;
+      if (dismissed['new:' + feature]) return;
+      if (el.querySelector('.jj-new-badge')) return; // redan renderad
+
+      var badge = document.createElement('span');
+      badge.className = 'jj-new-badge';
+      badge.setAttribute('aria-label', 'Ny funktion: ' + feature);
+      badge.textContent = 'NY';
+      el.appendChild(badge);
+
+      // Dismiss när element ELLER badge klickas (klick på länken räknas också)
+      var dismiss = function () { setDismissed('new:' + feature); badge.remove(); };
+      badge.addEventListener('click', function (e) { e.preventDefault(); e.stopPropagation(); dismiss(); });
+      el.addEventListener('click', function () { setTimeout(dismiss, 100); }, { once: true });
+    });
+  }
+
+  function initTooltips() {
+    var dismissed = getDismissed();
+    document.querySelectorAll('[data-onboarding-tip]').forEach(function (el) {
+      var tipId = el.getAttribute('data-onboarding-id') || el.getAttribute('data-onboarding-tip').slice(0, 30);
+      if (dismissed['tip:' + tipId]) return;
+
+      var text = el.getAttribute('data-onboarding-tip');
+      if (!text) return;
+
+      var tip = document.createElement('div');
+      tip.className = 'jj-tooltip';
+      tip.setAttribute('role', 'status');
+      tip.setAttribute('aria-live', 'polite');
+      tip.innerHTML = escapeHtml(text) + '<span class="jj-tip-dismiss">Klicka för att stänga</span>';
+
+      // Positionering: under elementet om det finns plats, annars ovan
+      var rect = el.getBoundingClientRect();
+      var scrollY = window.scrollY || window.pageYOffset;
+      var scrollX = window.scrollX || window.pageXOffset;
+      var belowAvailable = window.innerHeight - rect.bottom > 80;
+
+      tip.style.position = 'absolute';
+      if (belowAvailable) {
+        tip.setAttribute('data-pos', 'bottom');
+        tip.style.top = (rect.bottom + scrollY + 14) + 'px';
+      } else {
+        tip.setAttribute('data-pos', 'top');
+        tip.style.top = (rect.top + scrollY - 80) + 'px';
+      }
+      tip.style.left = Math.max(10, rect.left + scrollX) + 'px';
+
+      document.body.appendChild(tip);
+
+      // Dismiss vid klick på tooltip eller efter 10 sekunder
+      var dismiss = function () {
+        tip.style.animation = 'jj-tip-in 0.2s ease reverse';
+        setTimeout(function () { tip.remove(); }, 180);
+        setDismissed('tip:' + tipId);
+      };
+      tip.addEventListener('click', dismiss);
+      setTimeout(dismiss, 10000);
+    });
+  }
+
+  function initOnboarding() {
+    initNewBadges();
+    // Fördröj tooltips kort så de inte konkurrerar med page-render
+    setTimeout(initTooltips, 600);
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initOnboarding);
+  } else {
+    initOnboarding();
+  }
 })();

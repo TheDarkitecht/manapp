@@ -66,7 +66,7 @@
       <h2>Logga en handling</h2>
       <form method="POST" action="/loggbok" class="lb-form">
         <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
-        <label class="lb-label">
+        <label class="lb-label"<% if (!actions || !actions.length) { %> data-onboarding-tip="Logga varje samtal, möte eller mejl — små steg bygger rytm" data-onboarding-id="loggbok-first-category"<% } %>>
           <span>Vad gjorde du?</span>
           <select name="category" id="lbCategory" required onchange="updateLbForm()">
             <option value="">— välj kategori —</option>

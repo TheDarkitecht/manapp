@@ -102,6 +102,7 @@
          data-search="<%= (block.title + ' ' + block.subtitle).toLowerCase() %>"
          data-status="<%= status.status %>"
          data-completed="<%= prog.completed ? '1' : '0' %>"
+         <% if (i === 0 && completedCount === 0) { %>data-onboarding-tip="Börja här. Block 1 + 2 är helt gratis." data-onboarding-id="learn-first-block"<% } %>
          style="--card-gradient: <%= block.gradient %>;">
         <div class="block-card-number">
           <% if (isMastered) { %>🏆<% } else if (isAdvanced) { %>⚡<% } else if (isQuizDone) { %>✓<% } else { %><%= i + 1 %><% } %>
