@@ -24,6 +24,7 @@ const {
   getUserPreferences, setUserPreferences,
   getDailyChallenge, saveDailyChallenge, completeDailyChallenge,
   getAllUsersWithEmail, getUsersForBroadcast,
+  saveBroadcast, getBroadcastsForUser, getBroadcastById,
   getAdminAnalytics, getUserAnalyticsProfile, getFunnelMetrics, getUserDataExport, getCohortRetention,
   getContinueTarget, getBlockTimeAnalytics,
   logPageView, updateLastPageViewDuration, cleanupOldPageViews, flushAnalytics,
@@ -2520,6 +2521,38 @@ app.get('/integritetspolicy', (req, res) => {
 
 // ── Ordbok ────────────────────────────────────────────────────────────────────
 
+// ── /nyheter — broadcast-arkiv för users ─────────────────────────────────────
+// Gör missade announcements läsbara. Alla broadcasts synliga oavsett
+// segment (transparens > exclusivity). Segment-taggen visas som kontext.
+
+app.get('/nyheter', requireLogin, (req, res) => {
+  const broadcasts = getBroadcastsForUser(50);
+  res.render('nyheter', {
+    username:  req.session.username,
+    role:      req.session.role,
+    broadcasts,
+  });
+});
+
+app.get('/nyheter/:id', requireLogin, (req, res) => {
+  const id = parseInt(req.params.id);
+  if (!id) return res.redirect('/nyheter');
+  const broadcast = getBroadcastById(id);
+  if (!broadcast) return res.redirect('/nyheter');
+  // Återanvänd buildBroadcastEmail-logiken för att rendera body konsistent
+  // (plain-text → <p>/<br>, HTML passes through)
+  const isHtml = /<\/?(p|br|div|strong|em|ul|ol|li|a|h[1-6])/i.test(broadcast.body);
+  const rendered = isHtml
+    ? broadcast.body
+    : '<p>' + broadcast.body.replace(/\n\n+/g, '</p><p>').replace(/\n/g, '<br>') + '</p>';
+  res.render('nyhet', {
+    username:   req.session.username,
+    role:       req.session.role,
+    broadcast,
+    rendered,
+  });
+});
+
 app.get('/ordbok', requireLogin, (req, res) => {
   const categories = [...new Set(glossaryTerms.map(t => t.category))];
   // Build a blockId→title map for term link tooltips
@@ -2706,6 +2739,7 @@ app.get('/admin/broadcast', requireLogin, requireAdmin, (req, res) => {
     failed: req.query.failed ? parseInt(req.query.failed) : null,
     testSent: req.query.testSent === '1',
     error: req.query.error || null,
+    pastBroadcasts: getBroadcastsForUser(30), // senaste 30 för admin-vy
   });
 });
 
@@ -2818,6 +2852,21 @@ app.post('/admin/broadcast', requireLogin, requireAdmin, broadcastLimiter, verif
     }
   }
   console.log(`📢 Broadcast klar: ${sent} skickade, ${failed} misslyckade (segment=${segment})`);
+
+  // Spara i arkivet så users kan läsa på /nyheter även om de missar mejlet
+  try {
+    saveBroadcast({
+      subject,
+      body,
+      segment,
+      admin_user_id: req.session.impersonatedBy?.adminUserId || req.session.userId,
+      sent_count: sent,
+      failed_count: failed,
+    });
+  } catch (err) {
+    console.error('saveBroadcast archive error:', err.message);
+  }
+
   audit(req, 'broadcast.send', null, { segment, sent, failed, subject: subject.slice(0, 100) });
   res.redirect(`/admin/broadcast?sent=${sent}&failed=${failed}`);
 });

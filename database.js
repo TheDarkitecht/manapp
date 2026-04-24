@@ -272,6 +272,22 @@ async function initDatabase() {
     )
   `);
 
+  // Broadcast-arkiv: varje admin-broadcast persisteras så users kan se
+  // missade announcements på /nyheter. Original body (som admin skrev)
+  // sparas — NOT rendered HTML med unsubscribe-länk (per-user).
+  db.run(`
+    CREATE TABLE IF NOT EXISTS broadcasts (
+      id             INTEGER PRIMARY KEY AUTOINCREMENT,
+      subject        TEXT    NOT NULL,
+      body           TEXT    NOT NULL,
+      segment        TEXT    NOT NULL,
+      admin_user_id  INTEGER,
+      sent_count     INTEGER NOT NULL DEFAULT 0,
+      failed_count   INTEGER NOT NULL DEFAULT 0,
+      sent_at        TEXT    NOT NULL DEFAULT (datetime('now'))
+    )
+  `);
+
   // Admin audit log — varje admin-åtgärd loggas för accountability + säkerhet.
   // Kritiskt för att kunna svara "vem ändrade detta?" vid support-issues eller
   // säkerhetsincidenter. Retention: 180 dagar (rensas via cron).
@@ -361,6 +377,8 @@ async function initDatabase() {
     "CREATE INDEX IF NOT EXISTS idx_sessions_expires     ON sessions(expires_at)",
     // Admin notes index (för snabb lookup per target user)
     "CREATE INDEX IF NOT EXISTS idx_admin_notes_target   ON admin_user_notes(target_user_id, created_at DESC)",
+    // Broadcasts index (huvudqueryn är "senaste N")
+    "CREATE INDEX IF NOT EXISTS idx_broadcasts_sent_at   ON broadcasts(sent_at DESC)",
     // Admin audit log index (huvud-query är "senaste 100 händelser")
     "CREATE INDEX IF NOT EXISTS idx_audit_date           ON admin_audit_log(created_at DESC)",
     "CREATE INDEX IF NOT EXISTS idx_audit_admin          ON admin_audit_log(admin_user_id, created_at DESC)",
@@ -1784,6 +1802,46 @@ function deleteAdminNote(noteId) {
   saveDb();
 }
 
+// ── Broadcast-arkiv ───────────────────────────────────────────────────────────
+
+function saveBroadcast({ subject, body, segment, admin_user_id, sent_count, failed_count }) {
+  db.run(
+    `INSERT INTO broadcasts (subject, body, segment, admin_user_id, sent_count, failed_count)
+     VALUES (?, ?, ?, ?, ?, ?)`,
+    [
+      (subject || '').slice(0, 200),
+      (body || '').slice(0, 20000),
+      (segment || 'all'),
+      admin_user_id || null,
+      sent_count || 0,
+      failed_count || 0,
+    ]
+  );
+  saveDb();
+}
+
+/**
+ * Hämta broadcasts synliga för user. Visar alla broadcasts oavsett
+ * segment — transparens > exclusivity. Users som bytt tier ser fortf
+ * gamla announcements. Segment-tag visas som kontext i UI:t.
+ */
+function getBroadcastsForUser(limit = 50) {
+  return rowsQuery(
+    `SELECT id, subject, body, segment, sent_at, sent_count
+     FROM broadcasts
+     ORDER BY sent_at DESC
+     LIMIT ?`,
+    [Math.min(limit, 100)]
+  );
+}
+
+function getBroadcastById(id) {
+  const s = db.prepare('SELECT * FROM broadcasts WHERE id = ?');
+  s.bind([id]);
+  if (s.step()) { const r = s.getAsObject(); s.free(); return r; }
+  s.free(); return null;
+}
+
 // ── Admin audit log ───────────────────────────────────────────────────────────
 
 /**
@@ -2700,6 +2758,7 @@ module.exports = {
   getDailyChallenge, saveDailyChallenge, completeDailyChallenge,
   // Retention emails
   getAllUsersWithEmail, getUsersForBroadcast,
+  saveBroadcast, getBroadcastsForUser, getBroadcastById,
   // Admin analytics
   getAdminAnalytics,
   getUserAnalyticsProfile,
