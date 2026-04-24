@@ -306,8 +306,13 @@
   </div>
   <% } %>
 
-  <!-- Goal-modal vid första besöket (bara om inga steg gjorda än) -->
-  <% if (!isTeaser && journey && journey.stepsCompleted === 0) { %>
+  <!-- Goal-modal vid första besöket (bara om inga steg gjorda än).
+       Visas INTE för:
+       - Användare som precis registrerade sig (?welcome=1) — för mycket att
+         välja mellan när de aldrig sett appen. Låt dem bara läsa först.
+       - Block 1 (inledning) — starter-blocket ska vara helt linjärt. Modal
+         passar bättre på block 2+ där de redan förstår 4-stegs-strukturen. -->
+  <% if (!isTeaser && journey && journey.stepsCompleted === 0 && !welcome && block.id !== 'inledning') { %>
   <div class="goal-modal-backdrop" id="goalModal" role="dialog" aria-labelledby="goalTitle" aria-modal="true">
     <div class="goal-modal">
       <button class="goal-close" onclick="closeGoalModal()" aria-label="Stäng">✕</button>
