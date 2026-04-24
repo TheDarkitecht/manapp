@@ -2575,6 +2575,9 @@ app.get('/admin', requireLogin, requireAdmin, (req, res) => {
     users:     getAllUsers(),
     stats:     getUserStats(),
     csrfToken: generateCsrfToken(req),
+    emailResult: req.query.emailResult || null,
+    emailUser:   req.query.emailUser   || null,
+    emailMsg:    req.query.emailMsg    || null,
   });
 });
 
@@ -2702,22 +2705,31 @@ app.post('/admin/users/:id/email', requireLogin, requireAdmin, verifyCsrf, async
   const user    = findUserById(Number(req.params.id));
   const baseUrl = process.env.APP_URL || `${req.protocol}://${req.get('host')}`;
 
-  if (!user?.email) return res.redirect('/admin');
+  if (!user) return res.redirect('/admin?emailResult=notfound');
+  if (!user.email) return res.redirect('/admin?emailResult=noemail&emailUser=' + encodeURIComponent(user.username));
+
+  // Fail loudly om Resend inte är konfigurerat (istället för tyst no-op)
+  if (!resend) {
+    console.error('Admin welcome email: resend client not configured (RESEND_API_KEY saknas?)');
+    return res.redirect('/admin?emailResult=noresend');
+  }
 
   try {
-    if (resend) {
-      await resend.emails.send({
-        from:    RESEND_FROM,
-        to:      user.email,
-        subject: `Välkommen, ${user.username}! Ditt konto är aktivt 🎯`,
-        html:    buildWelcomeEmail(user.username, baseUrl),
-      });
-      audit(req, 'email.welcome_sent', { id: user.id, username: user.username });
-    }
+    // Använd first_name om det finns, annars username (display-name-logik)
+    const name = user.first_name || user.username;
+    await resend.emails.send({
+      from:    RESEND_FROM,
+      to:      user.email,
+      subject: `Välkommen, ${name}! Ditt konto är aktivt 🎯`,
+      html:    buildWelcomeEmail(name, baseUrl),
+    });
+    audit(req, 'email.welcome_sent', { id: user.id, username: user.username });
+    console.log(`✅ Välkomstmejl skickat till ${user.email}`);
+    res.redirect('/admin?emailResult=ok&emailUser=' + encodeURIComponent(user.username));
   } catch (err) {
-    console.error('Admin email error:', err.message);
+    console.error(`❌ Välkomstmejl misslyckades för ${user.email}:`, err.message);
+    res.redirect('/admin?emailResult=failed&emailUser=' + encodeURIComponent(user.username) + '&emailMsg=' + encodeURIComponent(err.message.slice(0, 120)));
   }
-  res.redirect('/admin');
 });
 
 // ── Admin broadcast-mejl ─────────────────────────────────────────────────────
@@ -3086,8 +3098,21 @@ app.post('/upgrade/checkout', requireLogin, blockWhenImpersonating, verifyCsrf, 
     });
   }
 
-  const user    = findUserByUsername(req.session.username);
+  // OBS: använd findUserById, INTE findUserByUsername — session.username
+  // är display-name (first_name) efter namn-migrering och matchar inte
+  // DB-slugen längre. findUserById är alltid pålitlig identifier.
+  const user    = findUserById(req.session.userId);
   const baseUrl = process.env.APP_URL || `${req.protocol}://${req.get('host')}`;
+
+  if (!user) {
+    console.error('Checkout: user lookup failed for session.userId', req.session.userId);
+    return res.render('upgrade', {
+      username:  req.session.username,
+      role:      req.session.role,
+      csrfToken: generateCsrfToken(req),
+      error:     'Ditt konto hittades inte. Logga ut och in igen, eller kontakta support.',
+    });
+  }
 
   try {
     const session = await stripe.checkout.sessions.create({
@@ -3484,7 +3509,8 @@ ${ROLEPLAY_COACH_INSTRUCTION}
 // Allows premium users to manage/cancel their subscription directly
 
 app.post('/billing/portal', requireLogin, blockWhenImpersonating, verifyCsrf, async (req, res) => {
-  const user    = findUserByUsername(req.session.username);
+  // findUserById (inte findUserByUsername) — session.username är display-name nu
+  const user    = findUserById(req.session.userId);
   const baseUrl = process.env.APP_URL || `${req.protocol}://${req.get('host')}`;
 
   if (!user?.stripe_customer_id) {

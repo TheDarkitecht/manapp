@@ -33,6 +33,25 @@
       <a href="/admin/test-digest" onclick="return confirm('Skickar ett riktigt test-mejl till ditt admin-konto. Fortsätta?');" style="padding:0.5rem 1rem;background:rgba(16,185,129,0.12);color:#34d399;text-decoration:none;border-radius:8px;font-weight:600;font-size:0.9rem;border:1px solid rgba(16,185,129,0.3);">📧 Skicka test-digest</a>
     </div>
 
+    <!-- Flash-meddelande efter välkomstmejl-skick -->
+    <% if (typeof emailResult !== 'undefined' && emailResult) { %>
+      <%
+        const flashStyles = {
+          ok:       { bg: 'rgba(16,185,129,0.1)',  color: '#34d399', border: 'rgba(16,185,129,0.3)', icon: '✓',  msg: `Välkomstmejl skickat till ${emailUser || 'användaren'}.` },
+          failed:   { bg: 'rgba(239,68,68,0.1)',   color: '#fca5a5', border: 'rgba(239,68,68,0.3)',  icon: '⚠️', msg: `Välkomstmejl till ${emailUser || 'användaren'} misslyckades: ${emailMsg || 'okänt fel'}.` },
+          noresend: { bg: 'rgba(239,68,68,0.1)',   color: '#fca5a5', border: 'rgba(239,68,68,0.3)',  icon: '⚠️', msg: 'Resend-klienten är inte konfigurerad. Sätt RESEND_API_KEY på Railway.' },
+          noemail:  { bg: 'rgba(251,191,36,0.1)',  color: '#fbbf24', border: 'rgba(251,191,36,0.3)', icon: '⚠️', msg: `${emailUser || 'Användaren'} har ingen registrerad e-post.` },
+          notfound: { bg: 'rgba(239,68,68,0.1)',   color: '#fca5a5', border: 'rgba(239,68,68,0.3)',  icon: '⚠️', msg: 'Användaren hittades inte.' },
+        };
+        const f = flashStyles[emailResult];
+      %>
+      <% if (f) { %>
+        <div role="status" aria-live="polite" style="margin-bottom:1rem;padding:0.85rem 1.25rem;background:<%= f.bg %>;border:1px solid <%= f.border %>;border-radius:10px;color:<%= f.color %>;font-size:0.9rem;font-weight:600;">
+          <%= f.icon %> <%= f.msg %>
+        </div>
+      <% } %>
+    <% } %>
+
     <!-- Stats -->
     <div class="admin-stats">
       <div class="stat-card">
