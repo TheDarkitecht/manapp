@@ -16,8 +16,9 @@
 
   <a href="#main-content" class="skip-to-main">Hoppa till innehåll</a>
 
-  <!-- Reading progress bar (decorative — hidden from screen readers) -->
-  <div id="readProgress" aria-hidden="true" style="position:fixed;top:0;left:0;height:3px;width:0;background:linear-gradient(90deg,#6366f1,#8b5cf6);z-index:1000;pointer-events:none;"></div>
+  <!-- Reading progress bar (decorative — hidden from screen readers).
+       Styling i public/style.css (#readProgress); width sätts av JS nedan. -->
+  <div id="readProgress" aria-hidden="true"></div>
 
   <% if (isTeaser) { %>
   <div class="teaser-top-bar">
