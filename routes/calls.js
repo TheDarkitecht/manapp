@@ -262,6 +262,31 @@ module.exports = function createCallsRouter(deps) {
     res.redirect(`/admin/calls?batch=${encodeURIComponent(batchId)}&created=${created.length}&errors=${errors.length}`);
   });
 
+  // ── Insights: winning/losing phrases per säljare/metodik ────────────────
+  // Aggregerar ord-frekvenser över sold-samtal vs lost/no_sms-samtal,
+  // beräknar lift, visar topplista. Filter via querystring:
+  //   ?salesperson=Amelia&methodology=tempo&days=90
+  router.get('/insights', (req, res) => {
+    const salesperson = (req.query.salesperson || '').trim() || null;
+    const methodology = (req.query.methodology || '').trim() || null;
+    const days = parseInt(req.query.days, 10) || 90;
+
+    const phrases = db.getWinningLosingPhrases({ salesperson, methodology, days });
+    const stats = db.getOutcomeStats({ salesperson, methodology });
+    const allSalespeople = db.listSalespeople();
+
+    res.render('admin/calls/insights', {
+      username: req.session.username,
+      role: req.session.role,
+      filters: { salesperson, methodology, days },
+      phrases,
+      stats,
+      allSalespeople,
+      methodologies: prompts.list(),
+      csrfToken: generateCsrfToken(req),
+    });
+  });
+
   // ── Sök ──────────────────────────────────────────────────────────────────
   router.get('/search', (req, res) => {
     const q = (req.query.q || '').trim();
