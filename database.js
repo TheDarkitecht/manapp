@@ -237,6 +237,23 @@ async function initDatabase() {
     )
   `);
 
+  // Invändningsregister (Fas 3): LLM extraherar invändningar per samtal,
+  // grupperar dem över korpusen, kopplar till bästa-svar-fras från sold-samtal.
+  // category = normaliserad gruppering (t.ex. "pris", "tid", "intresse",
+  // "förtroende", "annan"). Free-text för MVP — kan refineras senare med embedding.
+  db.run(`
+    CREATE TABLE IF NOT EXISTS call_objections (
+      id                  INTEGER PRIMARY KEY AUTOINCREMENT,
+      job_id              INTEGER NOT NULL,
+      objection_text      TEXT    NOT NULL,
+      category            TEXT,
+      salesperson_response TEXT,
+      handled_well        INTEGER,
+      created_at          TEXT    NOT NULL DEFAULT (datetime('now')),
+      FOREIGN KEY (job_id) REFERENCES call_jobs(id)
+    )
+  `);
+
   // Session-store (ersätter MemoryStore så användare inte loggas ut vid redeploy)
   db.run(`
     CREATE TABLE IF NOT EXISTS sessions (
@@ -412,6 +429,9 @@ async function initDatabase() {
     "ALTER TABLE call_jobs ADD COLUMN outcome_tagged_at TEXT",
     "CREATE INDEX IF NOT EXISTS idx_call_jobs_outcome     ON call_jobs(outcome)",
     "CREATE INDEX IF NOT EXISTS idx_call_jobs_salesperson ON call_jobs(salesperson_name)",
+    // Invändningsregister
+    "CREATE INDEX IF NOT EXISTS idx_call_objections_job      ON call_objections(job_id)",
+    "CREATE INDEX IF NOT EXISTS idx_call_objections_category ON call_objections(category)",
   ];
   migrations.forEach(sql => { try { db.run(sql); } catch (_) {} });
 
@@ -2877,6 +2897,96 @@ function getWinningLosingPhrases({ salesperson = null, methodology = null, days 
   return { winning, losing, soldCount, lostCount, insufficient: false };
 }
 
+// ─── Invändningsregister (Fas 3) ───────────────────────────────────────────
+
+/**
+ * Spara extraherade invändningar för ett samtal. Clear-and-reinsert pattern.
+ */
+function saveCallObjections(jobId, objections) {
+  db.run('DELETE FROM call_objections WHERE job_id = ?', [jobId]);
+  for (const o of objections) {
+    if (!o || !o.objection_text) continue;
+    db.run(
+      `INSERT INTO call_objections (job_id, objection_text, category, salesperson_response, handled_well)
+       VALUES (?, ?, ?, ?, ?)`,
+      [
+        jobId,
+        String(o.objection_text).slice(0, 1000),
+        o.category ? String(o.category).slice(0, 60) : null,
+        o.salesperson_response ? String(o.salesperson_response).slice(0, 1000) : null,
+        o.handled_well === true ? 1 : (o.handled_well === false ? 0 : null),
+      ]
+    );
+  }
+  saveDb();
+}
+
+function getCallObjections(jobId) {
+  return rowsQuery(
+    `SELECT id, objection_text, category, salesperson_response, handled_well, created_at
+     FROM call_objections WHERE job_id = ? ORDER BY id ASC`,
+    [jobId]
+  );
+}
+
+/**
+ * Aggregerad vy: invändnings-kategorier rankade på förekomst, med
+ * exempel-svar från sold-samtal (winning) vs lost-samtal (losing).
+ */
+function getObjectionsRegister({ salesperson = null, methodology = null, days = 90 } = {}) {
+  const where = ["j.status = 'done'", "j.created_at > datetime('now', ?)"];
+  const params = [`-${parseInt(days, 10) || 90} days`];
+  if (salesperson) { where.push('j.salesperson_name = ?'); params.push(salesperson); }
+  if (methodology) { where.push('j.prompt_version = ?'); params.push(methodology); }
+  const baseWhere = where.join(' AND ');
+
+  // Ranka kategorier på förekomst
+  const categories = rowsQuery(`
+    SELECT
+      COALESCE(o.category, 'okategoriserad') AS category,
+      COUNT(*) AS occurrences,
+      SUM(CASE WHEN j.outcome = 'sold' THEN 1 ELSE 0 END) AS in_sold,
+      SUM(CASE WHEN j.outcome IN ('lost','no_sms') THEN 1 ELSE 0 END) AS in_lost,
+      SUM(CASE WHEN o.handled_well = 1 THEN 1 ELSE 0 END) AS handled_well_count
+    FROM call_objections o
+    INNER JOIN call_jobs j ON j.id = o.job_id
+    WHERE ${baseWhere}
+    GROUP BY category
+    ORDER BY occurrences DESC
+    LIMIT 30
+  `, params);
+
+  // För varje kategori: hämta 2 exempel-svar från sold + 2 från lost
+  const enriched = categories.map(cat => {
+    const soldExamples = rowsQuery(`
+      SELECT o.objection_text, o.salesperson_response, j.id AS job_id, j.salesperson_name
+      FROM call_objections o
+      INNER JOIN call_jobs j ON j.id = o.job_id
+      WHERE ${baseWhere} AND COALESCE(o.category, 'okategoriserad') = ? AND j.outcome = 'sold'
+        AND o.salesperson_response IS NOT NULL AND length(o.salesperson_response) > 10
+      ORDER BY o.id DESC
+      LIMIT 2
+    `, [...params, cat.category]);
+    const lostExamples = rowsQuery(`
+      SELECT o.objection_text, o.salesperson_response, j.id AS job_id, j.salesperson_name
+      FROM call_objections o
+      INNER JOIN call_jobs j ON j.id = o.job_id
+      WHERE ${baseWhere} AND COALESCE(o.category, 'okategoriserad') = ? AND j.outcome IN ('lost','no_sms')
+        AND o.salesperson_response IS NOT NULL AND length(o.salesperson_response) > 10
+      ORDER BY o.id DESC
+      LIMIT 2
+    `, [...params, cat.category]);
+    return {
+      ...cat,
+      handled_well_pct: cat.occurrences > 0 ? Math.round((cat.handled_well_count / cat.occurrences) * 100) : null,
+      soldExamples,
+      lostExamples,
+    };
+  });
+
+  return enriched;
+}
+
 // ─── Säljare-dashboards (Fas 3) ────────────────────────────────────────────
 
 /**
@@ -3054,4 +3164,6 @@ module.exports = {
   getOutcomeStats, getWinningLosingPhrases, ALLOWED_OUTCOMES,
   // CI Fas 3 (säljare-dashboards)
   getSalespeopleOverview, getSalespersonDashboard,
+  // CI Fas 3 (invändningsregister)
+  saveCallObjections, getCallObjections, getObjectionsRegister,
 };

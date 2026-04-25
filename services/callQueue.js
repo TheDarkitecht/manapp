@@ -66,6 +66,19 @@ async function processJob(job) {
     });
     db.saveCallWordFrequencies(jobId, result.wordFrequencies);
 
+    // 5.5. Extrahera invändningar (Fas 3) — egen LLM-call, fail-safe.
+    // Misslyckande här ska INTE bryta hela jobbet — invändningar är bonus.
+    try {
+      const sourceText = result.transcript.structured_text || result.transcript.text;
+      const objections = await analytics.extractObjections(sourceText, process.env.GROQ_API_KEY);
+      if (objections.length > 0) {
+        db.saveCallObjections(jobId, objections);
+        log(`✓ Job ${jobId} — ${objections.length} invändningar extraherade`);
+      }
+    } catch (err) {
+      log(`! Job ${jobId} — invändnings-extraktion misslyckades (icke-fatalt): ${err.message}`);
+    }
+
     // 6. Done
     db.updateCallJob(jobId, {
       status:       'done',

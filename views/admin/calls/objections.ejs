@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Invändningsregister — Samtalsintelligens</title>
+  <meta name="robots" content="noindex, nofollow" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🛡</text></svg>" />
+  <link rel="stylesheet" href="/style.css" />
+  <link rel="stylesheet" href="/call-analytics.css" />
+</head>
+<body class="learn-page ci-page">
+
+  <a href="#main-content" class="skip-to-main">Hoppa till innehåll</a>
+
+  <nav class="learn-nav">
+    <a href="/admin/calls" class="learn-nav-back">← Samtalsintelligens</a>
+    <span class="learn-nav-title">🛡 Invändningsregister</span>
+    <span class="learn-nav-user"><%= username %></span>
+  </nav>
+
+  <main id="main-content" class="ci-wrap">
+
+    <!-- Filter -->
+    <form method="GET" action="/admin/calls/objections" class="ci-insights-filters">
+      <label class="ci-filter-field">
+        <span>Säljare</span>
+        <select name="salesperson">
+          <option value="">Alla säljare</option>
+          <% allSalespeople.forEach(function(s) { %>
+            <option value="<%= s.name %>" <%= filters.salesperson === s.name ? 'selected' : '' %>>
+              <%= s.name %> (<%= s.samtal %>)
+            </option>
+          <% }); %>
+        </select>
+      </label>
+      <label class="ci-filter-field">
+        <span>Metodik</span>
+        <select name="methodology">
+          <option value="">Alla metodiker</option>
+          <% methodologies.forEach(function(m) { %>
+            <option value="<%= m.id %>" <%= filters.methodology === m.id ? 'selected' : '' %>>
+              <%= m.name %>
+            </option>
+          <% }); %>
+        </select>
+      </label>
+      <label class="ci-filter-field">
+        <span>Period</span>
+        <select name="days">
+          <option value="30"  <%= filters.days === 30  ? 'selected' : '' %>>Senaste 30 dagar</option>
+          <option value="90"  <%= filters.days === 90  ? 'selected' : '' %>>Senaste 90 dagar</option>
+          <option value="365" <%= filters.days === 365 ? 'selected' : '' %>>Senaste 12 månader</option>
+        </select>
+      </label>
+      <button type="submit" class="ci-btn ci-btn-primary">Uppdatera</button>
+    </form>
+
+    <% if (!register.length) { %>
+      <div class="ci-empty">
+        <p>Inga invändningar registrerade än med detta filter.</p>
+        <p>Invändningar extraheras automatiskt vid varje samtals-analys (Fas 3-feature).
+        Befintliga samtal från före denna feature deploy:ats har inga registrerade
+        invändningar — endast nya uppladdningar.</p>
+      </div>
+    <% } else { %>
+      <p class="ci-insights-meta">
+        <strong><%= register.length %></strong> invändningstyper rankade på förekomst.
+        Klicka på en kategori för att se exempel-svar från sold vs lost-samtal.
+      </p>
+
+      <div class="ci-objections-list">
+        <% register.forEach(function(cat) { %>
+          <details class="ci-objection-cat">
+            <summary>
+              <span class="ci-obj-category"><%= cat.category %></span>
+              <span class="ci-obj-count"><%= cat.occurrences %>×</span>
+              <% if (cat.handled_well_pct !== null) { %>
+                <span class="ci-obj-handled" style="color: <%= cat.handled_well_pct >= 60 ? '#6ee7b7' : (cat.handled_well_pct >= 30 ? '#fbbf24' : '#fca5a5') %>;">
+                  Hanterad bra: <%= cat.handled_well_pct %>%
+                </span>
+              <% } %>
+              <span class="ci-obj-split">
+                <span style="color:#6ee7b7;">↗ <%= cat.in_sold %> sold</span>
+                ·
+                <span style="color:#fca5a5;">↘ <%= cat.in_lost %> lost</span>
+              </span>
+            </summary>
+
+            <div class="ci-obj-examples">
+              <div>
+                <h4>🏆 Bästa svar (sold-samtal)</h4>
+                <% if (!cat.soldExamples.length) { %>
+                  <p class="ci-empty">Inga sold-exempel ännu.</p>
+                <% } else { %>
+                  <% cat.soldExamples.forEach(function(ex) { %>
+                    <div class="ci-obj-example ci-obj-example-sold">
+                      <p class="ci-obj-text">Kund: "<%= ex.objection_text %>"</p>
+                      <p class="ci-obj-response">Säljare: "<%= ex.salesperson_response %>"</p>
+                      <p class="ci-obj-meta">
+                        <%= ex.salesperson_name || 'okänd säljare' %>
+                        · <a href="/admin/calls/<%= ex.job_id %>">Se samtal #<%= ex.job_id %></a>
+                      </p>
+                    </div>
+                  <% }); %>
+                <% } %>
+              </div>
+
+              <div>
+                <h4>⚠️ Misslyckade svar (lost/no-sms-samtal)</h4>
+                <% if (!cat.lostExamples.length) { %>
+                  <p class="ci-empty">Inga lost-exempel ännu.</p>
+                <% } else { %>
+                  <% cat.lostExamples.forEach(function(ex) { %>
+                    <div class="ci-obj-example ci-obj-example-lost">
+                      <p class="ci-obj-text">Kund: "<%= ex.objection_text %>"</p>
+                      <p class="ci-obj-response">Säljare: "<%= ex.salesperson_response %>"</p>
+                      <p class="ci-obj-meta">
+                        <%= ex.salesperson_name || 'okänd säljare' %>
+                        · <a href="/admin/calls/<%= ex.job_id %>">Se samtal #<%= ex.job_id %></a>
+                      </p>
+                    </div>
+                  <% }); %>
+                <% } %>
+              </div>
+            </div>
+          </details>
+        <% }); %>
+      </div>
+
+      <p class="ci-hint" style="margin-top:1.5rem;">
+        Använd "Bästa svar" som scripts för andra säljare när samma invändning kommer.
+        Detta är där en uttryckt invändning blir ett organisationsminne istället för
+        att leva och dö i ett enskilt samtal.
+      </p>
+    <% } %>
+
+  </main>
+
+  <script src="/heartbeat.js" defer></script>
+</body>
+</html>

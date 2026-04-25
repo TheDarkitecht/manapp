@@ -640,6 +640,131 @@
   border-radius: 0 6px 6px 0;
 }
 
+/* ── Invändningsregister + per-samtal-invändningar ──────────────────────── */
+.ci-objections-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+.ci-objection-cat {
+  background: #111126;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 10px;
+  overflow: hidden;
+}
+.ci-objection-cat summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.85rem 1.1rem;
+  cursor: pointer;
+  font-size: 0.92rem;
+}
+.ci-objection-cat summary:hover { background: rgba(255, 255, 255, 0.02); }
+.ci-objection-cat[open] summary { border-bottom: 1px solid rgba(255, 255, 255, 0.05); }
+.ci-obj-category {
+  display: inline-block;
+  padding: 0.2rem 0.7rem;
+  border-radius: 999px;
+  background: rgba(168, 85, 247, 0.15);
+  color: #d8b4fe;
+  border: 1px solid rgba(168, 85, 247, 0.35);
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.ci-obj-count {
+  color: #f1f5f9;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.ci-obj-handled {
+  font-size: 0.84rem;
+  font-weight: 600;
+}
+.ci-obj-split {
+  margin-left: auto;
+  font-size: 0.84rem;
+  color: #94a3b8;
+}
+
+.ci-obj-examples {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  padding: 1rem 1.1rem;
+}
+@media (max-width: 800px) {
+  .ci-obj-examples { grid-template-columns: 1fr; }
+}
+.ci-obj-examples h4 {
+  margin: 0 0 0.5rem;
+  font-size: 0.88rem;
+  color: #cbd5e1;
+  font-weight: 600;
+}
+.ci-obj-example {
+  padding: 0.7rem 0.85rem;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  margin-bottom: 0.5rem;
+  font-size: 0.86rem;
+}
+.ci-obj-example-sold {
+  background: rgba(16, 185, 129, 0.07);
+  border-color: rgba(16, 185, 129, 0.2);
+}
+.ci-obj-example-lost {
+  background: rgba(239, 68, 68, 0.07);
+  border-color: rgba(239, 68, 68, 0.2);
+}
+.ci-obj-text { color: #cbd5e1; margin: 0 0 0.4rem; line-height: 1.5; }
+.ci-obj-response { color: #e2e8f0; margin: 0 0 0.4rem; line-height: 1.5; }
+.ci-obj-meta { color: #64748b; font-size: 0.78rem; margin: 0.4rem 0 0; }
+.ci-obj-meta a { color: #a5b4fc; }
+
+/* Per-samtal-invändningar på detalj-sidan */
+.ci-obj-call-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+.ci-obj-call-item {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 8px;
+  padding: 0.85rem 1rem;
+  font-size: 0.9rem;
+}
+.ci-obj-call-header {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-bottom: 0.4rem;
+}
+.ci-obj-tag-good {
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: #6ee7b7;
+  background: rgba(16, 185, 129, 0.1);
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+}
+.ci-obj-tag-bad {
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: #fca5a5;
+  background: rgba(239, 68, 68, 0.1);
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+}
+
 /* ── Säljare-trend-chart ────────────────────────────────────────────────── */
 .ci-trend-chart {
   display: flex;

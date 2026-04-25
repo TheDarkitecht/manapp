@@ -50,12 +50,40 @@ coaching. Förhandsvisning + råmarkdown sida vid sida + kopiera-knapp.
 
 ---
 
-## 📋 Nästa (Fas 3 — Aggregerad intelligens)
+## ✅ Levererat (Fas 3 — Aggregerad intelligens)
 
-- **Säljare-dashboard per individ**: alla samtal, win-rate, vanligaste invändningar, signatur-fraser, framsteg över tid
-- **Invändningsregister**: extrahera alla invändningar över korpusen, gruppera, ranka, koppla till bästa-svar-fras
-- **Few-shot-infra för prompts**: Joakim väljer 3-5 benchmark-samtal, skriver feedback-han-skulle-gett, AI imiterar hans stil framöver
-- **Throttle worker till TPM-budget**: undvik retry-overhead vid 1000/dag
+### 1. Säljare-dashboard per individ ✅
+- Översikt: `/admin/calls/salespeople` — tabell med alla säljare, win-rate, outcome-fördelning
+- Detalj: `/admin/calls/salesperson/:name` — full dashboard med:
+  - Headline-stats + win-rate
+  - Win-rate-trend över 12 veckor (CSS-bar-chart)
+  - Metodik-fördelning (vilka projekt jobbar säljaren mest med?)
+  - Per-säljare winning/losing words (top 15 vardera)
+  - Senaste 50 samtalen
+
+### 2. Invändningsregister ✅
+- LLM extraherar invändningar automatiskt vid varje samtals-analys
+- Kategorisering: pris/tid/behov/förtroende/auktoritet/praktiskt/annan
+- Bedömning: handled_well (true/false/null)
+- Detalj-sida visar invändningar i samtalet
+- Aggregerad vy: `/admin/calls/objections`
+  - Rankad på förekomst per kategori
+  - Hanterad-bra-procent
+  - Splits sold vs lost
+  - Exempel-svar från sold-samtal (winning) och lost-samtal (losing)
+  - Filter: säljare, metodik, period
+- Misslyckad extraction = icke-fatalt (loggas, samtalet fortsätter vara done)
+
+### 3. Few-shot-infra för prompts ✅
+- `examples`-array per metodik i `services/prompts/feedback.js`
+- Format: `{ transcript, feedback }`
+- Skickas som user/assistant-par i Groq-anropet — LLM imiterar stilen
+- Block-content-thread fyller på med benchmark-samtal löpande
+- `list()` exposar exampleCount så UI kan visa "v3 har 3 examples"
+
+---
+
+## 📋 Nästa (Fas 4 — Content-loop, vision)
 
 ---
 
@@ -64,6 +92,7 @@ coaching. Förhandsvisning + råmarkdown sida vid sida + kopiera-knapp.
 - Extraherade insikter blir nya rollspel i kursen
 - Anonymiserade benchmark-stats för Premium/Pro-users ("säljare i din nivå stänger 23% — top-10% stänger 41%")
 - Auto-genererade content-uppdateringar baserade på nya mönster
+- **Throttle worker till TPM-budget** — undvik retry-overhead vid 1000/dag (just nu auto-retry, framöver: rate-limit på app-nivå)
 
 ---
 

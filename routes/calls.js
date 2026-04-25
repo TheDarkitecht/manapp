@@ -262,6 +262,26 @@ module.exports = function createCallsRouter(deps) {
     res.redirect(`/admin/calls?batch=${encodeURIComponent(batchId)}&created=${created.length}&errors=${errors.length}`);
   });
 
+  // ── Invändningsregister (aggregerad) ────────────────────────────────────
+  router.get('/objections', (req, res) => {
+    const salesperson = (req.query.salesperson || '').trim() || null;
+    const methodology = (req.query.methodology || '').trim() || null;
+    const days = parseInt(req.query.days, 10) || 90;
+
+    const register = db.getObjectionsRegister({ salesperson, methodology, days });
+    const allSalespeople = db.listSalespeople();
+
+    res.render('admin/calls/objections', {
+      username: req.session.username,
+      role:     req.session.role,
+      filters: { salesperson, methodology, days },
+      register,
+      allSalespeople,
+      methodologies: prompts.list(),
+      csrfToken: generateCsrfToken(req),
+    });
+  });
+
   // ── Säljare-översikt ────────────────────────────────────────────────────
   router.get('/salespeople', (req, res) => {
     const overview = db.getSalespeopleOverview();
@@ -464,6 +484,7 @@ module.exports = function createCallsRouter(deps) {
     const full = db.getCallJobFull(jobId);
     if (!full) return res.redirect('/admin/calls');
     const runs = db.listCallAnalysisRuns(jobId);
+    const objections = db.getCallObjections(jobId);
     const isAdmin = req.session?.role === 'admin' || req.session?.impersonatedBy?.role === 'admin';
     res.render('admin/calls/detail', {
       username:         req.session.username,
@@ -474,6 +495,7 @@ module.exports = function createCallsRouter(deps) {
       analysis:         full.analysis,
       wordFrequencies:  full.wordFrequencies,
       runs,
+      objections,
       promptVersions:   prompts.list(),
       allowedOutcomes:  db.ALLOWED_OUTCOMES,
       formatDuration,

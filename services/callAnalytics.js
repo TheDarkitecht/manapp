@@ -265,6 +265,90 @@ async function processCall(audioBuffer, filename, { title, apiKey, promptVersion
   };
 }
 
+// ─── Invändningsextraktor (Fas 3) ───────────────────────────────────────────
+// LLM extraherar strukturerade invändningar + svar från ett samtal. Output:
+// JSON-array som lagras i call_objections-tabellen för aggregerad analys.
+
+const OBJECTION_EXTRACTOR_SYSTEM = `Du extraherar invändningar från ett säljsamtal-transkript.
+
+DEFINITION AV "INVÄNDNING":
+- Allt kunden säger som signalerar tvekan, motstånd eller skäl att INTE köpa.
+- Exempel: "för dyrt", "har inte tid", "behöver fundera", "äter medicin",
+  "har redan en leverantör", "vet inte om jag behöver", "min man bestämmer".
+- Inkludera även mjuka invändningar ("hmm, jag vet inte...") och konkreta
+  ("Det krockar med min medicin").
+
+KATEGORISERING (välj EN per invändning):
+- "pris"        — för dyrt, har inte råd, för mycket pengar
+- "tid"         — har inte tid, vill tänka, kommer tillbaka senare
+- "behov"       — behöver inte, har redan, ointresserad
+- "förtroende"  — vet inte om det funkar, dålig erfarenhet förut, scam-misstanke
+- "auktoritet"  — kan inte själv besluta, måste fråga någon
+- "praktiskt"   — funkar inte med min situation (medicin, allergier, etc)
+- "annan"       — om ingen annan kategori passar
+
+BEDÖMNING AV HANTERING:
+- "handled_well": true om säljaren bemötte invändningen med diagnos-fråga,
+  acknowledge + relevant svar, eller styrde mot hanterbar invändningstyp.
+- false om säljaren körde över, ignorerade, eller pressade.
+- null om oklart.
+
+OUTPUT (strikt JSON, inget annat):
+{
+  "objections": [
+    {
+      "objection_text": "exakt citat eller paraphrase av kundens invändning",
+      "category": "pris|tid|behov|förtroende|auktoritet|praktiskt|annan",
+      "salesperson_response": "exakt citat eller paraphrase av säljarens svar",
+      "handled_well": true|false|null
+    }
+  ]
+}
+
+Om INGA invändningar finns: returnera { "objections": [] }.
+Returnera INGET ANNAT än JSON. Ingen markdown-fence, ingen förklaring.`;
+
+async function extractObjections(transcript, apiKey) {
+  if (!apiKey) throw new Error('GROQ_API_KEY saknas');
+  if (!transcript || transcript.trim().length < 50) {
+    return []; // för kort för meningsfull extraction
+  }
+
+  const res = await fetch(`${GROQ_API_URL}/chat/completions`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      model: 'llama-3.3-70b-versatile',
+      messages: [
+        { role: 'system', content: OBJECTION_EXTRACTOR_SYSTEM },
+        { role: 'user',   content: `TRANSKRIPT:\n\n${transcript}` },
+      ],
+      max_tokens:  2000,
+      temperature: 0.1,
+      response_format: { type: 'json_object' },
+    }),
+  });
+
+  if (!res.ok) {
+    const errText = await res.text();
+    throw new Error(`Groq objection-extract error ${res.status}: ${errText.slice(0, 200)}`);
+  }
+  const data = await res.json();
+  const text = data.choices?.[0]?.message?.content;
+  if (!text) return [];
+
+  try {
+    const parsed = JSON.parse(text);
+    return Array.isArray(parsed.objections) ? parsed.objections : [];
+  } catch (err) {
+    console.warn('[callAnalytics] objection JSON parse fel:', err.message);
+    return [];
+  }
+}
+
 // ─── Case-study-generator för marknadsföring ────────────────────────────────
 // LLM-call som tar transcript + analys och returnerar anonymiserad markdown
 // case study för Joakims marketing-site. Kritiskt: ANONYMISERING måste vara
@@ -355,6 +439,7 @@ module.exports = {
   processCall,
   analyzeWithPrompt,
   identifySpeakers,
+  extractObjections,
   generateCaseStudy,
   extractWordFrequencies,
   countWords,

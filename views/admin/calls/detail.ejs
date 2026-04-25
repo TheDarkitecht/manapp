@@ -191,6 +191,34 @@
     </section>
     <% } %>
 
+    <!-- Invändningar i detta samtal (om extraherade) -->
+    <% if (objections && objections.length) { %>
+    <section class="ci-section">
+      <header class="ci-section-header">
+        <h2>🛡 Invändningar i detta samtal (<%= objections.length %>)</h2>
+        <a href="/admin/calls/objections" class="ci-btn ci-btn-ghost">Aggregerat register →</a>
+      </header>
+      <ul class="ci-obj-call-list">
+        <% objections.forEach(function(o) { %>
+          <li class="ci-obj-call-item">
+            <div class="ci-obj-call-header">
+              <% if (o.category) { %><span class="ci-obj-category"><%= o.category %></span><% } %>
+              <% if (o.handled_well === 1) { %>
+                <span class="ci-obj-tag-good">✓ hanterad bra</span>
+              <% } else if (o.handled_well === 0) { %>
+                <span class="ci-obj-tag-bad">✗ missade</span>
+              <% } %>
+            </div>
+            <p class="ci-obj-text"><strong>Kund:</strong> "<%= o.objection_text %>"</p>
+            <% if (o.salesperson_response) { %>
+              <p class="ci-obj-response"><strong>Säljare:</strong> "<%= o.salesperson_response %>"</p>
+            <% } %>
+          </li>
+        <% }); %>
+      </ul>
+    </section>
+    <% } %>
+
     <!-- Historik: tidigare körningar mot olika metodiker -->
     <% if (runs && runs.length > 1) { %>
     <section class="ci-section">
