@@ -558,6 +558,26 @@ module.exports = function createCallsRouter(deps) {
     }
   });
 
+  // ── Manuell speaker-tagging ─────────────────────────────────────────────
+  // User har redigerat structured_text för att korrigera AI:ns felattributioner.
+  // Vi sparar och redirectar tillbaka. Re-analyse-knappen använder den nya
+  // versionen automatiskt eftersom analyzeWithPrompt prefer:ar structured_text.
+  router.post('/:id/structured-transcript', verifyCsrf, (req, res) => {
+    const jobId = parseInt(req.params.id, 10);
+    if (!jobId) return res.redirect('/admin/calls');
+    const text = (req.body.structured_text || '').trim();
+    if (!text || text.length < 20) {
+      return res.status(400).send('Strukturerat transkript är för kort eller tomt.');
+    }
+    try {
+      db.updateStructuredTranscript(jobId, text);
+      res.redirect(`/admin/calls/${jobId}?transcript_saved=1`);
+    } catch (err) {
+      console.error('[calls/structured-transcript]', err.message);
+      res.status(500).send('Kunde inte spara: ' + err.message);
+    }
+  });
+
   // ── Säljare-edit ────────────────────────────────────────────────────────
   router.post('/:id/salesperson', verifyCsrf, (req, res) => {
     const jobId = parseInt(req.params.id, 10);

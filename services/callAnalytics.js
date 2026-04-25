@@ -9,6 +9,7 @@
 
 const proAnalysis = require('../proCallAnalysis');
 const prompts     = require('./prompts/feedback');
+const transcribeService = require('./transcribe');
 
 const GROQ_API_URL = 'https://api.groq.com/openai/v1';
 
@@ -103,13 +104,49 @@ function countWords(text) {
 
 const DIARIZATION_SYSTEM = `Du får ett råtranskript från ett säljsamtal på svenska, utan markering av vem som säger vad. Din uppgift: dela upp texten i yttranden och klassificera varje som "Säljare:" eller "Kund:".
 
-REGLER:
-- Börja ALLTID med säljaren (säljsamtal öppnas alltid av säljaren — "Hallå?", "Hej, jag ringer från...", etc).
+VIKTIGAST: ATTRIBUTERA RÄTT TALARE.
+Felattribution är värre än ingen markering — säljaren tappar förtroende för
+hela analys-pipeline:n om en uppenbar felattribution dyker upp. Bättre att
+markera osäkerhet än att låta säker.
+
+KONTEXT-HEURISTIKER (använd för att gissa rätt):
+
+Säljaren karaktäriseras typically av:
+- Driver samtalet — ställer kvalifikationsfrågor, presenterar erbjudanden
+- Längre yttranden, mer struktur, mer "säljspråk"
+- Introducerar sig i början ("Hej, jag heter X och ringer från Y")
+- Använder försäljnings-fraser: "perfekt", "jättebra", "då gör vi så här",
+  "kan jag bara fråga", "har du en stund", "skickar iväg det till dig"
+- Hanterar invändningar med "jag förstår", "många säger så", etc.
+- Avrundar samtalet — bekräftar nästa steg, säger hej då
+
+Kunden karaktäriseras typically av:
+- Reagerar på säljarens initiativ — kortare yttranden
+- Ställer frågor om pris, tid, produktdetaljer
+- Mer pauser, "hmm", "jaa men", "vet inte"
+- Säger oftare "nej", "men", "fast", "jag tänker att"
+- Invändningar formulerade som personlig situation: "jag har redan", "jag
+  behöver inte", "jag har inte tid", "jag äter medicin"
+- Uttrycker tveksamhet eller acceptans — driver inte processen framåt
+
+INLEDNINGEN: säljaren öppnar nästan alltid med en hälsning/intro. Kunden
+svarar med "hallå?" eller "ja det är jag". Börja därför med Säljare i
+99% av fallen — undantaget är inkommande samtal där kunden ringer in.
+
+REGLER FÖR FORMAT:
 - Varje nytt yttrande på ny rad med "Säljare:" eller "Kund:" som prefix.
-- Behåll ORD FÖR ORD vad som sagts. Ändra INTE ord, lägg INTE till, ta INTE bort. Bara split + label.
-- Vid korta "mm", "ja", "okej" — gissa baserat på kontext (är det en bekräftelse från den som lyssnar, eller en öppning?).
-- Om Whisper uppenbarligen missade ord (ex. "jag h inte riktigt d f vad sa du") — behåll exakt som det står, märk ändå som rimlig talare.
+- Behåll ORD FÖR ORD vad som sagts. Ändra INTE ord, lägg INTE till, ta INTE bort.
+  Bara split + label.
+- Vid korta "mm", "ja", "okej" — gissa baserat på kontext. Vem är det som
+  precis sa något långt? Då är "mm" troligen den andra (lyssnaren).
+- Om Whisper uppenbarligen missade ord (ex. "jag h inte riktigt d f vad sa du")
+  — behåll exakt som det står, märk ändå som rimlig talare.
 - Inga andra markeringar, ingen analys, ingen sammanfattning. BARA strukturerad dialog.
+
+OSÄKERHETSREGEL: om du verkligen INTE kan avgöra vem som sa något (inget
+sammanhang, ord som passar båda) — skriv "?Säljare:" eller "?Kund:" med
+frågetecken framför labeln. Användaren ser då att den raden är osäker
+och kan dubbelkolla mot ljudet.
 
 OUTPUT-FORMAT (strikt):
 Säljare: [yttrande]
@@ -118,7 +155,36 @@ Kund: [yttrande]
 
 Säljare: [yttrande]
 
+?Kund: [yttrande där du är osäker — använd ? som prefix]
+
 (Tom rad mellan varje yttrande.)`;
+
+/**
+ * Formaterar segments från native-diarization-backends (Deepgram et al)
+ * till samma "Säljare:/Kund:"-format som identifySpeakers ger ut. Då kan
+ * resten av pipelinen behandla output identiskt oavsett källa.
+ *
+ * Förväntad input: [{ start, end, text, speaker: 'Säljare'|'Kund' }, ...]
+ * Slår ihop intilliggande segment från samma talare.
+ */
+function formatNativeDiarization(segments) {
+  if (!Array.isArray(segments) || !segments.length) return null;
+  const lines = [];
+  let currentSpeaker = null;
+  let currentText = '';
+  for (const seg of segments) {
+    const speaker = (seg.speaker || '').toLowerCase().includes('säljare') ? 'Säljare' : 'Kund';
+    if (speaker === currentSpeaker) {
+      currentText += ' ' + (seg.text || '').trim();
+    } else {
+      if (currentSpeaker) lines.push(`${currentSpeaker}: ${currentText.trim()}`);
+      currentSpeaker = speaker;
+      currentText = (seg.text || '').trim();
+    }
+  }
+  if (currentSpeaker) lines.push(`${currentSpeaker}: ${currentText.trim()}`);
+  return lines.join('\n\n');
+}
 
 async function identifySpeakers(rawText, apiKey) {
   if (!apiKey) throw new Error('GROQ_API_KEY saknas');
@@ -216,28 +282,38 @@ async function analyzeWithPrompt(transcript, apiKey, { promptVersion, userTitle 
 async function processCall(audioBuffer, filename, { title, apiKey, promptVersion, identifySpeakers: doIdentify } = {}) {
   if (!apiKey) throw new Error('GROQ_API_KEY saknas');
 
-  // Steg 1: Transkribering (med auto-retry vid 429 — ovanligt men kan hända)
+  // Steg 1: Transkribering via swappable backend (services/transcribe.js).
+  // Idag = Groq Whisper. Senare kan bytas till Deepgram/AssemblyAI utan att
+  // röra resten av pipelinen. Auto-retry vid 429.
   const transcription = await callGroqWithRetry(
-    () => proAnalysis.transcribeAudio(audioBuffer, filename, apiKey),
-    'whisper-transcribe'
+    () => transcribeService.transcribe(audioBuffer, filename, apiKey),
+    'transcribe'
   );
   const text = transcription.text || '';
   if (text.trim().length < 50) {
     throw new Error(`För kort transkription (${text.length} tecken) — samtalet kanske är tyst eller korrupt`);
   }
 
-  // Steg 2 (opt-in): Speaker diarization via LLM. Ger oss en strukturerad
-  // "Säljare:/Kund:"-version av transkriptet. Misslyckas inte hela pipelinen
-  // om diarizationen kraschar — vi loggar och fortsätter med raw text.
+  // Steg 2 (opt-in): Speaker diarization. Om transcribe-backend redan
+  // levererar speakers (Deepgram et al, framtida) — använd dem. Annars:
+  // fallback till vår LLM-baserade identifySpeakers.
   let structuredText = null;
   if (doIdentify) {
-    try {
-      structuredText = await callGroqWithRetry(
-        () => identifySpeakers(text, apiKey),
-        'llm-diarization'
-      );
-    } catch (err) {
-      console.warn('[callAnalytics] diarization misslyckades, fortsätter med raw text:', err.message);
+    if (transcription.speakers && transcription.segments) {
+      // Native diarization från provider — sammanfoga segment till
+      // "Säljare:/Kund:"-format som matchar vår LLM-output.
+      structuredText = formatNativeDiarization(transcription.segments);
+    } else {
+      // LLM-fallback (Groq Whisper-fallet). Misslyckande är icke-fatalt —
+      // vi loggar och fortsätter med raw text.
+      try {
+        structuredText = await callGroqWithRetry(
+          () => identifySpeakers(text, apiKey),
+          'llm-diarization'
+        );
+      } catch (err) {
+        console.warn('[callAnalytics] diarization misslyckades, fortsätter med raw text:', err.message);
+      }
     }
   }
 
