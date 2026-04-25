@@ -401,6 +401,17 @@ async function initDatabase() {
     // Strukturerat transkript — markdown med Säljare:/Kund:-labels.
     // Fylls i av worker efter identifySpeakers()-steget. NULL om inte begärt.
     "ALTER TABLE call_transcripts ADD COLUMN structured_text TEXT",
+    // Resultatmaskin-fält:
+    // salesperson_name = vem säljaren är (admin sätter vid upload). Fri text
+    //   för MVP — senare kanske egen säljare-tabell. Tomt = "okänd säljare".
+    "ALTER TABLE call_jobs ADD COLUMN salesperson_name TEXT",
+    // outcome = sold | lost | no_sms | callback | other | NULL (otaggat).
+    //   Joakim taggar manuellt på detalj-sidan när samtalet bedömts.
+    //   Grundval för aggregerad winning/losing-phrase-analys.
+    "ALTER TABLE call_jobs ADD COLUMN outcome TEXT",
+    "ALTER TABLE call_jobs ADD COLUMN outcome_tagged_at TEXT",
+    "CREATE INDEX IF NOT EXISTS idx_call_jobs_outcome     ON call_jobs(outcome)",
+    "CREATE INDEX IF NOT EXISTS idx_call_jobs_salesperson ON call_jobs(salesperson_name)",
   ];
   migrations.forEach(sql => { try { db.run(sql); } catch (_) {} });
 
@@ -2407,11 +2418,11 @@ function getFunnelMetrics() {
  * conditions där worker hinner plocka upp jobbet INNAN storage_key är satt.
  * Caller MÅSTE uppgradera till 'pending' efter att putAudio() lyckats.
  */
-function createCallJob(userId, { batch_id, original_name, storage_key, file_size, mime_type, title, status, prompt_version, identify_speakers }) {
+function createCallJob(userId, { batch_id, original_name, storage_key, file_size, mime_type, title, status, prompt_version, identify_speakers, salesperson_name }) {
   db.run(
-    `INSERT INTO call_jobs (user_id, batch_id, original_name, storage_key, file_size, mime_type, title, status, prompt_version, identify_speakers)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    [userId, batch_id || null, original_name, storage_key || null, file_size || null, mime_type || null, title || null, status || 'uploading', prompt_version || null, identify_speakers ? 1 : 0]
+    `INSERT INTO call_jobs (user_id, batch_id, original_name, storage_key, file_size, mime_type, title, status, prompt_version, identify_speakers, salesperson_name)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [userId, batch_id || null, original_name, storage_key || null, file_size || null, mime_type || null, title || null, status || 'uploading', prompt_version || null, identify_speakers ? 1 : 0, salesperson_name || null]
   );
   const s = db.prepare('SELECT last_insert_rowid() AS id');
   s.step();
@@ -2526,6 +2537,7 @@ function listCallJobs({ statusFilter = null, batchId = null, limit = 100, offset
   const s = db.prepare(`
     SELECT j.id, j.user_id, j.batch_id, j.original_name, j.title, j.status, j.error,
            j.created_at, j.started_at, j.completed_at, j.file_size, j.prompt_version,
+           j.salesperson_name, j.outcome,
            t.duration_sec, t.word_count
     FROM call_jobs j
     LEFT JOIN call_transcripts t ON t.job_id = j.id
@@ -2717,6 +2729,154 @@ function deleteCallJob(jobId) {
   return job.storage_key || null;
 }
 
+// ─── Resultatmaskin (outcome-tagging + aggregation) ────────────────────────
+
+const ALLOWED_OUTCOMES = ['sold', 'lost', 'no_sms', 'callback', 'other'];
+
+function setCallOutcome(jobId, outcome) {
+  if (outcome !== null && !ALLOWED_OUTCOMES.includes(outcome)) {
+    throw new Error(`Ogiltigt outcome: ${outcome}. Tillåtna: ${ALLOWED_OUTCOMES.join(', ')}`);
+  }
+  db.run(
+    `UPDATE call_jobs SET outcome = ?, outcome_tagged_at = datetime('now') WHERE id = ?`,
+    [outcome, jobId]
+  );
+  saveDb();
+}
+
+function setCallSalesperson(jobId, name) {
+  const clean = name ? String(name).trim().slice(0, 80) : null;
+  db.run(`UPDATE call_jobs SET salesperson_name = ? WHERE id = ?`, [clean, jobId]);
+  saveDb();
+}
+
+/**
+ * Lista distinkta säljare i datat (för dropdown-filter i insights-vy).
+ */
+function listSalespeople() {
+  return rowsQuery(`
+    SELECT salesperson_name AS name, COUNT(*) AS samtal
+    FROM call_jobs
+    WHERE salesperson_name IS NOT NULL AND salesperson_name != ''
+    GROUP BY salesperson_name
+    ORDER BY samtal DESC, salesperson_name ASC
+  `);
+}
+
+/**
+ * Outcome-fördelning över korpusen (eller filtrerat). Matar dashboard-stats.
+ */
+function getOutcomeStats({ salesperson = null, methodology = null } = {}) {
+  const where = ['j.status = ?'];
+  const params = ['done'];
+  if (salesperson) {
+    where.push('j.salesperson_name = ?');
+    params.push(salesperson);
+  }
+  if (methodology) {
+    where.push('j.prompt_version = ?');
+    params.push(methodology);
+  }
+  const rows = rowsQuery(`
+    SELECT COALESCE(outcome, 'untagged') AS outcome, COUNT(*) AS n
+    FROM call_jobs j
+    WHERE ${where.join(' AND ')}
+    GROUP BY outcome
+  `, params);
+  const stats = { sold: 0, lost: 0, no_sms: 0, callback: 0, other: 0, untagged: 0, total: 0 };
+  for (const r of rows) {
+    stats[r.outcome] = r.n;
+    stats.total += r.n;
+  }
+  // Win-rate beräknad på TAGGADE samtal (otaggade exkluderas — vi vet inte utfallet)
+  const tagged = stats.total - stats.untagged;
+  stats.tagged = tagged;
+  stats.win_rate = tagged > 0 ? Math.round((stats.sold / tagged) * 100) : null;
+  return stats;
+}
+
+/**
+ * Winning vs losing phrases.
+ *
+ * Logik:
+ *   1. Räkna ord-frekvenser separat över alla "sold"-samtal vs alla "lost/no_sms"-samtal.
+ *   2. Normalisera: dela med antal samtal i respektive grupp för att få genomsnittlig
+ *      användning per samtal.
+ *   3. För varje ord, beräkna "lift" = sold-snitt / lost-snitt.
+ *   4. Returnera top-N ord med högst lift (winning) och lägst lift (losing).
+ *
+ * Filter: salesperson, methodology, datumintervall (senaste N dagar).
+ *
+ * Output: { winning: [{word, sold_avg, lost_avg, lift, sold_calls, lost_calls}], losing: [...] }
+ */
+function getWinningLosingPhrases({ salesperson = null, methodology = null, days = 90, minOccurrences = 3 } = {}) {
+  const where = ["j.status = 'done'", "j.created_at > datetime('now', ? )"];
+  const params = [`-${parseInt(days, 10) || 90} days`];
+  if (salesperson) { where.push('j.salesperson_name = ?'); params.push(salesperson); }
+  if (methodology) { where.push('j.prompt_version = ?'); params.push(methodology); }
+  const baseWhere = where.join(' AND ');
+
+  // Antal samtal per outcome-grupp (för normalisering)
+  const soldCount = (rowsQuery(
+    `SELECT COUNT(*) AS n FROM call_jobs j WHERE ${baseWhere} AND outcome = 'sold'`,
+    params
+  )[0] || { n: 0 }).n;
+  const lostCount = (rowsQuery(
+    `SELECT COUNT(*) AS n FROM call_jobs j WHERE ${baseWhere} AND outcome IN ('lost','no_sms')`,
+    params
+  )[0] || { n: 0 }).n;
+
+  if (soldCount < 2 || lostCount < 2) {
+    // För lite data för meningsfull jämförelse
+    return { winning: [], losing: [], soldCount, lostCount, insufficient: true };
+  }
+
+  // Aggregerad ord-frekvens per outcome-grupp
+  const soldFreq = rowsQuery(`
+    SELECT wf.word, SUM(wf.count) AS total
+    FROM call_word_frequencies wf
+    INNER JOIN call_jobs j ON j.id = wf.job_id
+    WHERE ${baseWhere} AND j.outcome = 'sold'
+    GROUP BY wf.word
+    HAVING SUM(wf.count) >= ?
+  `, [...params, minOccurrences]);
+
+  const lostFreq = rowsQuery(`
+    SELECT wf.word, SUM(wf.count) AS total
+    FROM call_word_frequencies wf
+    INNER JOIN call_jobs j ON j.id = wf.job_id
+    WHERE ${baseWhere} AND j.outcome IN ('lost','no_sms')
+    GROUP BY wf.word
+    HAVING SUM(wf.count) >= ?
+  `, [...params, minOccurrences]);
+
+  // Map ord -> snitt-användning per samtal
+  const soldMap = new Map(soldFreq.map(r => [r.word, r.total / soldCount]));
+  const lostMap = new Map(lostFreq.map(r => [r.word, r.total / lostCount]));
+
+  // Slå ihop nyckel-mängd, beräkna lift
+  const allWords = new Set([...soldMap.keys(), ...lostMap.keys()]);
+  const scored = [];
+  for (const word of allWords) {
+    const soldAvg = soldMap.get(word) || 0;
+    const lostAvg = lostMap.get(word) || 0;
+    // Smoothing: addera 0.1 i nämnaren så vi inte dividerar med 0 + dämpar extrema utstickare
+    const lift = (soldAvg + 0.1) / (lostAvg + 0.1);
+    scored.push({
+      word,
+      sold_avg: Math.round(soldAvg * 100) / 100,
+      lost_avg: Math.round(lostAvg * 100) / 100,
+      lift:     Math.round(lift * 100) / 100,
+    });
+  }
+
+  scored.sort((a, b) => b.lift - a.lift);
+  const winning = scored.slice(0, 30);
+  const losing  = scored.slice(-30).reverse();
+
+  return { winning, losing, soldCount, lostCount, insufficient: false };
+}
+
 /**
  * Återställ jobb som fastnade i 'transcribing'/'analyzing' vid en server-omstart.
  * Kallas en gång vid start av callQueue-workern.
@@ -2794,4 +2954,7 @@ module.exports = {
   searchCallTranscripts, deleteCallJob, resetStuckCallJobs,
   // CI prompt-iteration
   getCallTranscript, listCallAnalysisRuns, getCallAnalysisRun,
+  // CI Resultatmaskin (outcome + aggregation)
+  setCallOutcome, setCallSalesperson, listSalespeople,
+  getOutcomeStats, getWinningLosingPhrases, ALLOWED_OUTCOMES,
 };
