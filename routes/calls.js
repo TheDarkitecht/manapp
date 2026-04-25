@@ -468,6 +468,42 @@ module.exports = function createCallsRouter(deps) {
     }
   });
 
+  // ── Case study export (LLM-genererad anonymiserad markdown) ────────────
+  // Synkront: 10-20 sek väntan medan Groq genererar. Visar resultatet i
+  // egen vy med "kopiera till urklipp"-knapp. Inget sparas i DB — Joakim
+  // kopierar och paste:ar var han vill.
+  router.post('/:id/case-study', verifyCsrf, async (req, res) => {
+    const jobId = parseInt(req.params.id, 10);
+    if (!jobId) return res.redirect('/admin/calls');
+    const full = db.getCallJobFull(jobId);
+    if (!full || !full.transcript) {
+      return res.status(400).send('Inget transkript än — kan inte generera case study.');
+    }
+    try {
+      const sourceText = full.transcript.structured_text || full.transcript.text;
+      const md = await analytics.generateCaseStudy(
+        sourceText,
+        full.analysis ? full.analysis.analysis : null,
+        process.env.GROQ_API_KEY,
+        {
+          methodology: full.job.prompt_version,
+          salesperson: full.job.salesperson_name,
+          callTitle:   full.job.title || full.job.original_name,
+        }
+      );
+      res.render('admin/calls/case-study', {
+        username:  req.session.username,
+        role:      req.session.role,
+        job:       full.job,
+        markdown:  md,
+        csrfToken: generateCsrfToken(req),
+      });
+    } catch (err) {
+      console.error('[calls/case-study]', err.message);
+      res.status(500).send('Case-study-generering misslyckades: ' + err.message);
+    }
+  });
+
   // ── Säljare-edit ────────────────────────────────────────────────────────
   router.post('/:id/salesperson', verifyCsrf, (req, res) => {
     const jobId = parseInt(req.params.id, 10);

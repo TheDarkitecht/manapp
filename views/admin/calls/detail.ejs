@@ -50,6 +50,13 @@
         <% if (job.storage_key) { %>
           <a class="ci-btn ci-btn-secondary" href="/admin/calls/audio/<%= job.id %>" target="_blank" rel="noopener">🔊 Spela upp</a>
         <% } %>
+        <% if (job.status === 'done' && transcript && transcript.text) { %>
+          <form method="POST" action="/admin/calls/<%= job.id %>/case-study" style="display:inline;"
+                onsubmit="this.querySelector('button').disabled=true; this.querySelector('button').textContent='⏳ Genererar...';">
+            <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+            <button type="submit" class="ci-btn ci-btn-secondary" title="Generera anonymiserad case study för marketing">📤 Case study</button>
+          </form>
+        <% } %>
         <% if (isAdmin && job.status === 'failed') { %>
           <form method="POST" action="/admin/calls/worker/retry/<%= job.id %>" style="display:inline;">
             <input type="hidden" name="_csrf" value="<%= csrfToken %>" />

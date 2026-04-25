@@ -25,32 +25,28 @@ Skala-mål: Joakims säljkontor 1000 samtal/dag.
 
 ---
 
-## 🚧 Pågående (Fas 2 — Resultatmaskin-positionering, prio 1)
+## ✅ Levererat (Fas 2 — Resultatmaskin-positionering)
 
-Detta är basen för "vi gör säljteam mätbart bättre"-positionering.
+### 1. Outcome-tagging per samtal ✅
+Tagging-bar på detalj-sidan: sold | lost | no_sms | callback | other.
+Tillgänglig för alla CI-users (admin + allowlist). Visas som färgad pill
+i dashboard-tabellen. Avtaggning möjlig.
 
-### 1. Outcome-tagging per samtal
-Joakim taggar varje färdiganalyserat samtal med utfall:
-- `sold` — kunden sa ja och bekräftade SMS
-- `lost` — kunden sa nej eller försvann
-- `no_sms` — muntligt ja men inget SMS-svar (=de facto lost)
-- `callback` — uppföljning bokad
-- `other` — udda fall
+### 2. Säljare-tagging vid upload ✅
+Frivilligt textfält på upload-form. Kan editeras i efterhand via detalj-
+sidan. Driver per-säljare-aggregation i Insights.
 
-Krävs som grundval för punkt 2 + 3.
+### 3. Insights — winning vs losing words ✅
+Ny vy: `/admin/calls/insights`
+- Filter: säljare, metodik, period (30/90/365 dagar)
+- Stats: outcome-fördelning + win-rate
+- Top-30 winning + top-30 losing ord, sorterade på "lift" (smoothad ratio)
+- Tydlig fallback när data är otillräcklig
 
-### 2. Word/fras-frekvens-aggregation per säljare + outcome
-"Vilka fraser använder top-30%-säljarna som bottom-30% INTE använder?"
-"Vilka ord är överrepresenterade i sold vs lost?"
-
-Beräkning: korstabulera `call_word_frequencies` mot `call_jobs.outcome` och `call_jobs.salesperson_name`. Visa top-50 winning + top-50 losing ord. Filter: per säljare, per metodik, per datum.
-
-Detta är exakt det säljkontor betalar för i Voxo-liknande verktyg.
-
-### 3. Case-study-snippet-export
-Knapp på detalj-sida: "Exportera som case study". Genererar anonymiserad
-markdown (kundnamn maskat, säljare initialer) med 2-3 nyckelmoment +
-Jockes feedback. För Joakims marknadsförings-site ("se vad systemet gör").
+### 4. Case-study-snippet-export ✅
+Knapp på detalj-sidan: "📤 Case study". LLM genererar anonymiserad
+markdown (säljare/kund/företag maskat) med 3 nyckelmoment + Jockes
+coaching. Förhandsvisning + råmarkdown sida vid sida + kopiera-knapp.
 
 ---
 

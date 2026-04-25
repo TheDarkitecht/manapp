@@ -256,10 +256,97 @@ async function processCall(audioBuffer, filename, { title, apiKey, promptVersion
   };
 }
 
+// ─── Case-study-generator för marknadsföring ────────────────────────────────
+// LLM-call som tar transcript + analys och returnerar anonymiserad markdown
+// case study för Joakims marketing-site. Kritiskt: ANONYMISERING måste vara
+// hårdkodad i prompten — vi vill aldrig av misstag publicera kundens namn.
+
+const CASE_STUDY_SYSTEM = `Du genererar en case study för marknadsföring av en AI-säljcoach. Output: enkel markdown.
+
+KRITISKA ANONYMISERINGSREGLER (bryt aldrig dessa):
+- Ersätt säljarens riktiga namn med "Säljaren" eller "Säljare A".
+- Ersätt kundens riktiga namn med "Kunden".
+- Ta bort/maska företagsnamn, gatuadresser, personnummer, telefonnummer, e-postadresser.
+- Behåll branschen generellt (t.ex. "hälsokost", "telekom") men inte specifika produktnamn eller varumärken.
+
+STRUKTUR PÅ CASE STUDY:
+
+# Case Study — [Samtalstyp + Bransch]
+
+## Bakgrund
+1-2 meningar: vilken typ av samtal, vilken bransch, vilket utfall.
+
+## Tre nyckelmoment
+
+### 1. [Kort rubrik på vad som hände]
+> "Säljaren: [citat anonymiserat]"
+> "Kunden: [citat anonymiserat]"
+
+**Vad Jocke ser:** [1-2 meningar — vad som var bra eller dåligt enligt vald metodik]
+
+### 2. [Kort rubrik]
+[Samma struktur]
+
+### 3. [Kort rubrik]
+[Samma struktur]
+
+## Coachens slutsats
+2-3 meningar: vad detta samtal lär oss, hur säljaren kan förbättra sig, varför AI-coaching slår mänsklig retroaktiv feedback.
+
+VIKTIGT:
+- Markdown, klar att klistras in i hemsida eller LinkedIn-post.
+- Inga personliga detaljer som kan identifiera säljaren eller kunden.
+- Citera ordagrant från transkriptet (men anonymisera namn).
+- Håll det punchy — case studies på marketing-site läses snabbt.`;
+
+async function generateCaseStudy(transcript, analysis, apiKey, { methodology, salesperson, callTitle } = {}) {
+  if (!apiKey) throw new Error('GROQ_API_KEY saknas');
+  if (!transcript) throw new Error('Inget transkript tillgängligt');
+
+  const userContent = [
+    methodology ? `METODIK: ${methodology}` : null,
+    salesperson ? `SÄLJARE (anonymisera): ${salesperson}` : null,
+    callTitle   ? `SAMTAL: ${callTitle}`   : null,
+    '',
+    'TRANSKRIPT:',
+    transcript,
+    '',
+    'JOCKES FEEDBACK (för referens — anonymisera om citat hänvisar till namn):',
+    analysis || '(ingen feedback tillgänglig)',
+  ].filter(line => line !== null).join('\n');
+
+  const res = await fetch(`${GROQ_API_URL}/chat/completions`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      model: 'llama-3.3-70b-versatile',
+      messages: [
+        { role: 'system', content: CASE_STUDY_SYSTEM },
+        { role: 'user',   content: userContent },
+      ],
+      max_tokens:  2000,
+      temperature: 0.5,
+    }),
+  });
+
+  if (!res.ok) {
+    const errText = await res.text();
+    throw new Error(`Groq case-study error ${res.status}: ${errText.slice(0, 200)}`);
+  }
+  const data = await res.json();
+  const text = data.choices?.[0]?.message?.content;
+  if (!text) throw new Error('Tomt svar från case-study-LLM');
+  return text.trim();
+}
+
 module.exports = {
   processCall,
   analyzeWithPrompt,
   identifySpeakers,
+  generateCaseStudy,
   extractWordFrequencies,
   countWords,
   SWEDISH_STOPWORDS,
