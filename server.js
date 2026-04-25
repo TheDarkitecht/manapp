@@ -3203,7 +3203,10 @@ app.get('/pro/samtal/ny', requireLogin, requirePro, (req, res) => {
 });
 
 // POST: hantera uppladdning + transkribering + analys
-app.post('/pro/samtal/ny', requireLogin, requirePro, verifyCsrf, upload.single('audio'), async (req, res) => {
+// OBS: verifyCsrf MÅSTE köra EFTER multer för multipart/form-data — annars är req.body
+// tom när CSRF-tokenen läses → "Ogiltig begäran"-fel. Samma bugg som CI-threaden fixat
+// i sin bulk-upload-route. Multer parsar både filen och övriga form-fält (inkl. _csrf).
+app.post('/pro/samtal/ny', requireLogin, requirePro, upload.single('audio'), verifyCsrf, async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).render('pro-upload', {
