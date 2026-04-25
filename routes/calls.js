@@ -262,6 +262,38 @@ module.exports = function createCallsRouter(deps) {
     res.redirect(`/admin/calls?batch=${encodeURIComponent(batchId)}&created=${created.length}&errors=${errors.length}`);
   });
 
+  // ── Säljare-översikt ────────────────────────────────────────────────────
+  router.get('/salespeople', (req, res) => {
+    const overview = db.getSalespeopleOverview();
+    res.render('admin/calls/salespeople', {
+      username: req.session.username,
+      role:     req.session.role,
+      overview,
+      csrfToken: generateCsrfToken(req),
+    });
+  });
+
+  // ── Säljare-detalj-dashboard ────────────────────────────────────────────
+  // Lägg FÖRE /:id-routen så :name inte fångas där
+  router.get('/salesperson/:name', (req, res) => {
+    const name = decodeURIComponent(req.params.name);
+    if (!name) return res.redirect('/admin/calls/salespeople');
+    const dashboard = db.getSalespersonDashboard(name);
+    if (!dashboard) return res.redirect('/admin/calls/salespeople');
+    // Inkludera winning/losing-phrases scopat till denna säljare
+    const phrases = db.getWinningLosingPhrases({ salesperson: name, days: 365 });
+    res.render('admin/calls/salesperson', {
+      username: req.session.username,
+      role:     req.session.role,
+      name,
+      dashboard,
+      phrases,
+      methodologies: prompts.list(),
+      formatDuration,
+      csrfToken: generateCsrfToken(req),
+    });
+  });
+
   // ── Insights: winning/losing phrases per säljare/metodik ────────────────
   // Aggregerar ord-frekvenser över sold-samtal vs lost/no_sms-samtal,
   // beräknar lift, visar topplista. Filter via querystring:

@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title><%= name %> — Säljare-dashboard</title>
+  <meta name="robots" content="noindex, nofollow" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🧑</text></svg>" />
+  <link rel="stylesheet" href="/style.css" />
+  <link rel="stylesheet" href="/call-analytics.css" />
+</head>
+<body class="learn-page ci-page">
+
+  <a href="#main-content" class="skip-to-main">Hoppa till innehåll</a>
+
+  <nav class="learn-nav">
+    <a href="/admin/calls/salespeople" class="learn-nav-back">← Alla säljare</a>
+    <span class="learn-nav-title">🧑 <%= name %></span>
+    <span class="learn-nav-user"><%= username %></span>
+  </nav>
+
+  <main id="main-content" class="ci-wrap">
+
+    <!-- Headline-stats -->
+    <div class="ci-stats">
+      <div class="ci-stat">
+        <span class="ci-stat-num"><%= dashboard.stats.total %></span>
+        <span class="ci-stat-label">Samtal totalt</span>
+      </div>
+      <div class="ci-stat ci-stat-done">
+        <span class="ci-stat-num"><%= dashboard.stats.sold %></span>
+        <span class="ci-stat-label">Sold</span>
+      </div>
+      <div class="ci-stat ci-stat-failed">
+        <span class="ci-stat-num"><%= dashboard.stats.lost %></span>
+        <span class="ci-stat-label">Lost</span>
+      </div>
+      <div class="ci-stat">
+        <span class="ci-stat-num" style="color:#fdba74;"><%= dashboard.stats.no_sms %></span>
+        <span class="ci-stat-label">No-SMS</span>
+      </div>
+      <div class="ci-stat">
+        <span class="ci-stat-num">
+          <%= dashboard.stats.win_rate !== null ? dashboard.stats.win_rate + '%' : '—' %>
+        </span>
+        <span class="ci-stat-label">Win-rate</span>
+      </div>
+      <div class="ci-stat">
+        <span class="ci-stat-num"><%= dashboard.stats.total_minutes %></span>
+        <span class="ci-stat-label">Minuter</span>
+      </div>
+    </div>
+
+    <div class="ci-detail-grid">
+      <!-- Veckotrend -->
+      <section class="ci-section">
+        <header class="ci-section-header">
+          <h2>📈 Win-rate över tid (12 veckor)</h2>
+        </header>
+        <% if (!dashboard.weeklyTrend.length) { %>
+          <p class="ci-empty">Inga taggade samtal de senaste 12 veckorna.</p>
+        <% } else { %>
+          <div class="ci-trend-chart">
+            <% dashboard.weeklyTrend.forEach(function(w) {
+                 const heightPct = w.win_rate !== null ? w.win_rate : 0;
+                 const color = w.win_rate >= 50 ? '#6ee7b7' : (w.win_rate >= 25 ? '#fbbf24' : '#fca5a5');
+            %>
+              <div class="ci-trend-bar" title="<%= w.week %>: <%= w.calls %> samtal, <%= w.sold %> sold, <%= w.lost %> lost — <%= w.win_rate !== null ? w.win_rate + '%' : 'otaggat' %>">
+                <div class="ci-trend-fill" style="height: <%= heightPct %>%; background: <%= color %>;"></div>
+                <span class="ci-trend-label"><%= w.week.slice(-3) %></span>
+              </div>
+            <% }); %>
+          </div>
+          <p class="ci-hint">Hovra över staplarna för detaljer. Färg: grön ≥50%, gul 25-49%, röd &lt;25%.</p>
+        <% } %>
+      </section>
+
+      <!-- Metodik-fördelning -->
+      <section class="ci-section">
+        <header class="ci-section-header">
+          <h2>🎯 Metodik-fördelning</h2>
+        </header>
+        <% if (!dashboard.methodologyDist.length) { %>
+          <p class="ci-empty">Inga metodik-taggar.</p>
+        <% } else {
+             const totalCalls = dashboard.methodologyDist.reduce((sum, m) => sum + m.n, 0);
+        %>
+          <ul class="ci-wordfreq">
+            <% dashboard.methodologyDist.forEach(function(m) {
+                 const meta = methodologies.find(x => x.id === m.methodology);
+                 const label = meta ? meta.name : m.methodology;
+                 const pct = Math.round((m.n / totalCalls) * 100);
+            %>
+              <li>
+                <span class="ci-wf-word"><%= label %></span>
+                <span class="ci-wf-bar"><span class="ci-wf-fill" style="width: <%= pct %>%;"></span></span>
+                <span class="ci-wf-count"><%= m.n %> (<%= pct %>%)</span>
+              </li>
+            <% }); %>
+          </ul>
+        <% } %>
+      </section>
+    </div>
+
+    <!-- Winning/losing phrases scopat till denna säljare -->
+    <% if (!phrases.insufficient) { %>
+    <div class="ci-insights-grid">
+      <section class="ci-section">
+        <header class="ci-section-header">
+          <h2>🏆 <%= name %>:s winning words</h2>
+        </header>
+        <% if (!phrases.winning.length) { %>
+          <p class="ci-empty">Inga ord uppfyller minimitrösken.</p>
+        <% } else { %>
+          <table class="ci-table ci-phrase-table">
+            <thead><tr><th>Ord</th><th>Lift</th><th>Sold/samtal</th></tr></thead>
+            <tbody>
+              <% phrases.winning.slice(0, 15).forEach(function(p) { %>
+                <tr>
+                  <td class="ci-phrase-word"><%= p.word %></td>
+                  <td class="ci-phrase-lift ci-phrase-lift-up"><%= p.lift.toFixed(2) %>×</td>
+                  <td class="ci-td-num"><%= p.sold_avg.toFixed(2) %></td>
+                </tr>
+              <% }); %>
+            </tbody>
+          </table>
+        <% } %>
+      </section>
+
+      <section class="ci-section">
+        <header class="ci-section-header">
+          <h2>⚠️ <%= name %>:s losing words</h2>
+        </header>
+        <% if (!phrases.losing.length) { %>
+          <p class="ci-empty">Inga ord uppfyller minimitrösken.</p>
+        <% } else { %>
+          <table class="ci-table ci-phrase-table">
+            <thead><tr><th>Ord</th><th>Lift</th><th>Lost/samtal</th></tr></thead>
+            <tbody>
+              <% phrases.losing.slice(0, 15).forEach(function(p) { %>
+                <tr>
+                  <td class="ci-phrase-word"><%= p.word %></td>
+                  <td class="ci-phrase-lift ci-phrase-lift-down"><%= p.lift.toFixed(2) %>×</td>
+                  <td class="ci-td-num"><%= p.lost_avg.toFixed(2) %></td>
+                </tr>
+              <% }); %>
+            </tbody>
+          </table>
+        <% } %>
+      </section>
+    </div>
+    <% } else { %>
+    <div class="ci-warn">
+      För lite data för per-säljare-fras-analys. Behöver minst 2 sold + 2 lost för <%= name %>
+      (just nu: <%= phrases.soldCount %> sold, <%= phrases.lostCount %> lost).
+    </div>
+    <% } %>
+
+    <!-- Senaste samtalen -->
+    <section class="ci-section">
+      <header class="ci-section-header">
+        <h2>📜 Senaste 50 samtal</h2>
+      </header>
+      <div class="ci-table-wrap">
+        <table class="ci-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Fil</th>
+              <th>Status</th>
+              <th>Utfall</th>
+              <th>Längd</th>
+              <th>Ord</th>
+              <th>Uppladdad</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            <% dashboard.recentCalls.forEach(function(c) { %>
+              <tr>
+                <td class="ci-td-id"><%= c.id %></td>
+                <td class="ci-td-name" title="<%= c.original_name %>">
+                  <a href="/admin/calls/<%= c.id %>"><%= c.title || c.original_name %></a>
+                </td>
+                <td><span class="ci-status ci-status-<%= c.status %>"><%= c.status %></span></td>
+                <td>
+                  <% if (c.outcome) { %>
+                    <span class="ci-outcome ci-outcome-<%= c.outcome %>"><%= c.outcome %></span>
+                  <% } else { %>
+                    <span class="ci-outcome-untagged">—</span>
+                  <% } %>
+                </td>
+                <td class="ci-td-dur"><%= formatDuration(c.duration_sec) %></td>
+                <td class="ci-td-num"><%= c.word_count || '—' %></td>
+                <td class="ci-td-date"><%= (c.created_at || '').slice(0, 16) %></td>
+                <td><a class="ci-td-link" href="/admin/calls/<%= c.id %>">Öppna →</a></td>
+              </tr>
+            <% }); %>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+  </main>
+
+  <script src="/heartbeat.js" defer></script>
+</body>
+</html>

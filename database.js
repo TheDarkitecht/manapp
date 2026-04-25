@@ -2877,6 +2877,101 @@ function getWinningLosingPhrases({ salesperson = null, methodology = null, days 
   return { winning, losing, soldCount, lostCount, insufficient: false };
 }
 
+// ─── Säljare-dashboards (Fas 3) ────────────────────────────────────────────
+
+/**
+ * Översikt över alla säljare med basic stats.
+ * Returnerar [{ name, total, sold, lost, no_sms, callback, untagged, tagged, win_rate, total_minutes, last_call_at }]
+ */
+function getSalespeopleOverview() {
+  const rows = rowsQuery(`
+    SELECT
+      j.salesperson_name AS name,
+      COUNT(*) AS total,
+      SUM(CASE WHEN j.outcome = 'sold'     THEN 1 ELSE 0 END) AS sold,
+      SUM(CASE WHEN j.outcome = 'lost'     THEN 1 ELSE 0 END) AS lost,
+      SUM(CASE WHEN j.outcome = 'no_sms'   THEN 1 ELSE 0 END) AS no_sms,
+      SUM(CASE WHEN j.outcome = 'callback' THEN 1 ELSE 0 END) AS callback,
+      SUM(CASE WHEN j.outcome = 'other'    THEN 1 ELSE 0 END) AS other,
+      SUM(CASE WHEN j.outcome IS NULL      THEN 1 ELSE 0 END) AS untagged,
+      COALESCE(SUM(t.duration_sec), 0) AS total_seconds,
+      MAX(j.created_at) AS last_call_at
+    FROM call_jobs j
+    LEFT JOIN call_transcripts t ON t.job_id = j.id
+    WHERE j.salesperson_name IS NOT NULL AND j.salesperson_name != ''
+      AND j.status = 'done'
+    GROUP BY j.salesperson_name
+    ORDER BY total DESC, name ASC
+  `);
+  return rows.map(r => {
+    const tagged = r.total - r.untagged;
+    return {
+      ...r,
+      tagged,
+      win_rate:      tagged > 0 ? Math.round((r.sold / tagged) * 100) : null,
+      total_minutes: Math.round(r.total_seconds / 60),
+    };
+  });
+}
+
+/**
+ * Full dashboard för en specifik säljare.
+ * Returnerar { stats, recentCalls, weeklyTrend }
+ */
+function getSalespersonDashboard(name) {
+  if (!name) return null;
+
+  // Stats (samma som i overview men för en specifik säljare)
+  const overview = getSalespeopleOverview().find(s => s.name === name);
+  if (!overview) return null;
+
+  // Senaste 50 samtalen
+  const recentCalls = rowsQuery(`
+    SELECT j.id, j.original_name, j.title, j.status, j.outcome, j.created_at, j.prompt_version,
+           t.duration_sec, t.word_count
+    FROM call_jobs j
+    LEFT JOIN call_transcripts t ON t.job_id = j.id
+    WHERE j.salesperson_name = ?
+    ORDER BY j.created_at DESC
+    LIMIT 50
+  `, [name]);
+
+  // Veckotrend: win-rate per ISO-vecka, senaste 12 veckorna
+  const weeklyTrend = rowsQuery(`
+    SELECT
+      strftime('%Y-W%W', j.created_at) AS week,
+      COUNT(*) AS calls,
+      SUM(CASE WHEN j.outcome = 'sold' THEN 1 ELSE 0 END) AS sold,
+      SUM(CASE WHEN j.outcome IN ('lost', 'no_sms') THEN 1 ELSE 0 END) AS lost
+    FROM call_jobs j
+    WHERE j.salesperson_name = ?
+      AND j.status = 'done'
+      AND j.created_at > datetime('now', '-84 days')
+    GROUP BY week
+    ORDER BY week ASC
+  `, [name]).map(w => ({
+    ...w,
+    tagged:   w.sold + w.lost,
+    win_rate: (w.sold + w.lost) > 0 ? Math.round((w.sold / (w.sold + w.lost)) * 100) : null,
+  }));
+
+  // Metodik-fördelning — vilka projekt jobbar säljaren mest på?
+  const methodologyDist = rowsQuery(`
+    SELECT prompt_version AS methodology, COUNT(*) AS n
+    FROM call_jobs
+    WHERE salesperson_name = ? AND status = 'done' AND prompt_version IS NOT NULL
+    GROUP BY prompt_version
+    ORDER BY n DESC
+  `, [name]);
+
+  return {
+    stats:           overview,
+    recentCalls,
+    weeklyTrend,
+    methodologyDist,
+  };
+}
+
 /**
  * Återställ jobb som fastnade i 'transcribing'/'analyzing' vid en server-omstart.
  * Kallas en gång vid start av callQueue-workern.
@@ -2957,4 +3052,6 @@ module.exports = {
   // CI Resultatmaskin (outcome + aggregation)
   setCallOutcome, setCallSalesperson, listSalespeople,
   getOutcomeStats, getWinningLosingPhrases, ALLOWED_OUTCOMES,
+  // CI Fas 3 (säljare-dashboards)
+  getSalespeopleOverview, getSalespersonDashboard,
 };
