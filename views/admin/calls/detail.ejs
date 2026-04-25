@@ -27,6 +27,12 @@
         <h1><%= job.title || job.original_name %></h1>
         <div class="ci-meta-row">
           <span class="ci-status ci-status-<%= job.status %>"><%= job.status %></span>
+          <% if (job.outcome) { %>
+            <span class="ci-outcome ci-outcome-<%= job.outcome %>"><%= job.outcome %></span>
+          <% } %>
+          <% if (job.salesperson_name) { %>
+            <span>🧑 <%= job.salesperson_name %></span>
+          <% } %>
           <span>📁 <%= job.original_name %></span>
           <% if (formatFileSize(job.file_size) !== '—') { %>
             <span>💾 <%= formatFileSize(job.file_size) %></span>
@@ -59,6 +65,65 @@
         <% } %>
       </div>
     </div>
+
+    <!-- Resultatmaskin: outcome-tagging + säljare-edit (visas när jobbet är done) -->
+    <% if (job.status === 'done') { %>
+    <section class="ci-tagging-bar">
+      <div class="ci-tagging-group">
+        <span class="ci-tagging-label">Utfall:</span>
+        <% allowedOutcomes.forEach(function(oc) { %>
+          <form method="POST" action="/admin/calls/<%= job.id %>/outcome" style="display:inline;">
+            <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+            <input type="hidden" name="outcome" value="<%= oc %>" />
+            <button type="submit" class="ci-outcome-btn ci-outcome-btn-<%= oc %> <%= job.outcome === oc ? 'is-active' : '' %>"
+                    title="Markera samtalet som <%= oc %>"><%= oc %></button>
+          </form>
+        <% }); %>
+        <% if (job.outcome) { %>
+          <form method="POST" action="/admin/calls/<%= job.id %>/outcome" style="display:inline;"
+                onsubmit="return confirm('Avtagga utfall?');">
+            <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+            <input type="hidden" name="outcome" value="" />
+            <button type="submit" class="ci-outcome-btn ci-outcome-btn-clear" title="Avtagga">✕ avtagga</button>
+          </form>
+        <% } %>
+      </div>
+
+      <form method="POST" action="/admin/calls/<%= job.id %>/salesperson" class="ci-tagging-group ci-salesperson-edit">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+        <span class="ci-tagging-label">Säljare:</span>
+        <input type="text" name="salesperson" maxlength="80"
+               placeholder="t.ex. Amelia"
+               value="<%= job.salesperson_name || '' %>"
+               class="ci-salesperson-edit-input" />
+        <button type="submit" class="ci-btn ci-btn-ghost">Spara</button>
+      </form>
+    </section>
+    <script>
+      // Flash efter outcome/säljare-uppdatering
+      (function() {
+        const p = new URLSearchParams(window.location.search);
+        const oc = p.get('outcome_set');
+        const sp = p.get('salesperson_set');
+        if (oc) {
+          const banner = document.createElement('div');
+          banner.className = 'ci-flash ci-flash-success';
+          banner.textContent = oc === 'cleared' ? '✓ Utfall avtaggat.' : `✓ Utfall satt till "${oc}".`;
+          document.querySelector('main').prepend(banner);
+          setTimeout(() => banner.remove(), 5000);
+          history.replaceState({}, '', window.location.pathname);
+        }
+        if (sp) {
+          const banner = document.createElement('div');
+          banner.className = 'ci-flash ci-flash-success';
+          banner.textContent = '✓ Säljare uppdaterad.';
+          document.querySelector('main').prepend(banner);
+          setTimeout(() => banner.remove(), 5000);
+          history.replaceState({}, '', window.location.pathname);
+        }
+      })();
+    </script>
+    <% } %>
 
     <!-- Status / fel -->
     <% if (job.status === 'failed' && job.error) { %>

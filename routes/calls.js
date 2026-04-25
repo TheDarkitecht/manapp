@@ -418,10 +418,38 @@ module.exports = function createCallsRouter(deps) {
       wordFrequencies:  full.wordFrequencies,
       runs,
       promptVersions:   prompts.list(),
+      allowedOutcomes:  db.ALLOWED_OUTCOMES,
       formatDuration,
       formatFileSize,
       csrfToken:        generateCsrfToken(req),
     });
+  });
+
+  // ── Outcome-tagging ─────────────────────────────────────────────────────
+  // Tillgänglig för alla CI-users (inte bara admin) — arbetsledare ska kunna
+  // tagga sina egna samtal. Inte destruktivt, så ingen requireAdminForDestructive.
+  router.post('/:id/outcome', verifyCsrf, (req, res) => {
+    const jobId = parseInt(req.params.id, 10);
+    if (!jobId) return res.redirect('/admin/calls');
+    const raw = (req.body.outcome || '').trim();
+    // Tomt värde = avtagga (sätt till null)
+    const outcome = raw === '' ? null : raw;
+    try {
+      db.setCallOutcome(jobId, outcome);
+      res.redirect(`/admin/calls/${jobId}?outcome_set=${encodeURIComponent(outcome || 'cleared')}`);
+    } catch (err) {
+      console.error('[calls/outcome]', err.message);
+      res.status(400).send('Ogiltigt outcome-värde: ' + err.message);
+    }
+  });
+
+  // ── Säljare-edit ────────────────────────────────────────────────────────
+  router.post('/:id/salesperson', verifyCsrf, (req, res) => {
+    const jobId = parseInt(req.params.id, 10);
+    if (!jobId) return res.redirect('/admin/calls');
+    const name = (req.body.salesperson || '').trim();
+    db.setCallSalesperson(jobId, name);
+    res.redirect(`/admin/calls/${jobId}?salesperson_set=1`);
   });
 
   // ── Radera (admin-only) ─────────────────────────────────────────────────
