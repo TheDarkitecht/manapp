@@ -147,7 +147,9 @@
               <tr>
                 <th>#</th>
                 <th>Fil</th>
+                <th>Säljare</th>
                 <th>Status</th>
+                <th>Utfall</th>
                 <th>Längd</th>
                 <th>Ord</th>
                 <th>Uppladdad</th>
@@ -161,7 +163,15 @@
                   <td class="ci-td-name" title="<%= j.original_name %>">
                     <a href="/admin/calls/<%= j.id %>"><%= j.title || j.original_name %></a>
                   </td>
+                  <td class="ci-td-salesperson"><%= j.salesperson_name || '—' %></td>
                   <td><span class="ci-status ci-status-<%= j.status %>"><%= j.status %></span></td>
+                  <td>
+                    <% if (j.outcome) { %>
+                      <span class="ci-outcome ci-outcome-<%= j.outcome %>"><%= j.outcome %></span>
+                    <% } else { %>
+                      <span class="ci-outcome-untagged">—</span>
+                    <% } %>
+                  </td>
                   <td class="ci-td-dur"><%= formatDuration(j.duration_sec) %></td>
                   <td class="ci-td-num"><%= j.word_count || '—' %></td>
                   <td class="ci-td-date"><%= (j.created_at || '').slice(0, 16) %></td>

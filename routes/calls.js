@@ -208,6 +208,11 @@ module.exports = function createCallsRouter(deps) {
     // 'identifySpeakers=1' när ikryssad, inget fält alls när inte — läs defensivt.
     const identifySpeakers = req.body.identifySpeakers === '1' || req.body.identifySpeakers === 'on';
 
+    // Säljare-namn: frivilligt textfält. Trimma + cap på 80 tecken.
+    // Tomma strängar normaliseras till null så aggregation funkar.
+    const rawSalesperson = (req.body.salesperson || '').trim().slice(0, 80);
+    const salespersonName = rawSalesperson || null;
+
     for (const file of files) {
       let jobId = null;
       // Multer returnerar filnamnet som Latin-1 — konvertera till UTF-8 så
@@ -226,6 +231,7 @@ module.exports = function createCallsRouter(deps) {
           status:            'uploading',
           prompt_version:    methodologyId,
           identify_speakers: identifySpeakers,
+          salesperson_name:  salespersonName,
         });
 
         // 2. Läs buffer från disk, lagra i R2/final disk

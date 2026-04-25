@@ -67,6 +67,22 @@
               <span class="ci-speaker-toggle-help">Gör transkriptet läsbart som dialog och ger AI:n bättre kontext. Lägger ~5 sek extra per samtal.</span>
             </span>
           </label>
+
+          <!-- Säljare — frivilligt men driver per-säljare-aggregation -->
+          <label class="ci-salesperson-field">
+            <span class="ci-salesperson-label">
+              <strong>🧑 Vem är säljaren?</strong>
+              <span class="ci-salesperson-help">Frivilligt men låter oss aggregera per säljare ("Amelias winning phrases" etc). Lämna tomt om du inte vet.</span>
+            </span>
+            <input
+              type="text"
+              name="salesperson"
+              maxlength="80"
+              placeholder="t.ex. Amelia, Kevin, Rasmus"
+              autocomplete="off"
+              spellcheck="false"
+            />
+          </label>
         </div>
 
         <label class="ci-dropzone" id="dropZone">
