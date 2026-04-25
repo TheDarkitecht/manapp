@@ -19,11 +19,21 @@
 //   - Leta reda på konstanten (ex: TEMPO_SYSTEM) och ändra innehållet.
 //   - Varje prompt bör: namnge tekniker vid namn, koppla till Jocke-
 //     specifika block/fraser, citera några exempel på vad 5/5 låter som.
-//   - Few-shot-exempel (ett riktigt samtal + feedback du skulle gett)
-//     är den största enskilda förbättringen. Lägg dem efter system-
-//     instruktionerna i samma string.
 //   - Efter ändring: pusha till main. Railway re-deployar. Nya samtal
 //     använder nya prompten; gamla kan re-analyseras från detalj-vyn.
+//
+// ─── FEW-SHOT EXAMPLES (Fas 3) ──────────────────────────────────────────────
+// Varje metodik kan ha en `examples`-array med 0-5 verkliga samtal-exempel +
+// den feedback Joakim själv skulle gett. Dessa skickas in som extra messages
+// FÖRE det nya transkriptet, så LLM:en imiterar Joakims stil/skärpa istället
+// för att skriva generiskt.
+//
+// Format per example:
+//   { transcript: 'Säljare: ... \n\nKund: ...', feedback: '## Samtalstyp...' }
+//
+// Tomma examples-arrays = ingen few-shot. Lägg till löpande när Joakim har
+// benchmark-samtal med "ideal" feedback. analyzeWithPrompt i callAnalytics.js
+// inkluderar dem automatiskt om de finns.
 // ═══════════════════════════════════════════════════════════════════════════
 
 // ─── GEMENSAM STRUKTUR (används av alla metodiker) ──────────────────────────
@@ -226,6 +236,9 @@ const versions = {
     outputFormat: 'markdown',
     isActive:     true,
     createdAt:    '2026-04-23',
+    // Few-shot examples — fyll på med 1-3 benchmark-samtal + ideal-feedback
+    // för att höja AI-kvaliteten dramatiskt. Format: { transcript, feedback }.
+    examples:     [],
   },
   abonnemang: {
     id:           'abonnemang',
@@ -238,6 +251,9 @@ const versions = {
     outputFormat: 'markdown',
     isActive:     true,
     createdAt:    '2026-04-23',
+    // Few-shot examples — fyll på med 1-3 benchmark-samtal + ideal-feedback
+    // för att höja AI-kvaliteten dramatiskt. Format: { transcript, feedback }.
+    examples:     [],
   },
   behovsstyrd: {
     id:           'behovsstyrd',
@@ -250,6 +266,9 @@ const versions = {
     outputFormat: 'markdown',
     isActive:     true,
     createdAt:    '2026-04-23',
+    // Few-shot examples — fyll på med 1-3 benchmark-samtal + ideal-feedback
+    // för att höja AI-kvaliteten dramatiskt. Format: { transcript, feedback }.
+    examples:     [],
   },
   b2b_konsultativ: {
     id:           'b2b_konsultativ',
@@ -262,6 +281,9 @@ const versions = {
     outputFormat: 'markdown',
     isActive:     true,
     createdAt:    '2026-04-23',
+    // Few-shot examples — fyll på med 1-3 benchmark-samtal + ideal-feedback
+    // för att höja AI-kvaliteten dramatiskt. Format: { transcript, feedback }.
+    examples:     [],
   },
   inkommande: {
     id:           'inkommande',
@@ -274,6 +296,9 @@ const versions = {
     outputFormat: 'markdown',
     isActive:     true,
     createdAt:    '2026-04-23',
+    // Few-shot examples — fyll på med 1-3 benchmark-samtal + ideal-feedback
+    // för att höja AI-kvaliteten dramatiskt. Format: { transcript, feedback }.
+    examples:     [],
   },
 };
 
@@ -302,6 +327,7 @@ function list() {
       outputFormat: v.outputFormat,
       createdAt:    v.createdAt,
       isDefault:    v.id === DEFAULT_VERSION_ID,
+      exampleCount: (v.examples || []).length,
     }));
 }
 

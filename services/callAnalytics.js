@@ -167,6 +167,18 @@ async function analyzeWithPrompt(transcript, apiKey, { promptVersion, userTitle 
   const cfg = prompts.get(promptVersion) || prompts.getActive();
   const userContent = `${userTitle ? `SAMTAL: "${userTitle}"\n\n` : ''}TRANSKRIBERING:\n\n${transcript}`;
 
+  // Bygg messages: system + few-shot-exempel (om finns) + nytt samtal.
+  // Exempel skickas som user/assistant-par så LLM:en uppfattar dem som
+  // verkliga prior turns att imitera, inte som del av instruktionerna.
+  const messages = [{ role: 'system', content: cfg.systemPrompt }];
+  const examples = Array.isArray(cfg.examples) ? cfg.examples : [];
+  for (const ex of examples) {
+    if (!ex || !ex.transcript || !ex.feedback) continue;
+    messages.push({ role: 'user',      content: `TRANSKRIBERING:\n\n${ex.transcript}` });
+    messages.push({ role: 'assistant', content: ex.feedback });
+  }
+  messages.push({ role: 'user', content: userContent });
+
   const res = await fetch(`${GROQ_API_URL}/chat/completions`, {
     method: 'POST',
     headers: {
@@ -174,11 +186,8 @@ async function analyzeWithPrompt(transcript, apiKey, { promptVersion, userTitle 
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      model: cfg.model,
-      messages: [
-        { role: 'system', content: cfg.systemPrompt },
-        { role: 'user',   content: userContent },
-      ],
+      model:       cfg.model,
+      messages,
       max_tokens:  cfg.maxTokens,
       temperature: cfg.temperature,
     }),
