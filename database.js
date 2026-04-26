@@ -387,6 +387,10 @@ async function initDatabase() {
     // till username då.
     "ALTER TABLE users ADD COLUMN first_name TEXT",
     "ALTER TABLE users ADD COLUMN last_name  TEXT",
+    // Fraud-detection: spara IP vid registrering (anonymiserad till /24)
+    // Används för att flagga potentiell self-referral-fraud när referrer
+    // krediteras (samma IP-prefix på referrer + referred = flagga för review)
+    "ALTER TABLE users ADD COLUMN register_ip TEXT",
     // Page-view tracking index
     "CREATE INDEX IF NOT EXISTS idx_page_views_user_date ON page_views(user_id, visited_at DESC)",
     "CREATE INDEX IF NOT EXISTS idx_page_views_path      ON page_views(path)",
@@ -610,7 +614,7 @@ function findUserById(id) {
 }
 
 // Register a new user. Returns { ok, error? }
-function createUser(username, email, password, firstName, lastName) {
+function createUser(username, email, password, firstName, lastName, registerIp) {
   if (findUserByUsername(username))
     return { ok: false, error: 'Användarnamnet är redan taget.' };
   if (findUserByEmail(email))
@@ -619,11 +623,14 @@ function createUser(username, email, password, firstName, lastName) {
   const hash = bcrypt.hashSync(password, 10);
   const cleanFirst = firstName ? firstName.trim().slice(0, 50) : null;
   const cleanLast  = lastName  ? lastName.trim().slice(0, 50)  : null;
+  // Anonymisera IP till /24-prefix (sista oktett 0). Räcker för
+  // fraud-flagging utan att lagra unika personuppgifter.
+  const cleanIp = registerIp ? String(registerIp).replace(/\.\d+$/, '.0').slice(0, 64) : null;
 
   db.run(
-    `INSERT INTO users (username, email, password_hash, role, gdpr, gdpr_at, created_at, first_name, last_name)
-     VALUES (?, ?, ?, 'free', 1, datetime('now'), datetime('now'), ?, ?)`,
-    [username.trim(), email.trim().toLowerCase(), hash, cleanFirst, cleanLast]
+    `INSERT INTO users (username, email, password_hash, role, gdpr, gdpr_at, created_at, first_name, last_name, register_ip)
+     VALUES (?, ?, ?, 'free', 1, datetime('now'), datetime('now'), ?, ?, ?)`,
+    [username.trim(), email.trim().toLowerCase(), hash, cleanFirst, cleanLast, cleanIp]
   );
   // Hämta nyss skapat ID
   const s = db.prepare('SELECT last_insert_rowid() AS id');
@@ -1319,6 +1326,26 @@ function grantReferralCreditIfEligible(referredUserId) {
   if (referred.referral_credit_granted) return { granted: false, reason: 'already granted' };
   if (referred.referrer_id === referred.id) return { granted: false, reason: 'self-referral' };
 
+  // Fraud-detection: jämför register_ip + email-domän mellan referrer och refererad.
+  // Om matchar → grant fortf, men flagga som suspicious i audit-loggen.
+  // Joakim ser dessa i /admin/referral-credits + /admin/audit och kan revertera.
+  const referrer = findUserById(referred.referrer_id);
+  const fraudFlags = [];
+  if (referrer && referred.register_ip && referrer.register_ip &&
+      referred.register_ip === referrer.register_ip) {
+    fraudFlags.push('same_ip');
+  }
+  if (referrer && referred.email && referrer.email) {
+    const refDomain = referred.email.split('@')[1];
+    const refrerDomain = referrer.email.split('@')[1];
+    // Samma domän = samma företag/familj. Inte alltid fraud men värt att flagga.
+    // Skippa generella mail-providers (gmail, hotmail, etc) — de är för vanliga.
+    const commonProviders = ['gmail.com', 'hotmail.com', 'outlook.com', 'yahoo.com', 'icloud.com', 'live.com', 'protonmail.com'];
+    if (refDomain && refrerDomain && refDomain === refrerDomain && !commonProviders.includes(refDomain.toLowerCase())) {
+      fraudFlags.push('same_domain');
+    }
+  }
+
   // Atomisk: markera som granted + öka referrerns counter
   try {
     db.run('BEGIN TRANSACTION');
@@ -1326,8 +1353,13 @@ function grantReferralCreditIfEligible(referredUserId) {
     db.run('UPDATE users SET referral_credits_earned = referral_credits_earned + 1 WHERE id = ?', [referred.referrer_id]);
     db.run('COMMIT');
     saveDb();
-    console.log(`🎁 Referral-credit: user ${referred.referrer_id} tjänade 1 gratis månad (via ${referred.username})`);
-    return { granted: true, referrerId: referred.referrer_id };
+    console.log(`🎁 Referral-credit: user ${referred.referrer_id} tjänade 1 gratis månad (via ${referred.username})${fraudFlags.length ? ' [FLAGGA: ' + fraudFlags.join(',') + ']' : ''}`);
+    return {
+      granted: true,
+      referrerId: referred.referrer_id,
+      fraudFlags,                             // tom om inga
+      suspicious: fraudFlags.length > 0,      // för callers att enkelt logga audit
+    };
   } catch (err) {
     db.run('ROLLBACK');
     console.error('grantReferralCreditIfEligible failed:', err.message);
@@ -1779,14 +1811,35 @@ function sessionCleanupExpired() {
 // ── Stripe webhook idempotency ────────────────────────────────────────────────
 
 /**
- * Kontrollera + markera ett Stripe-event som processerat.
- * Returns true om eventet är nytt (bör processeras), false om redan sett.
- * Atomisk via INSERT OR IGNORE + changes().
+ * Kontrollera om ett Stripe-event redan är processerat.
+ * Returnerar true om EJ tidigare sett (bör processeras), false om redan processerat.
+ *
+ * OBS: ENDAST READ — inserterar INTE. Använd markStripeEventProcessed() EFTER
+ * lyckad handler-execution för att markera som processerat. Detta skydd förhindrar
+ * att events markeras som "processerat" om servern kraschar mid-handler — Stripe
+ * kommer då att retry:a och vi kan re-execute (handlers är idempotenta).
+ */
+function isStripeEventProcessed(eventId) {
+  if (!eventId) return false;
+  try {
+    const s = db.prepare('SELECT 1 FROM stripe_events WHERE event_id = ? LIMIT 1');
+    s.bind([eventId]);
+    const found = s.step();
+    s.free();
+    return found;
+  } catch (err) {
+    console.error('isStripeEventProcessed failed:', err.message);
+    return false; // vid fel, låt processeringen gå vidare
+  }
+}
+
+/**
+ * Markera ett Stripe-event som processerat. ENDAST efter lyckad handler-execution.
+ * Returns true om INSERT lyckades (var verkligen nytt), false om duplicate.
  */
 function markStripeEventProcessed(eventId, eventType) {
-  if (!eventId) return true; // ingen id = kan inte dedupa, processera
+  if (!eventId) return true;
   try {
-    // INSERT OR IGNORE — om PRIMARY KEY krockar sker inget och changes() = 0
     db.run(
       'INSERT OR IGNORE INTO stripe_events (event_id, event_type) VALUES (?, ?)',
       [eventId, eventType || 'unknown']
@@ -1795,11 +1848,11 @@ function markStripeEventProcessed(eventId, eventType) {
     s.step();
     const { n } = s.getAsObject();
     s.free();
-    saveDb(); // Stripe events är sällsynta nog för direkt flush
+    saveDb();
     return n > 0;
   } catch (err) {
     console.error('markStripeEventProcessed failed:', err.message);
-    return true; // vid fel, låt processeringen gå vidare hellre än blockera
+    return true;
   }
 }
 
@@ -3137,7 +3190,7 @@ module.exports = {
   // Session store
   sessionGet, sessionSet, sessionDestroy, sessionCleanupExpired,
   // Stripe idempotency
-  markStripeEventProcessed, cleanupOldStripeEvents,
+  isStripeEventProcessed, markStripeEventProcessed, cleanupOldStripeEvents,
   // Admin notes
   getAdminNotesForUser, addAdminNote, deleteAdminNote,
   // Admin audit log

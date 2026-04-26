@@ -3,7 +3,7 @@ const express   = require('express');
 const session   = require('express-session');
 const bcrypt    = require('bcryptjs');
 const OpenAI    = require('openai');
-const rateLimit = require('express-rate-limit');
+const { rateLimit, ipKeyGenerator } = require('express-rate-limit');
 const Stripe    = require('stripe');
 const { Resend } = require('resend');
 const helmet    = require('helmet');
@@ -29,7 +29,7 @@ const {
   getContinueTarget, getBlockTimeAnalytics,
   logPageView, updateLastPageViewDuration, cleanupOldPageViews, flushAnalytics,
   sessionGet, sessionSet, sessionDestroy, sessionCleanupExpired,
-  markStripeEventProcessed, cleanupOldStripeEvents,
+  isStripeEventProcessed, markStripeEventProcessed, cleanupOldStripeEvents,
   getAdminNotesForUser, addAdminNote, deleteAdminNote,
   logAdminAction, getAuditLog, getAuditActionTypes, cleanupOldAuditLog,
   createProCallAnalysis, updateProCallAnalysis, getProCallAnalysis,
@@ -205,12 +205,18 @@ app.post('/webhook', express.raw({ type: 'application/json' }), async (req, res)
     return res.status(400).send(`Webhook Error: ${err.message}`);
   }
 
-  // ── Idempotency: Stripe retries events vid nätverksfel. Utan dedup skulle
-  // samma checkout.session.completed kunna processeras N gånger, vilket
-  // blir fel när vi börjar ge ut referral-rewards eller skicka välkomstmejl
-  // som bi-effekt. Spara event.id; om redan sett — ignorera tyst (ack:a Stripe).
-  const isNewEvent = markStripeEventProcessed(event.id, event.type);
-  if (!isNewEvent) {
+  // ── Idempotency: Stripe retries events vid nätverksfel.
+  // Pattern: CHECK före handler-execution, MARK efter lyckad execution.
+  // Detta skyddar mot scenarion där:
+  //   1. Event kommer in
+  //   2. Handler börjar köra (t.ex. setUserRole)
+  //   3. Server kraschar mid-handler
+  //   4. Stripe retries
+  // Med GAMMAL pattern (mark FÖRE handler): event = "redan processat" → skip
+  //   → user betalar utan att uppgraderas. KRITISK BUGG.
+  // Med NY pattern (mark EFTER handler): retry körs igen → handlers är
+  //   idempotenta (setUserRole sätter samma roll, grant har eget flag) → safe.
+  if (isStripeEventProcessed(event.id)) {
     console.log(`⏭️  Skippar redan-processat Stripe-event ${event.id} (${event.type})`);
     return res.json({ received: true, duplicate: true });
   }
@@ -243,10 +249,22 @@ app.post('/webhook', express.raw({ type: 'application/json' }), async (req, res)
       // ── Auto-referral-reward: om den här användaren refererades av någon
       // och detta är deras första upgrade, kreditera referrern 1 gratis månad.
       // Idempotent via referral_credit_granted-flaggan i DB.
+      // Fraud-flagging: om referrer + referred har samma IP/email-domän →
+      // krediteras fortf. men loggas som suspicious. Joakim kan revertera.
       try {
         const result = grantReferralCreditIfEligible(userId);
         if (result.granted) {
           console.log(`🎁 Referrer ${result.referrerId} fick 1 gratis månad krediterad`);
+          if (result.suspicious) {
+            try {
+              logAdminAction(0, 'system', 'referral.suspicious_grant',
+                { id: userId, username: null },
+                { referrerId: result.referrerId, flags: result.fraudFlags },
+                null
+              );
+              console.warn(`⚠️ Misstänkt referral-grant: user ${result.referrerId} ← user ${userId} (${result.fraudFlags.join(',')})`);
+            } catch (_) {}
+          }
         }
       } catch (err) {
         // Logga men låt inte fel här påverka upgrade-flödet
@@ -313,6 +331,10 @@ app.post('/webhook', express.raw({ type: 'application/json' }), async (req, res)
     }
   }
 
+  // Markera event som processerat ENDAST efter att alla handlers körts klart.
+  // Om server kraschat innan denna rad: event ej markerat → Stripe retries →
+  // handlers körs igen (idempotent, safe).
+  markStripeEventProcessed(event.id, event.type);
   res.json({ received: true });
 });
 
@@ -454,7 +476,7 @@ const registerLimiter = rateLimit({
 const chatLimiter = rateLimit({
   windowMs: 10 * 60 * 1000, // 10 minutes
   max: 30,
-  keyGenerator: (req) => `chat_${req.session?.userId || req.ip}`,
+  keyGenerator: (req) => `chat_${req.session?.userId || ipKeyGenerator(req)}`,
   handler: (req, res) => {
     res.status(429).json({ error: 'För många meddelanden. Vänta lite och försök igen.' });
   },
@@ -465,7 +487,7 @@ const chatLimiter = rateLimit({
 const quizLimiter = rateLimit({
   windowMs: 10 * 60 * 1000, // 10 minutes
   max: 60, // 6 blocks × 10 retries
-  keyGenerator: (req) => `quiz_${req.session?.userId || req.ip}`,
+  keyGenerator: (req) => `quiz_${req.session?.userId || ipKeyGenerator(req)}`,
   handler: (req, res) => {
     res.status(429).json({ ok: false, error: 'För många försök.' });
   },
@@ -490,7 +512,7 @@ const resetLimiter = rateLimit({
 const noteLimiter = rateLimit({
   windowMs: 10 * 60 * 1000,
   max: 30,
-  keyGenerator: (req) => `note_${req.session?.userId || req.ip}`,
+  keyGenerator: (req) => `note_${req.session?.userId || ipKeyGenerator(req)}`,
   handler: (req, res) => res.redirect('/dashboard'),
 });
 
@@ -499,7 +521,7 @@ const noteLimiter = rateLimit({
 const noteDeleteLimiter = rateLimit({
   windowMs: 10 * 60 * 1000,
   max: 20,
-  keyGenerator: (req) => `notedel_${req.session?.userId || req.ip}`,
+  keyGenerator: (req) => `notedel_${req.session?.userId || ipKeyGenerator(req)}`,
   handler: (req, res) => res.redirect('/dashboard'),
 });
 
@@ -508,7 +530,7 @@ const noteDeleteLimiter = rateLimit({
 const deleteLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 3,
-  keyGenerator: (req) => `del_${req.session?.userId || req.ip}`,
+  keyGenerator: (req) => `del_${req.session?.userId || ipKeyGenerator(req)}`,
   handler: (req, res) => res.redirect('/dashboard?deleteError=1'),
 });
 
@@ -517,7 +539,7 @@ const deleteLimiter = rateLimit({
 const passwordChangeLimiter = rateLimit({
   windowMs: 60 * 60 * 1000,
   max: 10,
-  keyGenerator: (req) => `pwchg_${req.session?.userId || req.ip}`,
+  keyGenerator: (req) => `pwchg_${req.session?.userId || ipKeyGenerator(req)}`,
   handler: (req, res) => res.redirect('/account?pwError=ratelimit'),
 });
 
@@ -928,7 +950,9 @@ app.post('/register', registerLimiter, async (req, res) => {
     username = generateUsernameFromEmail(email.trim());
   }
 
-  const result = createUser(username, email.trim(), password, cleanFirst, cleanLast);
+  // IP fångas för fraud-detection vid framtida referral-grants
+  const registerIp = req.ip || req.connection?.remoteAddress || null;
+  const result = createUser(username, email.trim(), password, cleanFirst, cleanLast, registerIp);
   if (!result.ok)
     return res.render('login', { error: null, success: null, turnstileSiteKey: TURNSTILE_SITE_KEY,
       registerError: result.error });
@@ -1013,33 +1037,39 @@ app.get('/forgot-password', (req, res) => {
 
 app.post('/forgot-password', resetLimiter, verifyCsrf, async (req, res) => {
   const { email } = req.body;
+  const startTime = Date.now();
   const user = findUserByEmail(email?.trim().toLowerCase());
 
-  // Always show success to prevent email enumeration
-  if (!user) {
-    return res.render('forgot-password', {
-      error: null,
-      success: 'Om e-postadressen finns i systemet har vi skickat en länk.',
-      csrfToken: generateCsrfToken(req),
-    });
+  // Skicka mejl + skapa token om user finns. Annars: kör en dummy-delay
+  // så response-tiden är jämn oavsett — eliminerar timing-side-channel
+  // för email-enumeration. Industri-standard säkerhetsmönster.
+  if (user) {
+    const token   = createResetToken(user.id);
+    const baseUrl = process.env['APP_URL'] || 'https://app.joakimjaksen.se';
+    const link    = `${baseUrl}/reset-password/${token}`;
+
+    try {
+      if (resend) {
+        await resend.emails.send({
+          from:    RESEND_FROM,
+          to:      user.email,
+          subject: 'Återställ ditt lösenord — Joakim Jaksen',
+          html: buildPasswordResetEmail(user.first_name || user.username, link),
+        });
+      }
+    } catch (err) {
+      console.error('Resend error:', err.message);
+    }
+  } else {
+    // Constant-time-ish: vänta ungefär lika länge som token-creation + mail-send
+    // skulle tagit (200-400ms typiskt). Litet jitter förhindrar exakt-match-detection.
+    const baseDelay = 250 + Math.floor(Math.random() * 150);
+    const elapsed = Date.now() - startTime;
+    const remainingDelay = Math.max(0, baseDelay - elapsed);
+    await new Promise(r => setTimeout(r, remainingDelay));
   }
 
-  const token   = createResetToken(user.id);
-  const baseUrl = process.env['APP_URL'] || 'https://manapp-production.up.railway.app';
-  const link    = `${baseUrl}/reset-password/${token}`;
-
-  try {
-    if (!resend) throw new Error('RESEND_API_KEY not configured');
-    await resend.emails.send({
-      from:    RESEND_FROM,
-      to:      user.email,
-      subject: 'Återställ ditt lösenord — Joakim Jaksen',
-      html: buildPasswordResetEmail(user.username, link),
-    });
-  } catch (err) {
-    console.error('Resend error:', err.message);
-  }
-
+  // Always show same success message — prevent email enumeration
   res.render('forgot-password', {
     error: null,
     success: 'Om e-postadressen finns i systemet har vi skickat en länk.',
