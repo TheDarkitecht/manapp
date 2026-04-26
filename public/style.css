@@ -3993,6 +3993,7 @@ body.dash-page {
   .ordbok-grid       { padding-bottom: 6rem !important; }
   .tab-content-wrapper { padding-bottom: 5rem !important; }
   .block-nav-footer  { margin-bottom: 3.5rem !important; }
+  .pro-wrap          { padding-bottom: 6rem !important; } /* /pro pages */
 
   /* Chat bubble: lift it above the bottom nav */
   .chat-bubble { bottom: 5rem !important; }
