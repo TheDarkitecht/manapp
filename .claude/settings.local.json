@@ -13,7 +13,22 @@
       "Bash(npm install *)",
       "Bash(node -e \"const m = require\\('multer'\\); console.log\\('multer loaded OK'\\);\")",
       "Bash(node -c proCallAnalysis.js)",
-      "Bash(node -e \"const ejs=require\\('ejs'\\),fs=require\\('fs'\\); ejs.compile\\(fs.readFileSync\\('views/bevis-publik.ejs','utf8'\\)\\); ejs.compile\\(fs.readFileSync\\('views/admin.ejs','utf8'\\)\\); console.log\\('views OK'\\);\")"
+      "Bash(node -e \"const ejs=require\\('ejs'\\),fs=require\\('fs'\\); ejs.compile\\(fs.readFileSync\\('views/bevis-publik.ejs','utf8'\\)\\); ejs.compile\\(fs.readFileSync\\('views/admin.ejs','utf8'\\)\\); console.log\\('views OK'\\);\")",
+      "Bash(node -e \"const ejs=require\\('ejs'\\);const fs=require\\('fs'\\);['views/installningar.ejs','views/landing.ejs','views/dashboard.ejs'].forEach\\(f=>{try{ejs.compile\\(fs.readFileSync\\(f,'utf8'\\),{filename:f}\\);console.log\\(f,'OK'\\);}catch\\(e\\){console.error\\(f,'FAIL:',e.message\\);process.exit\\(1\\);}}\\);\")",
+      "Bash(git push *)",
+      "Bash(git fetch *)",
+      "Bash(git merge *)",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(git status)",
+      "Bash(git log *)",
+      "Bash(git diff *)",
+      "Bash(node -c *)",
+      "Bash(node -e *)",
+      "Bash([ -f \"views/$f.ejs\" ])",
+      "Bash(continue)",
+      "Bash(sed -i 's|</body>|  <script src=\"/heartbeat.js\" defer></script>\\\\n</body>|' views/__TRACKED_VAR__.ejs)",
+      "Bash(git pull *)"
     ]
   },
   "defaultMode": "bypassPermissions"

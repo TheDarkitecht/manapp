@@ -13,6 +13,7 @@ const {
   updateUserEmail, updateUserName,
   setStripeCustomerId, findUserByStripeCustomerId,
   updateLastLogin,
+  isUserLocked, recordFailedLogin, clearFailedLogins,
   getNotesByUserId, createNote, deleteNote,
   getBlockProgress, saveQuizResult, getCompletedBlockCount,
   createResetToken, findValidResetToken, deleteResetToken, updateUserPassword,
@@ -25,6 +26,7 @@ const {
   getDailyChallenge, saveDailyChallenge, completeDailyChallenge,
   getAllUsersWithEmail, getUsersForBroadcast,
   saveBroadcast, getBroadcastsForUser, getBroadcastById,
+  enqueueEmail, getPendingEmails, markEmailSent, markEmailFailed, cleanupOldEmailQueue,
   getAdminAnalytics, getUserAnalyticsProfile, getFunnelMetrics, getUserDataExport, getCohortRetention,
   getContinueTarget, getBlockTimeAnalytics,
   logPageView, updateLastPageViewDuration, cleanupOldPageViews, flushAnalytics,
@@ -856,12 +858,39 @@ app.post('/login', loginLimiter, async (req, res) => {
     user = findUserByUsername(rawId);
   }
 
+  // Account-lockout: kolla om kontot är låst pga för många failed logins
+  // (skydd mot distribuerad brute-force som kringgår per-IP-rate-limit).
+  if (user) {
+    const lockStatus = isUserLocked(user);
+    if (lockStatus.locked) {
+      console.warn(`🔒 Login attempt på låst konto: user ${user.id}, ${lockStatus.minutesLeft}m kvar`);
+      return res.render('login', {
+        error: `Kontot är tillfälligt låst pga för många misslyckade inloggningar. Försök igen om ${lockStatus.minutesLeft} minuter.`,
+        registerError: null, success: null, turnstileSiteKey: TURNSTILE_SITE_KEY,
+      });
+    }
+  }
+
   if (!user || !(await bcrypt.compare(password, user.password_hash))) {
+    // Räkna failed attempt om user finns (skippa om user inte finns —
+    // vi vill inte heller läcka info om vilka konton som existerar).
+    if (user) {
+      const result = recordFailedLogin(user.id);
+      if (result.locked) {
+        return res.render('login', {
+          error: 'Kontot är nu låst i 15 minuter pga för många misslyckade försök.',
+          registerError: null, success: null, turnstileSiteKey: TURNSTILE_SITE_KEY,
+        });
+      }
+    }
     return res.render('login', {
       error: 'Fel e-post eller lösenord.',
       registerError: null, success: null, turnstileSiteKey: TURNSTILE_SITE_KEY,
     });
   }
+
+  // Successful login → reset failed-counter
+  clearFailedLogins(user.id);
 
   // Läs returnTo INNAN regenerate — sessionen nollställs annars
   const returnTo = (isSafeReturnPath(req.session?.returnTo) ? req.session.returnTo : null);
@@ -2611,11 +2640,25 @@ app.get('/admin', requireLogin, requireAdmin, (req, res) => {
   });
 });
 
+// Cache för admin-analytics: dessa queries är dyra (~12 separata SQL-anrop
+// per render). 60-sekunders TTL. Räcker långt eftersom data uppdateras långsamt
+// och flera admins som refreshar samtidigt får samma cached snapshot.
+const analyticsCache = { data: null, fetchedAt: 0 };
+const ANALYTICS_CACHE_TTL_MS = 60 * 1000;
+
 app.get('/admin/analytics', requireLogin, requireAdmin, (req, res) => {
-  const analytics = getAdminAnalytics();
-  const funnel = getFunnelMetrics();
-  const cohorts = getCohortRetention();
-  // Berika blockEngagement med block-titlar för läsbarhet
+  const now = Date.now();
+  let analytics, funnel, cohorts;
+  if (analyticsCache.data && (now - analyticsCache.fetchedAt) < ANALYTICS_CACHE_TTL_MS) {
+    ({ analytics, funnel, cohorts } = analyticsCache.data);
+  } else {
+    analytics = getAdminAnalytics();
+    funnel    = getFunnelMetrics();
+    cohorts   = getCohortRetention();
+    analyticsCache.data = { analytics, funnel, cohorts };
+    analyticsCache.fetchedAt = now;
+  }
+
   const blockTitles = {};
   salesBlocks.forEach((b, i) => { blockTitles[b.id] = { title: b.title, index: i + 1, icon: b.icon }; });
   res.render('admin-analytics', {
@@ -3789,6 +3832,52 @@ async function startServer() {
   // och sedan var 6:e timme. Total recovery-fönster: ~18 timmar med 3 snapshots.
   setTimeout(() => rotateDbBackups(), 10_000);
   setInterval(rotateDbBackups, 6 * 60 * 60 * 1000);
+
+  // Email retry-queue worker: processar pending mejl var 60:e sek.
+  // Säkerställer att mejl inte tappas pga tillfälliga Resend-fel.
+  const emailWorker = async () => {
+    if (!resend) return;
+    const pending = getPendingEmails(20);
+    if (!pending.length) return;
+    for (const mail of pending) {
+      try {
+        await resend.emails.send({
+          from:    mail.from_email || RESEND_FROM,
+          to:      mail.to_email,
+          subject: mail.subject,
+          html:    mail.html,
+        });
+        markEmailSent(mail.id);
+        // Resend free tier 10/sec — rate-limit safety
+        await new Promise(r => setTimeout(r, 100));
+      } catch (err) {
+        markEmailFailed(mail.id, err.message);
+        console.error(`📧 Email queue retry-${mail.attempts + 1} failed for ${mail.to_email}: ${err.message}`);
+      }
+    }
+  };
+  setTimeout(emailWorker, 30 * 1000); // första körning 30s efter startup
+  setInterval(emailWorker, 60 * 1000); // sen var 60:e sek
+  // Cleanup gamla rader dagligen
+  setInterval(cleanupOldEmailQueue, 24 * 60 * 60 * 1000);
+
+  // Offsite DB-backup till Cloudflare R2 (skydd mot Railway disk-failure).
+  // Daglig snapshot + "latest.db" som overwritas varje gång. Retention 90d.
+  // Körs första gången 5 min efter startup (sluss dagliga snapshots något),
+  // sen var 24:e timme. Cleanup av gamla snapshots dagligen.
+  const dbBackupR2 = require('./services/dbBackup');
+  if (dbBackupR2.isR2Enabled()) {
+    setTimeout(async () => {
+      await dbBackupR2.uploadDailyBackup();
+      await dbBackupR2.cleanupOldR2Backups(90);
+    }, 5 * 60 * 1000);
+    setInterval(async () => {
+      await dbBackupR2.uploadDailyBackup();
+      await dbBackupR2.cleanupOldR2Backups(90);
+    }, 24 * 60 * 60 * 1000);
+  } else {
+    console.warn('⚠️  R2 not configured — offsite DB-backups disabled (only local backups exist)');
+  }
 
   // CI (Conversation Intelligence) — bulk call-analytics worker.
   // Pollar call_jobs-tabellen efter pending uppladdningar och processar

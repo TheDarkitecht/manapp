@@ -289,6 +289,26 @@ async function initDatabase() {
     )
   `);
 
+  // Email retry-queue: alla mejl som ska skickas via Resend hamnar här först.
+  // Worker hämtar pending och skickar. Fail → retry med exponential backoff.
+  // Säkerställer att inga transactional mejl tappas pga tillfälliga API-fel.
+  db.run(`
+    CREATE TABLE IF NOT EXISTS email_queue (
+      id              INTEGER PRIMARY KEY AUTOINCREMENT,
+      to_email        TEXT NOT NULL,
+      subject         TEXT NOT NULL,
+      html            TEXT NOT NULL,
+      from_email      TEXT,
+      kind            TEXT,
+      status          TEXT NOT NULL DEFAULT 'pending',
+      attempts        INTEGER NOT NULL DEFAULT 0,
+      last_error      TEXT,
+      next_attempt_at TEXT NOT NULL DEFAULT (datetime('now')),
+      created_at      TEXT NOT NULL DEFAULT (datetime('now')),
+      sent_at         TEXT
+    )
+  `);
+
   // Broadcast-arkiv: varje admin-broadcast persisteras så users kan se
   // missade announcements på /nyheter. Original body (som admin skrev)
   // sparas — NOT rendered HTML med unsubscribe-länk (per-user).
@@ -391,6 +411,11 @@ async function initDatabase() {
     // Används för att flagga potentiell self-referral-fraud när referrer
     // krediteras (samma IP-prefix på referrer + referred = flagga för review)
     "ALTER TABLE users ADD COLUMN register_ip TEXT",
+    // Account-lockout: räkna failed login attempts. Lock if >5 inom 15 min.
+    // Skydd mot distribuerad brute-force som kringgår per-IP-rate-limit.
+    "ALTER TABLE users ADD COLUMN failed_login_attempts INTEGER NOT NULL DEFAULT 0",
+    "ALTER TABLE users ADD COLUMN failed_login_at       TEXT",
+    "ALTER TABLE users ADD COLUMN locked_until          TEXT",
     // Page-view tracking index
     "CREATE INDEX IF NOT EXISTS idx_page_views_user_date ON page_views(user_id, visited_at DESC)",
     "CREATE INDEX IF NOT EXISTS idx_page_views_path      ON page_views(path)",
@@ -741,6 +766,84 @@ function deleteUser(userId)        { _deleteUserRows(userId); }
 
 function updateLastLogin(userId) {
   db.run("UPDATE users SET last_login = datetime('now') WHERE id = ?", [userId]);
+  saveDb();
+}
+
+// ── Account lockout (brute-force protection) ──────────────────────────────────
+// Pattern: räkna failed login per user. Vid >= MAX_FAIL inom WINDOW → lock 15 min.
+// Successful login → reset counter. Detta kompletterar per-IP-rate-limit som
+// inte skyddar mot distribuerade attacker (botnet med flera IPs).
+
+const LOCKOUT_MAX_FAILED   = 5;
+const LOCKOUT_WINDOW_MS    = 15 * 60 * 1000; // 15 min
+const LOCKOUT_DURATION_MS  = 15 * 60 * 1000; // 15 min lock
+
+/**
+ * Kolla om en user är låst pga för många failed logins.
+ * Returnerar { locked: bool, until: ISO-string|null, minutesLeft: number }.
+ */
+function isUserLocked(user) {
+  if (!user || !user.locked_until) return { locked: false, until: null, minutesLeft: 0 };
+  const lockedUntilMs = new Date(user.locked_until).getTime();
+  const nowMs = Date.now();
+  if (lockedUntilMs > nowMs) {
+    return {
+      locked: true,
+      until: user.locked_until,
+      minutesLeft: Math.ceil((lockedUntilMs - nowMs) / 60000),
+    };
+  }
+  return { locked: false, until: null, minutesLeft: 0 };
+}
+
+/**
+ * Registrera ett failed login attempt. Om threshold nåtts → lås kontot.
+ * Returnerar { locked: bool, attemptsRemaining: number }.
+ */
+function recordFailedLogin(userId) {
+  if (!userId) return { locked: false, attemptsRemaining: LOCKOUT_MAX_FAILED };
+
+  // Hämta nuvarande state
+  const s = db.prepare('SELECT failed_login_attempts, failed_login_at FROM users WHERE id = ?');
+  s.bind([userId]);
+  if (!s.step()) { s.free(); return { locked: false, attemptsRemaining: LOCKOUT_MAX_FAILED }; }
+  const row = s.getAsObject();
+  s.free();
+
+  const nowMs = Date.now();
+  const lastFailMs = row.failed_login_at ? new Date(row.failed_login_at).getTime() : 0;
+  const insideWindow = (nowMs - lastFailMs) < LOCKOUT_WINDOW_MS;
+
+  // Om utanför window → reset counter (gamla fails räknas inte)
+  const newCount = insideWindow ? (row.failed_login_attempts || 0) + 1 : 1;
+  const nowIso = new Date(nowMs).toISOString();
+
+  if (newCount >= LOCKOUT_MAX_FAILED) {
+    const lockedUntilIso = new Date(nowMs + LOCKOUT_DURATION_MS).toISOString();
+    db.run(
+      'UPDATE users SET failed_login_attempts = ?, failed_login_at = ?, locked_until = ? WHERE id = ?',
+      [newCount, nowIso, lockedUntilIso, userId]
+    );
+    saveDb();
+    console.warn(`🔒 Account locked: user ${userId} after ${newCount} failed login attempts`);
+    return { locked: true, attemptsRemaining: 0 };
+  } else {
+    db.run(
+      'UPDATE users SET failed_login_attempts = ?, failed_login_at = ?, locked_until = NULL WHERE id = ?',
+      [newCount, nowIso, userId]
+    );
+    saveDb();
+    return { locked: false, attemptsRemaining: LOCKOUT_MAX_FAILED - newCount };
+  }
+}
+
+/** Reset counter vid lyckad login. */
+function clearFailedLogins(userId) {
+  if (!userId) return;
+  db.run(
+    'UPDATE users SET failed_login_attempts = 0, failed_login_at = NULL, locked_until = NULL WHERE id = ?',
+    [userId]
+  );
   saveDb();
 }
 
@@ -1884,6 +1987,86 @@ function addAdminNote(targetUserId, adminUserId, content) {
 function deleteAdminNote(noteId) {
   db.run('DELETE FROM admin_user_notes WHERE id = ?', [noteId]);
   saveDb();
+}
+
+// ── Email retry-queue ─────────────────────────────────────────────────────────
+
+/**
+ * Lägg till mejl i kön. Worker plockar nästa pending och skickar via Resend.
+ * Vid fail: increment attempts, sätt next_attempt_at via exponential backoff.
+ */
+function enqueueEmail({ to, subject, html, from, kind }) {
+  if (!to || !subject || !html) return { ok: false, error: 'missing fields' };
+  db.run(
+    `INSERT INTO email_queue (to_email, subject, html, from_email, kind)
+     VALUES (?, ?, ?, ?, ?)`,
+    [to.slice(0, 200), subject.slice(0, 300), html, (from || '').slice(0, 200), (kind || '').slice(0, 50)]
+  );
+  saveDb();
+  return { ok: true };
+}
+
+/** Hämta pending mejl som är redo att skickas (next_attempt_at <= now). */
+function getPendingEmails(limit = 20) {
+  return rowsQuery(
+    `SELECT * FROM email_queue
+     WHERE status = 'pending' AND next_attempt_at <= datetime('now')
+     ORDER BY next_attempt_at ASC
+     LIMIT ?`,
+    [Math.min(limit, 100)]
+  );
+}
+
+/** Markera ett mejl som lyckat skickat. */
+function markEmailSent(id) {
+  db.run(
+    `UPDATE email_queue
+     SET status = 'sent', sent_at = datetime('now')
+     WHERE id = ?`,
+    [id]
+  );
+  saveDb();
+}
+
+/**
+ * Markera ett mejl som failed denna gång. Schemalägger retry med exponential
+ * backoff (1m, 5m, 30m, 2h, 8h, 24h). Efter 6 attempts → permanent failed.
+ */
+function markEmailFailed(id, errorMsg) {
+  const s = db.prepare('SELECT attempts FROM email_queue WHERE id = ?');
+  s.bind([id]);
+  if (!s.step()) { s.free(); return; }
+  const { attempts } = s.getAsObject();
+  s.free();
+
+  const newAttempts = (attempts || 0) + 1;
+  const backoffMinutes = [1, 5, 30, 120, 480, 1440]; // 1m, 5m, 30m, 2h, 8h, 24h
+  if (newAttempts >= backoffMinutes.length) {
+    db.run(
+      `UPDATE email_queue
+       SET status = 'failed', attempts = ?, last_error = ?
+       WHERE id = ?`,
+      [newAttempts, (errorMsg || '').slice(0, 500), id]
+    );
+  } else {
+    db.run(
+      `UPDATE email_queue
+       SET attempts = ?, last_error = ?, next_attempt_at = datetime('now', '+' || ? || ' minutes')
+       WHERE id = ?`,
+      [newAttempts, (errorMsg || '').slice(0, 500), backoffMinutes[newAttempts], id]
+    );
+  }
+  saveDb();
+}
+
+/** Cleanup: ta bort sent + failed-mejl äldre än 30 dagar. */
+function cleanupOldEmailQueue() {
+  try {
+    db.run(`DELETE FROM email_queue WHERE status IN ('sent', 'failed') AND created_at < datetime('now', '-30 days')`);
+    saveDb();
+  } catch (err) {
+    console.error('cleanupOldEmailQueue failed:', err.message);
+  }
 }
 
 // ── Broadcast-arkiv ───────────────────────────────────────────────────────────
@@ -3181,6 +3364,7 @@ module.exports = {
   updateUserEmail, updateUserName,
   setStripeCustomerId, findUserByStripeCustomerId,
   updateLastLogin,
+  isUserLocked, recordFailedLogin, clearFailedLogins,
   getNotesByUserId, createNote, deleteNote,
   getBlockProgress, saveQuizResult, getCompletedBlockCount,
   createResetToken, findValidResetToken, deleteResetToken, updateUserPassword,
@@ -3199,6 +3383,7 @@ module.exports = {
   // Retention emails
   getAllUsersWithEmail, getUsersForBroadcast,
   saveBroadcast, getBroadcastsForUser, getBroadcastById,
+  enqueueEmail, getPendingEmails, markEmailSent, markEmailFailed, cleanupOldEmailQueue,
   // Admin analytics
   getAdminAnalytics,
   getUserAnalyticsProfile,
