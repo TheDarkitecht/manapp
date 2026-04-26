@@ -36,6 +36,49 @@
 // inkluderar dem automatiskt om de finns.
 // ═══════════════════════════════════════════════════════════════════════════
 
+// ─── SPEAKER-DISAMBIGUATION (används av alla metodiker) ─────────────────────
+// Whisper ger oss bara löpande text utan speaker-labels. När vi INTE har
+// kört diarization-pre-processing ("Säljare: / Kund:"-prefix) måste LLM:n
+// gissa vem som sa vad. Den har historiskt felattribuerat ofta — kundens
+// invändning blir tillskriven säljaren och vice versa.
+//
+// Den här sektionen hjälper LLM:n att:
+//   1. Använda kontext-heuristik för att gissa rätt
+//   2. Markera EXPLICIT när den är osäker istället för att bluffa
+//   3. Använda neutral framing ("[Säljare ELLER kund]") när ambigt
+const SHARED_SPEAKER_GUIDANCE = `
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SPEAKER-ATTRIBUTION (om transkriptet INTE har "Säljare:/Kund:"-labels)
+
+Whisper transkriberar text utan att märka vem som talar. Du måste gissa.
+Använd dessa heuristiker:
+
+- **Säljaren leder samtalet.** Ställer kvalifikationsfrågor, presenterar
+  erbjudande, driver mot avslut. Ofta längre yttranden. Introducerar sig
+  ofta i början ("Hej, jag heter X och ringer från Y").
+- **Kunden reagerar.** Svarar kort. Ställer frågor om pris, produkt, tid.
+  Har fler pauser och tveksamma uttryck ("hmm", "jaa men", "vet inte").
+  Säger oftare "nej", "men", "fast".
+- **Inledningen:** säljaren öppnar nästan alltid (cold call) eller
+  bekräftar (inkommande). Kunden svarar med "hallå?" eller liknande.
+- **Avslutet:** säljaren styr typically — bekräftar nästa steg, säger hej då.
+
+OSÄKERHETSREGEL: om du är osäker på vem som sa något — ANVÄND inte säkra
+formuleringar som "Säljaren sa X". Använd istället:
+  • "[Sannolikt säljaren]: X" — om mer trolig än kund
+  • "[Sannolikt kunden]: X" — om mer trolig än säljare
+  • "[Säljare ELLER kund]: X" — om helt ambigt
+  • Markera med 🤔 i feedbacken: "🤔 (osäker speaker — verifiera mot ljud)"
+
+Hellre erkänn osäkerhet än felattribuera. Felattribution som låter säker
+är värre än ärlig osäkerhet — säljaren tappar förtroende för hela analysen
+om en uppenbar felattribution dyker upp.
+
+Om transkriptet HAR "Säljare:/Kund:"-prefix från diarization → använd dem
+direkt. De är inte 100% perfekta heller, men bättre än din gissning.
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+`;
+
 // ─── GEMENSAM STRUKTUR (används av alla metodiker) ──────────────────────────
 // Delad "skelett" som alla prompter bygger på — då får vi konsekvent
 // output-format (markdown med samma sektioner) oavsett metodik.
@@ -94,7 +137,7 @@ DET HÄR ÄR INTE BRA (i denna metodik):
 
 <!-- TODO Joakim: lägg till dina egna tempo-principer här. Citera 2-3 fraser som du vet fungerar bra i tempoprojekt. Nämn specifika block om du vill. -->
 
-${SHARED_OUTPUT_STRUCTURE}`;
+${SHARED_SPEAKER_GUIDANCE}${SHARED_OUTPUT_STRUCTURE}`;
 
 // ═══════════════════════════════════════════════════════════════════════════
 // METODIK 2: LEDD ABONNEMANGSFÖRSÄLJNING
@@ -124,7 +167,7 @@ DET HÄR ÄR INTE BRA (i denna metodik):
 
 <!-- TODO Joakim: lägg till dina egna abonnemangs-principer. Vilka tie-downs fungerade bäst i TV-projektet? Specifika fraser som säljarna ska kunna. -->
 
-${SHARED_OUTPUT_STRUCTURE}`;
+${SHARED_SPEAKER_GUIDANCE}${SHARED_OUTPUT_STRUCTURE}`;
 
 // ═══════════════════════════════════════════════════════════════════════════
 // METODIK 3: BEHOVSSTYRD DIALOG
@@ -154,7 +197,7 @@ DET HÄR ÄR INTE BRA (i denna metodik):
 
 <!-- TODO Joakim: Lägg till dina specifika behovsstyrda principer. Exempel på frågor som byggt behov riktigt bra. Vilka labeling-formuleringar fungerar. -->
 
-${SHARED_OUTPUT_STRUCTURE}`;
+${SHARED_SPEAKER_GUIDANCE}${SHARED_OUTPUT_STRUCTURE}`;
 
 // ═══════════════════════════════════════════════════════════════════════════
 // METODIK 4: B2B KONSULTATIV
@@ -184,7 +227,7 @@ DET HÄR ÄR INTE BRA (i denna metodik):
 
 <!-- TODO Joakim: Om du har B2B-projekt, lägg in dina principer. Om du INTE har det — sätt \`isActive: false\` längst ner så visas denna metodik inte i dropdown. -->
 
-${SHARED_OUTPUT_STRUCTURE}`;
+${SHARED_SPEAKER_GUIDANCE}${SHARED_OUTPUT_STRUCTURE}`;
 
 // ═══════════════════════════════════════════════════════════════════════════
 // METODIK 5: INKOMMANDE SUPPORT/UPSELL
@@ -215,7 +258,7 @@ DET HÄR ÄR INTE BRA (i denna metodik):
 
 <!-- TODO Joakim: Lägg in dina principer för inkommande. Om du inte har inkommande säljverksamhet — sätt \`isActive: false\` längst ner. -->
 
-${SHARED_OUTPUT_STRUCTURE}`;
+${SHARED_SPEAKER_GUIDANCE}${SHARED_OUTPUT_STRUCTURE}`;
 
 // ═══════════════════════════════════════════════════════════════════════════
 // REGISTER

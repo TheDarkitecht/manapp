@@ -249,7 +249,12 @@
       <section class="ci-section">
         <header class="ci-section-header">
           <h2>📝 Transkript<% if (transcript.structured_text) { %> <span class="ci-version-pill">talare identifierade</span><% } %></h2>
-          <button type="button" class="ci-btn ci-btn-ghost" onclick="copyTranscript()">📋 Kopiera</button>
+          <div style="display:flex;gap:0.4rem;">
+            <% if (transcript.structured_text) { %>
+              <button type="button" class="ci-btn ci-btn-ghost" onclick="openSpeakerEditor()" title="Rätta felattribuerade rader (Säljare/Kund)">✏️ Rätta talare</button>
+            <% } %>
+            <button type="button" class="ci-btn ci-btn-ghost" onclick="copyTranscript()">📋 Kopiera</button>
+          </div>
         </header>
         <% if (transcript.structured_text) { %>
           <div class="ci-dialog" id="dialogView">
@@ -311,7 +316,68 @@
 
   </main>
 
+  <!-- Speaker-editor modal -->
+  <% if (transcript && transcript.structured_text) { %>
+  <div class="ci-modal-backdrop" id="speakerEditorBackdrop" onclick="closeSpeakerEditor(event)" role="dialog" aria-modal="true" aria-labelledby="speakerEditorTitle">
+    <div class="ci-modal">
+      <header class="ci-modal-header">
+        <h2 id="speakerEditorTitle">✏️ Rätta talar-attribution</h2>
+        <button type="button" onclick="closeSpeakerEditor(null)" aria-label="Stäng" class="ci-modal-close">✕</button>
+      </header>
+      <div class="ci-modal-body">
+        <p class="ci-hint" style="margin-top:0;">
+          Editera raderna så de börjar med <code>Säljare:</code> eller <code>Kund:</code>.
+          Behåll tom rad mellan varje yttrande. Behåll texten ord-för-ord —
+          bara rätta vem som sa vad.
+          <br><br>
+          När du sparar: klicka sen <strong>↻ Re-analysera</strong> så Jocke
+          kör om analysen med den rättade versionen.
+        </p>
+        <form method="POST" action="/admin/calls/<%= job.id %>/structured-transcript" id="speakerEditorForm">
+          <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+          <textarea
+            name="structured_text"
+            id="structuredTextEditor"
+            rows="20"
+            class="ci-speaker-editor-textarea"
+            spellcheck="false"
+            required
+          ><%= transcript.structured_text %></textarea>
+          <div class="ci-modal-actions">
+            <button type="button" class="ci-btn ci-btn-ghost" onclick="closeSpeakerEditor(null)">Avbryt</button>
+            <button type="submit" class="ci-btn ci-btn-primary">💾 Spara rättad version</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+  <% } %>
+
   <script>
+    function openSpeakerEditor() {
+      const m = document.getElementById('speakerEditorBackdrop');
+      if (m) m.classList.add('is-open');
+    }
+    function closeSpeakerEditor(e) {
+      const m = document.getElementById('speakerEditorBackdrop');
+      if (!e || e.target === m) m.classList.remove('is-open');
+    }
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape') closeSpeakerEditor(null);
+    });
+    // Flash efter sparat transkript
+    (function() {
+      const p = new URLSearchParams(window.location.search);
+      if (p.get('transcript_saved')) {
+        const banner = document.createElement('div');
+        banner.className = 'ci-flash ci-flash-success';
+        banner.textContent = '✓ Transkriptet är rättat. Klicka Re-analysera för att uppdatera Jockes feedback.';
+        document.querySelector('main').prepend(banner);
+        setTimeout(() => banner.remove(), 8000);
+        history.replaceState({}, '', window.location.pathname);
+      }
+    })();
+
     function confirmReanalyze(form) {
       const sel = form.querySelector('select[name="promptVersion"]');
       if (!sel.value) {

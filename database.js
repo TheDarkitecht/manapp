@@ -2733,6 +2733,28 @@ function getCallTranscript(jobId) {
 }
 
 /**
+ * Manuell speaker-tagging — admin/säljare har rättat AI:ns gissningar i
+ * structured_text (Säljare/Kund-prefixar). Vi sparar ändringarna direkt
+ * i samma kolumn, ingen separat versionering. Re-analyse plockar då upp
+ * det rättade transkriptet automatiskt.
+ *
+ * För att markera att texten är manuellt rättad: vi sätter ingen separat
+ * flagga (håller schemat enkelt). Trust-modellen är att om strukturerad
+ * text finns och har rationale "Säljare:/Kund:"-format, är den vad som
+ * ska användas — oavsett källa.
+ */
+function updateStructuredTranscript(jobId, structuredText) {
+  if (!structuredText || typeof structuredText !== 'string') {
+    throw new Error('structured_text måste vara en sträng');
+  }
+  db.run(
+    `UPDATE call_transcripts SET structured_text = ? WHERE job_id = ?`,
+    [structuredText, jobId]
+  );
+  saveDb();
+}
+
+/**
  * Batch-insert av ord-frekvenser. Clear-and-reinsert eftersom job-id är unikt per analys.
  */
 function saveCallWordFrequencies(jobId, pairs) {
@@ -3212,6 +3234,7 @@ module.exports = {
   searchCallTranscripts, deleteCallJob, resetStuckCallJobs,
   // CI prompt-iteration
   getCallTranscript, listCallAnalysisRuns, getCallAnalysisRun,
+  updateStructuredTranscript,
   // CI Resultatmaskin (outcome + aggregation)
   setCallOutcome, setCallSalesperson, listSalespeople,
   getOutcomeStats, getWinningLosingPhrases, ALLOWED_OUTCOMES,
