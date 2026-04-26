@@ -2887,8 +2887,26 @@ body.dash-page {
   .dash-main { padding: 1.25rem; }
   .dash-upsell .upsell-card { flex-direction: column; }
   .upsell-right { width: 100%; }
-  .progress-header { flex-direction: column; align-items: flex-start; }
+  .progress-header { flex-direction: column; align-items: flex-start; gap: 0.85rem; }
   .legal-content { padding: 1.5rem; }
+
+  /* Tap-targets för CTA på free-user-dashboard (conversion-kritisk) */
+  .step-upgrade-btn   { padding: 0.7rem 1.1rem; font-size: 0.85rem; min-height: 44px;
+                        display: inline-flex; align-items: center; touch-action: manipulation; }
+  .upsell-btn         { width: 100%; box-sizing: border-box; text-align: center;
+                        padding: 1rem 1.5rem; min-height: 48px; touch-action: manipulation; }
+  .dash-continue-btn  { padding: 0.85rem 1.25rem; font-size: 0.9rem; min-height: 44px;
+                        display: inline-flex; align-items: center; touch-action: manipulation;
+                        align-self: stretch; justify-content: center; }
+
+  /* Mini-blocks på premium-dashboard: 34px → 40px för bättre tap-target.
+     Behåll inte 44px — då blir grid-en för bullig. 40px är sweet-spot. */
+  .mini-block { width: 40px; height: 40px; font-size: 0.78rem; }
+
+  /* Peak-intent-banner (free-tier completed): full-bredd CTA på mobil */
+  #unlock-cta button { width: 100%; box-sizing: border-box; padding: 1rem 1.5rem !important;
+                       min-height: 48px; }
+  #unlock-cta form   { width: 100%; }
 }
 @media (max-width: 480px) {
   .dash-topbar { padding: 0 1rem; }
