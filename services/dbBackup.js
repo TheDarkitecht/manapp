@@ -7,11 +7,41 @@
 // R2-credentials från env-vars.
 //
 // Pattern:
-//   - Daglig snapshot till R2 under prefix "db-backups/users-YYYY-MM-DD.db"
-//   - Också "db-backups/latest/users.db" (overwrite, för snabb recovery)
-//   - Retention: 90 dagar (gamla rensas)
+//   - Daglig snapshot till R2 under prefix "db-backups/YYYY-MM-DD.db"
+//   - Också "db-backups/latest.db" (overwrite varje gång, för snabb recovery)
+//   - Retention: 90 dagar (gamla rensas av cleanupOldR2Backups)
 //
-// Recovery-procedur dokumenterad i README (TODO).
+// ═══════════════════════════════════════════════════════════════════════════
+// RECOVERY-PROCEDUR (vid Railway disk-failure eller korrupt users.db)
+// ═══════════════════════════════════════════════════════════════════════════
+//
+// 1. Verifiera att R2-creds är konfigurerade (annars kör ingen backup):
+//      console.log(require('./services/dbBackup').isR2Enabled())
+//
+// 2. Lista tillgängliga snapshots (Cloudflare-dashboard eller via aws-cli):
+//      aws s3 ls s3://${R2_BUCKET}/db-backups/ \
+//        --endpoint-url=https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com
+//
+// 3. Hämta önskad snapshot (latest.db för snabb recovery, eller
+//    YYYY-MM-DD.db för point-in-time):
+//      aws s3 cp s3://${R2_BUCKET}/db-backups/latest.db ./users.db \
+//        --endpoint-url=https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com
+//
+// 4. Stoppa Railway-deployen (eller ta ner servicen), kopiera users.db
+//    till disk-mount, starta om. App läser DB vid startup → all data
+//    återställd. Sessions raderas (express-session är i samma DB) — alla
+//    users måste logga in igen, men det är ok-tradeoff vid disaster recovery.
+//
+// 5. Kör manuellt en första backup direkt efter recovery för att fånga
+//    senaste state:
+//      await require('./services/dbBackup').uploadDailyBackup()
+//
+// RPO (Recovery Point Objective): 24h (daglig snapshot)
+// RTO (Recovery Time Objective): ~5 min (manuell aws cli + redeploy)
+//
+// För kortare RPO: trigga uploadDailyBackup() oftare i server.js cron.
+// För kortare RTO: skript som auto-restorar latest.db vid startup om
+// users.db saknas (TODO för senare när vi vet att vi vill ha det).
 // ═══════════════════════════════════════════════════════════════════════════
 
 const fs   = require('fs');
