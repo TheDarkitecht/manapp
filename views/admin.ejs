@@ -38,6 +38,7 @@
       <%
         const flashStyles = {
           ok:       { bg: 'rgba(16,185,129,0.1)',  color: '#34d399', border: 'rgba(16,185,129,0.3)', icon: '✓',  msg: `Välkomstmejl skickat till ${emailUser || 'användaren'}.` },
+          queued:   { bg: 'rgba(251,191,36,0.1)',  color: '#fbbf24', border: 'rgba(251,191,36,0.3)', icon: '⏳', msg: `Välkomstmejl till ${emailUser || 'användaren'} köades upp för retry (Resend tillfälligt nere?). Bg-worker försöker igen var 60:e sekund.` },
           failed:   { bg: 'rgba(239,68,68,0.1)',   color: '#fca5a5', border: 'rgba(239,68,68,0.3)',  icon: '⚠️', msg: `Välkomstmejl till ${emailUser || 'användaren'} misslyckades: ${emailMsg || 'okänt fel'}.` },
           noresend: { bg: 'rgba(239,68,68,0.1)',   color: '#fca5a5', border: 'rgba(239,68,68,0.3)',  icon: '⚠️', msg: 'Resend-klienten är inte konfigurerad. Sätt RESEND_API_KEY på Railway.' },
           noemail:  { bg: 'rgba(251,191,36,0.1)',  color: '#fbbf24', border: 'rgba(251,191,36,0.3)', icon: '⚠️', msg: `${emailUser || 'Användaren'} har ingen registrerad e-post.` },

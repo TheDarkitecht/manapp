@@ -142,6 +142,35 @@ const resend = process.env['RESEND_API_KEY'] ? new Resend(process.env['RESEND_AP
 // Set RESEND_FROM to a verified Resend sender, e.g. "Joakim Jaksen <noreply@joakimjaksen.se>"
 const RESEND_FROM = process.env['RESEND_FROM'] || 'Joakim Jaksen <onboarding@resend.dev>';
 
+/**
+ * Pålitlig mejl-send med automatic queue-fallback.
+ * Försöker skicka direkt → om fail, enqueue:as för retry med exponential backoff.
+ * Använd denna istället för raw resend.emails.send() för transactional mejl.
+ *
+ * Returnerar { sent: bool, queued: bool, error?: string }
+ */
+async function sendEmailReliable({ to, subject, html, from, kind }) {
+  if (!to || !subject || !html) return { sent: false, queued: false, error: 'missing fields' };
+  // Resend ej konfigurerad → enqueue och hoppa
+  if (!resend) {
+    enqueueEmail({ to, subject, html, from, kind });
+    return { sent: false, queued: true };
+  }
+  try {
+    await resend.emails.send({
+      from: from || RESEND_FROM,
+      to,
+      subject,
+      html,
+    });
+    return { sent: true, queued: false };
+  } catch (err) {
+    console.warn(`📧 Direct send failed för ${to} (${kind}), queueing för retry: ${err.message}`);
+    enqueueEmail({ to, subject, html, from, kind });
+    return { sent: false, queued: true, error: err.message };
+  }
+}
+
 // Block 1 (Inledning) and Block 2 (Första intrycket) are free; 3–20 require premium (teaser shown for locked blocks)
 const FREE_BLOCK_IDS = ['inledning', 'forsta-intrycket'];
 
@@ -1003,16 +1032,16 @@ app.post('/register', registerLimiter, async (req, res) => {
   }
 
   // ── Welcome email ──────────────────────────────────────────────────────────
+  // Reliable wrapper: vid tillfälligt Resend-fel queue:as mejlet och retry:as i bg-worker.
+  // Förstaintrycket är kritiskt — vi vill inte tappa det pga API-hicka.
   const baseUrl = process.env['APP_URL'] || 'https://manapp-production.up.railway.app';
   try {
-    if (resend) {
-      await resend.emails.send({
-        from:    RESEND_FROM,
-        to:      email.trim(),
-        subject: `Välkommen, ${cleanFirst}! Ditt konto är aktivt 🎯`,
-        html: buildWelcomeEmail(cleanFirst, baseUrl),
-      });
-    }
+    await sendEmailReliable({
+      to:      email.trim(),
+      subject: `Välkommen, ${cleanFirst}! Ditt konto är aktivt 🎯`,
+      html:    buildWelcomeEmail(cleanFirst, baseUrl),
+      kind:    'welcome',
+    });
   } catch (emailErr) {
     console.error('Welcome email error:', emailErr.message);
   }
@@ -1078,14 +1107,14 @@ app.post('/forgot-password', resetLimiter, verifyCsrf, async (req, res) => {
     const link    = `${baseUrl}/reset-password/${token}`;
 
     try {
-      if (resend) {
-        await resend.emails.send({
-          from:    RESEND_FROM,
-          to:      user.email,
-          subject: 'Återställ ditt lösenord — Joakim Jaksen',
-          html: buildPasswordResetEmail(user.first_name || user.username, link),
-        });
-      }
+      // KRITISKT mejl — user är utlåst utan reset-länken. Reliable wrapper queue:ar vid fail
+      // så de retry:as i bg-worker även om Resend är tillfälligt nere/rate-limited.
+      await sendEmailReliable({
+        to:      user.email,
+        subject: 'Återställ ditt lösenord — Joakim Jaksen',
+        html:    buildPasswordResetEmail(user.first_name || user.username, link),
+        kind:    'password_reset',
+      });
     } catch (err) {
       console.error('Resend error:', err.message);
     }
@@ -1558,8 +1587,8 @@ app.post('/quiz-result', requireLogin, quizLimiter, verifyCsrf, async (req, res)
     const unsubUrl   = `${baseUrl}/unsubscribe/${unsubToken}`;
 
     const personalName = displayName(user); // först förnamn, fallback username
-    await resend.emails.send({
-      from:    RESEND_FROM,
+    // Engagement-loop mejl — viktigt att det når fram så user kommer tillbaka till nästa block.
+    await sendEmailReliable({
       to:      user.email,
       subject: `🎯 Grymt, ${personalName}! Du klarade Block ${blockIndex + 1}`,
       html:    emails.buildBlockCompletion({
@@ -1572,6 +1601,7 @@ app.post('/quiz-result', requireLogin, quizLimiter, verifyCsrf, async (req, res)
         unsubscribeUrl: unsubUrl,
         isFreeTierEnd,
       }),
+      kind:    'block_completion',
     });
     console.log(`📧 Block-completion-mejl skickat till ${user.email} (block ${block.id})`);
   } catch (err) {
@@ -2790,15 +2820,23 @@ app.post('/admin/users/:id/email', requireLogin, requireAdmin, verifyCsrf, async
   try {
     // Använd first_name om det finns, annars username (display-name-logik)
     const name = user.first_name || user.username;
-    await resend.emails.send({
-      from:    RESEND_FROM,
+    const result = await sendEmailReliable({
       to:      user.email,
       subject: `Välkommen, ${name}! Ditt konto är aktivt 🎯`,
       html:    buildWelcomeEmail(name, baseUrl),
+      kind:    'welcome_admin_resend',
     });
-    audit(req, 'email.welcome_sent', { id: user.id, username: user.username });
-    console.log(`✅ Välkomstmejl skickat till ${user.email}`);
-    res.redirect('/admin?emailResult=ok&emailUser=' + encodeURIComponent(user.username));
+    audit(req, 'email.welcome_sent', { id: user.id, username: user.username, queued: !!result.queued });
+    if (result.sent) {
+      console.log(`✅ Välkomstmejl skickat till ${user.email}`);
+      res.redirect('/admin?emailResult=ok&emailUser=' + encodeURIComponent(user.username));
+    } else if (result.queued) {
+      // Resend-API svarade fel → hamnade i retry-kön. Inte ett katastrofalt fel.
+      console.warn(`📧 Välkomstmejl queued för ${user.email} (kommer retry:as): ${result.error || ''}`);
+      res.redirect('/admin?emailResult=queued&emailUser=' + encodeURIComponent(user.username));
+    } else {
+      throw new Error(result.error || 'sendEmailReliable returned no result');
+    }
   } catch (err) {
     console.error(`❌ Välkomstmejl misslyckades för ${user.email}:`, err.message);
     res.redirect('/admin?emailResult=failed&emailUser=' + encodeURIComponent(user.username) + '&emailMsg=' + encodeURIComponent(err.message.slice(0, 120)));
@@ -3800,8 +3838,9 @@ async function startServer() {
           const hoursLeft = Math.max(1, Math.round((endMs - Date.now()) / (60 * 60 * 1000)));
           const endsAtHuman = new Date(endMs).toLocaleString('sv-SE', { weekday: 'long', hour: '2-digit', minute: '2-digit' });
           const unsubToken = emails.createUnsubscribeToken(u.id);
-          await resend.emails.send({
-            from:    RESEND_FROM,
+          // Trial-reminder skyddar 24h-trial-konvertering. Reliable wrapper queue:ar vid fail
+          // så användaren ALLTID hinner få förvarning (ingen överraskande debitering → noll chargebacks).
+          await sendEmailReliable({
             to:      u.email,
             subject: `⏰ Din Pro-trial slutar om ~${hoursLeft}h`,
             html:    emails.buildTrialEndingSoon({
@@ -3812,6 +3851,7 @@ async function startServer() {
               cancelUrl:      `${baseUrl}/account`,
               unsubscribeUrl: `${baseUrl}/unsubscribe/${unsubToken}`,
             }),
+            kind:    'trial_reminder',
           });
           markProTrialReminderSent(u.id);
           console.log(`⏰ Trial-reminder skickat till ${u.email} (${hoursLeft}h kvar)`);
