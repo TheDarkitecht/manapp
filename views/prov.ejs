@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Prov: <%= block.title %> — Joakim Jaksen Säljutbildning</title>
+  <meta name="description" content="Prov för <%= block.title %>. 10 frågor som bekräftar att du förstått blocket." />
+  <meta name="robots" content="noindex" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🧠</text></svg>" />
+  <link rel="stylesheet" href="/style.css" />
+  <link rel="stylesheet" href="/journey.css" />
+</head>
+<body class="block-page">
+
+  <a href="#main-content" class="skip-to-main">Hoppa till innehåll</a>
+
+  <nav class="learn-nav">
+    <a href="/learn/<%= block.id %>" class="learn-nav-back">← <%= block.title %></a>
+    <span class="learn-nav-title">🧠 Prov</span>
+    <span class="learn-nav-user"><%= username %></span>
+  </nav>
+
+  <main id="main-content" class="prov-page-wrap">
+
+    <header class="prov-header">
+      <div class="prov-eyebrow">Steg: kontroll av förståelse</div>
+      <h1>Prov: <%= block.title %></h1>
+      <p class="prov-lead">10 frågor. Välj ett svar per fråga och klicka "Rätta provet". Du klarar gränsen vid 60 % rätt — då markeras blocket som "Läst" i din resa.</p>
+      <% if (journey && journey.theoryDone && journey.quizScore != null) { %>
+        <div class="prov-prev-score" role="status">
+          ✓ Tidigare resultat: <strong><%= journey.quizScore %>/<%= journey.quizTotal %></strong> rätt. Du kan göra om provet när du vill.
+        </div>
+      <% } %>
+    </header>
+
+    <div class="quiz-wrapper" id="quizWrapper">
+
+      <form id="quizForm">
+        <% block.quiz.forEach(function(q, qi) { %>
+          <fieldset class="quiz-question" id="qq-<%= qi %>">
+            <legend class="quiz-q-text"><span class="q-num" aria-hidden="true"><%= qi + 1 %></span> <%= q.q %></legend>
+            <div class="quiz-options">
+              <% q.options.forEach(function(opt, oi) { %>
+                <label class="quiz-option" data-qi="<%= qi %>" data-oi="<%= oi %>">
+                  <input type="radio" name="q<%= qi %>" value="<%= oi %>" />
+                  <span class="option-letter" aria-hidden="true"><%= ['A','B','C','D'][oi] %></span>
+                  <span><%= opt %></span>
+                </label>
+              <% }); %>
+            </div>
+          </fieldset>
+        <% }); %>
+
+        <button type="button" class="quiz-submit-btn" onclick="submitQuiz()">Rätta provet →</button>
+      </form>
+
+      <div id="quizResult" class="quiz-result" style="display:none;"></div>
+    </div>
+
+  </main>
+
+  <!-- Block-nav i botten — så användaren kan gå vidare även om de inte gör om provet -->
+  <div class="block-nav-footer">
+    <a href="/learn/<%= block.id %>" class="block-nav-btn">← Tillbaka till <%= block.title %></a>
+    <a href="/learn" class="block-nav-btn outline">Alla block</a>
+  </div>
+
+  <!-- ── Mobile bottom navigation ──────────────────────────────────────────── -->
+  <nav class="app-bottom-nav">
+    <a href="/dashboard" class="app-bottom-nav-item">
+      <span class="abn-icon">🏠</span>
+      <span class="abn-label">Hem</span>
+    </a>
+    <a href="/learn" class="app-bottom-nav-item active">
+      <span class="abn-icon">📚</span>
+      <span class="abn-label">Utbildning</span>
+    </a>
+    <a href="/ordbok" class="app-bottom-nav-item">
+      <span class="abn-icon">📖</span>
+      <span class="abn-label">Ordbok</span>
+    </a>
+    <% if (role === 'free') { %>
+      <a href="/upgrade" class="app-bottom-nav-item abn-upgrade">
+        <span class="abn-icon">⭐</span>
+        <span class="abn-label">Premium</span>
+      </a>
+    <% } else { %>
+      <a href="/logout" class="app-bottom-nav-item">
+        <span class="abn-icon">🚪</span>
+        <span class="abn-label">Logga ut</span>
+      </a>
+    <% } %>
+  </nav>
+
+  <script>
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    function safeScrollIntoView(el, opts) {
+      el.scrollIntoView({ ...opts, behavior: prefersReducedMotion ? 'auto' : (opts.behavior || 'smooth') });
+    }
+
+    const correctAnswers = <%- JSON.stringify(block.quiz.map(q => q.answer)).replace(/<\/script>/gi, '<\\/script>') %>;
+
+    function submitQuiz() {
+      const form = document.getElementById('quizForm');
+      let score = 0;
+      let allAnswered = true;
+
+      correctAnswers.forEach((correct, qi) => {
+        const selected = form.querySelector(`input[name="q${qi}"]:checked`);
+        if (!selected) { allAnswered = false; return; }
+
+        const value = parseInt(selected.value);
+        const questionEl = document.getElementById('qq-' + qi);
+        const options = questionEl.querySelectorAll('.quiz-option');
+
+        options.forEach(opt => {
+          opt.style.pointerEvents = 'none';
+          const oi = parseInt(opt.dataset.oi);
+          if (oi === correct) {
+            opt.classList.add('correct');
+          } else if (oi === value && value !== correct) {
+            opt.classList.add('wrong');
+          }
+        });
+
+        if (value === correct) score++;
+      });
+
+      if (!allAnswered) {
+        let errorEl = document.getElementById('quiz-inline-error');
+        if (!errorEl) {
+          errorEl = document.createElement('p');
+          errorEl.id = 'quiz-inline-error';
+          errorEl.setAttribute('role', 'alert');
+          errorEl.style.cssText = 'color:#f87171;font-size:.875rem;margin:.75rem 0 0;font-weight:600;';
+          document.querySelector('.quiz-submit-btn').insertAdjacentElement('beforebegin', errorEl);
+        }
+        errorEl.textContent = '⚠️ Svara på alla frågor innan du rättar provet.';
+        for (let i = 0; i < correctAnswers.length; i++) {
+          if (!form.querySelector(`input[name="q${i}"]:checked`)) {
+            const unansweredEl = document.getElementById('qq-' + i);
+            safeScrollIntoView(unansweredEl, { block: 'center' });
+            unansweredEl.classList.add('unanswered-highlight');
+            setTimeout(() => unansweredEl.classList.remove('unanswered-highlight'), 2000);
+            break;
+          }
+        }
+        return;
+      }
+
+      const errEl = document.getElementById('quiz-inline-error');
+      if (errEl) errEl.remove();
+
+      const resultEl = document.getElementById('quizResult');
+      const pct = Math.round((score / correctAnswers.length) * 100);
+      const passed = pct >= 60;
+      const emoji = pct >= 80 ? '🏆' : pct >= 60 ? '👍' : '📚';
+      const msg   = pct >= 80 ? 'Utmärkt! Du behärskar det här blocket.'
+                  : pct >= 60 ? 'Bra jobbat! Lite mer repetition gör dig till expert.'
+                  : 'Läs igenom teorin igen — du klarar det!';
+
+      <% const blockIdx = blocks.findIndex(b => b.id === block.id); %>
+      <% const nextBlock = blocks[blockIdx + 1]; %>
+
+      let nextBtnHtml = '';
+      if (passed) {
+        // Efter godkänt prov → sänd användaren till nästa pedagogiska steg (öva med Jocke),
+        // INTE direkt till nästa block. Det är där produkten faktiskt levererar värde.
+        <% if (block.roleplays && block.roleplays.length) { %>
+          nextBtnHtml += `<a href="/learn/<%= block.id %>/ova" class="next-block-btn">🎭 Nästa: Öva med Jocke →</a>`;
+        <% } else if (nextBlock) { %>
+          <% if (role === 'free' && !freeBlockIds.includes(nextBlock.id)) { %>
+            nextBtnHtml += `<a href="/upgrade" class="next-block-btn upgrade-next">⭐ Lås upp Block <%= blockIdx + 2 %>: <%= nextBlock.title %> →</a>`;
+          <% } else { %>
+            nextBtnHtml += `<a href="/learn/<%= nextBlock.id %>" class="next-block-btn">Nästa block: <%= nextBlock.title %> →</a>`;
+          <% } %>
+        <% } else { %>
+          nextBtnHtml += `<a href="/learn" class="next-block-btn">🏆 Du har klarat alla block! Se översikt →</a>`;
+        <% } %>
+      }
+
+      resultEl.innerHTML = `
+        <div class="result-score">${emoji} ${score} / ${correctAnswers.length} rätt (${pct}%)</div>
+        <p class="result-msg">${msg}</p>
+        <div class="result-actions">
+          <button onclick="retryQuiz()" class="retry-btn">Försök igen</button>
+          ${nextBtnHtml}
+        </div>
+      `;
+      resultEl.style.display = 'block';
+      resultEl.setAttribute('tabindex', '-1');
+      safeScrollIntoView(resultEl, {});
+      setTimeout(() => resultEl.focus({ preventScroll: true }), prefersReducedMotion ? 0 : 400);
+      document.querySelector('.quiz-submit-btn').style.display = 'none';
+
+      // Save result to server
+      fetch('/quiz-result', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-csrf-token': '<%= csrfToken %>',
+        },
+        body: JSON.stringify({ blockId: '<%= block.id %>', score, total: correctAnswers.length }),
+      }).catch(() => {});
+    }
+
+    function retryQuiz() {
+      const prevErr = document.getElementById('quiz-inline-error');
+      if (prevErr) prevErr.remove();
+      const form = document.getElementById('quizForm');
+      form.querySelectorAll('input[type="radio"]').forEach(r => r.checked = false);
+      form.querySelectorAll('.quiz-option').forEach(opt => {
+        opt.classList.remove('correct', 'wrong');
+        opt.style.pointerEvents = '';
+      });
+      document.getElementById('quizResult').style.display = 'none';
+      document.querySelector('.quiz-submit-btn').style.display = '';
+      safeScrollIntoView(document.getElementById('quizWrapper'), {});
+    }
+  </script>
+
+  <script src="/heartbeat.js" defer></script>
+</body>
+</html>

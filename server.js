@@ -1334,6 +1334,70 @@ app.get('/learn', requireLogin, (req, res) => {
   });
 });
 
+/**
+ * Beräkna ETT primärt nästa-steg för blocket — coach-tonalitet, inte meny.
+ * Driver användaren från konsumtion → handling → progression.
+ * Tar emot journey-status (kan vara null för teaser-läge) och returnerar
+ * { label, href, icon, desc } eller null om inget nästa-steg behövs.
+ */
+function computeNextBestStep(block, journey, blocks) {
+  if (!journey) return null;
+
+  // Steg 1: läs teorin → ta provet (provet är gating för "theoryDone")
+  if (!journey.theoryDone) {
+    return {
+      icon: '🧠',
+      label: 'Testa om du fattat blocket',
+      href:  `/learn/${block.id}/prov`,
+      desc:  '10 frågor — bekräfta din förståelse innan du tränar.',
+    };
+  }
+  // Steg 2: öva med Jocke
+  if (!journey.roleplayDone && block.roleplays && block.roleplays.length) {
+    return {
+      icon: '🎭',
+      label: 'Öva med Jocke',
+      href:  `/learn/${block.id}/ova`,
+      desc:  `${block.roleplays.length} scenarier — träna i tryggt läge innan riktiga kunder.`,
+    };
+  }
+  // Steg 3: veckans uppdrag
+  if (!journey.missionDone && block.mission) {
+    return {
+      icon: '🎯',
+      label: 'Gör veckans uppdrag',
+      href:  `/learn/${block.id}/uppdrag`,
+      desc:  block.mission.title || 'Konkret handling att göra IRL den här veckan.',
+    };
+  }
+  // Steg 4: reflektion
+  if (!journey.reflectionDone && block.reflections && block.reflections.length) {
+    return {
+      icon: '💭',
+      label: 'Skriv reflektion',
+      href:  `/learn/${block.id}/reflektion`,
+      desc:  'Stäng cirkeln — låt lärandet sjunka in via egna ord.',
+    };
+  }
+  // Allt klart → nästa block, eller hela kursen klar
+  const idx = blocks.findIndex(b => b.id === block.id);
+  const next = blocks[idx + 1];
+  if (next) {
+    return {
+      icon: '➡️',
+      label: `Nästa block: ${next.title}`,
+      href:  `/learn/${next.id}`,
+      desc:  'Du har bemästrat detta. Vidare.',
+    };
+  }
+  return {
+    icon: '🏆',
+    label: 'Du har klarat alla 20 block',
+    href:  '/learn',
+    desc:  'Hela utbildningen genomförd. Tillbaka till översikten.',
+  };
+}
+
 app.get('/learn/:id', requireLogin, (req, res) => {
   const block      = salesBlocks.find(b => b.id === req.params.id);
   if (!block) return res.redirect('/learn');
@@ -1353,6 +1417,9 @@ app.get('/learn/:id', requireLogin, (req, res) => {
   const journey = hasAccess || FREE_BLOCK_IDS.includes(block.id)
     ? getJourneyStatus(req.session.userId, block.id)
     : null;
+
+  // Server-beräknat nästa-steg (driver progression i bottom-CTA)
+  const nextBestStep = computeNextBestStep(block, journey, salesBlocks);
 
   // Subtil coach-hint baserat på användarens historia i blocket
   let coachHint = null;
@@ -1384,9 +1451,29 @@ app.get('/learn/:id', requireLogin, (req, res) => {
     readTime,
     journey,
     coachHint,
+    nextBestStep,
     welcome:            req.query.welcome === '1',
     freeTierCompleted,
     justUnlockedFreeTier,
+    csrfToken:    generateCsrfToken(req),
+  });
+});
+
+// ── Prov (quiz) som egen route ─────────────────────────────────────────────
+// Quiz är inte material — det är kontroll av förståelse. Egen sida = konsekvent
+// med Öva/Gör/Reflektera, och låter block-sidan vara renodlad lektion (video + teori).
+app.get('/learn/:id/prov', requireLogin, (req, res) => {
+  const block = resolveBlock(req, res);
+  if (!block) return;
+  if (!block.quiz || !block.quiz.length) return res.redirect('/learn/' + block.id);
+  const journey = getJourneyStatus(req.session.userId, block.id);
+  res.render('prov', {
+    username:     req.session.username,
+    role:         req.session.role,
+    block,
+    blocks:       salesBlocks,
+    freeBlockIds: FREE_BLOCK_IDS,
+    journey,
     csrfToken:    generateCsrfToken(req),
   });
 });

@@ -225,171 +225,54 @@
     </div>
   <% } %>
 
-  <!-- ════════════ 4-STEGS-RESAN: LÄR → ÖVA → GÖR → REFLEKTERA ════════════ -->
+  <!-- ════════════ KOMPAKT 4-STEGS-PROGRESS-STRIP ═══════════════════════════
+       Tunn statusrad — visar var i blocket användaren är (1✓ Läs · 2 Öva · 3 Gör · 4 Reflektera).
+       Inte huvudnavigation; bara orientering. Klickbar till respektive route.
+  ═══════════════════════════════════════════════════════════════════════════ -->
   <% if (!isTeaser && journey) { %>
-  <div class="journey-hub" role="region" aria-label="Din lärande-resa">
-    <div class="journey-header">
-      <span class="journey-eyebrow">Din resa genom blocket</span>
-      <span class="journey-progress-label"><%= journey.stepsCompleted %>/4 steg klara</span>
-    </div>
-
-    <div class="journey-steps">
-      <div class="journey-step <%= journey.theoryDone ? 'js-done' : 'js-current' %>">
-        <div class="js-bubble">
-          <% if (journey.theoryDone) { %>✓<% } else { %>📖<% } %>
-        </div>
-        <div class="js-label"><strong>Läs</strong><span>Teorin</span></div>
-      </div>
-      <div class="journey-connector <%= journey.theoryDone ? 'jc-done' : '' %>"></div>
-      <div class="journey-step <%= journey.roleplayDone ? 'js-done' : (journey.theoryDone ? 'js-current' : '') %>">
-        <div class="js-bubble">
-          <% if (journey.roleplayDone) { %>✓<% } else { %>🎭<% } %>
-        </div>
-        <div class="js-label"><strong>Öva</strong><span>Med Jocke</span></div>
-      </div>
-      <div class="journey-connector <%= journey.roleplayDone ? 'jc-done' : '' %>"></div>
-      <div class="journey-step <%= journey.missionDone ? 'js-done' : (journey.roleplayDone ? 'js-current' : '') %>">
-        <div class="js-bubble">
-          <% if (journey.missionDone) { %>✓<% } else { %>🎯<% } %>
-        </div>
-        <div class="js-label"><strong>Gör</strong><span>Uppdrag</span></div>
-      </div>
-      <div class="journey-connector <%= journey.missionDone ? 'jc-done' : '' %>"></div>
-      <div class="journey-step <%= journey.reflectionDone ? 'js-done' : (journey.missionDone ? 'js-current' : '') %>">
-        <div class="js-bubble">
-          <% if (journey.reflectionDone) { %>✓<% } else { %>💭<% } %>
-        </div>
-        <div class="js-label"><strong>Reflektera</strong><span>Stäng cirkeln</span></div>
-      </div>
-    </div>
-
-    <!-- Personaliserad "Nästa steg"-CTA -->
-    <div class="journey-cta-card">
-      <% if (!journey.theoryDone) { %>
-        <div class="jc-title">Börja här: <strong>Läs teorin</strong></div>
-        <div class="jc-desc">~<%= readTime %> min. Få grunden innan du tränar.</div>
-        <a href="#tab-theory" class="jc-btn" onclick="showTab('theory', document.getElementById('tab-btn-theory')); return false;">📖 Börja läsa</a>
-        <a href="/learn/<%= block.id %>/snabb" class="jc-btn jc-btn-ghost">⚡ Ta snabbversionen (2 min)</a>
-      <% } else if (!journey.roleplayDone && block.roleplays && block.roleplays.length) { %>
-        <div class="jc-title">Nästa: <strong>Öva med Jocke</strong></div>
-        <div class="jc-desc"><%= block.roleplays.length %> scenarier där du tränar teknikerna i tryggt läge. Jocke spelar kunden.</div>
-        <a href="/learn/<%= block.id %>/ova" class="jc-btn">🎭 Öppna träningsläget</a>
-      <% } else if (!journey.missionDone && block.mission) { %>
-        <div class="jc-title">Nästa: <strong>Veckans uppdrag</strong></div>
-        <div class="jc-desc"><%= block.mission.title %></div>
-        <a href="/learn/<%= block.id %>/uppdrag" class="jc-btn">🎯 Se uppdraget</a>
-      <% } else if (!journey.reflectionDone && block.reflections && block.reflections.length) { %>
-        <div class="jc-title">Nästa: <strong>Reflektion</strong></div>
-        <div class="jc-desc">Vad tar du med dig? 5 min journaling som låser in lärandet.</div>
-        <a href="/learn/<%= block.id %>/reflektion" class="jc-btn">💭 Reflektera</a>
-      <% } else if (journey.fullyMastered) { %>
-        <div class="jc-title">🏆 <strong>Blocket är bemästrat.</strong></div>
-        <div class="jc-desc">Alla 4 steg gjorda. Du kan alltid återvända — men nästa block väntar.</div>
-        <a href="/learn" class="jc-btn">📚 Välj nästa block</a>
-      <% } %>
-    </div>
-
-    <!-- Alla steg tillgängliga (inte blockerade) -->
-    <div class="journey-all">
-      <a href="#tab-theory" onclick="showTab('theory', document.getElementById('tab-btn-theory')); return false;" class="ja-link">📖 Teori</a>
-      <a href="/learn/<%= block.id %>/snabb" class="ja-link">⚡ Snabbversion</a>
-      <% if (block.roleplays && block.roleplays.length) { %>
-        <a href="/learn/<%= block.id %>/ova" class="ja-link">🎭 Öva<% if (journey.roleplayCount) { %> <span class="ja-count">(<%= journey.roleplayCount %>)</span><% } %></a>
-      <% } %>
-      <% if (block.mission) { %>
-        <a href="/learn/<%= block.id %>/uppdrag" class="ja-link">🎯 Uppdrag<% if (journey.missionStarted && !journey.missionDone) { %> <span class="ja-tag">Pågår</span><% } %></a>
-      <% } %>
-      <% if (block.reflections && block.reflections.length) { %>
-        <a href="/learn/<%= block.id %>/reflektion" class="ja-link">💭 Reflektion<% if (journey.reflectionCount) { %> <span class="ja-count">(<%= journey.reflectionCount %>)</span><% } %></a>
-      <% } %>
-    </div>
-  </div>
+  <nav class="block-progress-strip" aria-label="Din 4-stegs-resa">
+    <a href="/learn/<%= block.id %>/prov" class="bps-step <%= journey.theoryDone ? 'bps-done' : 'bps-current' %>" title="Steg 1: Läs teorin + ta provet">
+      <span class="bps-icon"><% if (journey.theoryDone) { %>✓<% } else { %>📖<% } %></span>
+      <span class="bps-label">Läs</span>
+    </a>
+    <span class="bps-connector <%= journey.theoryDone ? 'bps-done' : '' %>" aria-hidden="true"></span>
+    <a href="<%= block.roleplays && block.roleplays.length ? '/learn/' + block.id + '/ova' : '#' %>"
+       class="bps-step <%= journey.roleplayDone ? 'bps-done' : (journey.theoryDone ? 'bps-current' : 'bps-future') %>"
+       <% if (!block.roleplays || !block.roleplays.length) { %>aria-disabled="true" tabindex="-1"<% } %>
+       title="Steg 2: Öva med Jocke">
+      <span class="bps-icon"><% if (journey.roleplayDone) { %>✓<% } else { %>🎭<% } %></span>
+      <span class="bps-label">Öva</span>
+    </a>
+    <span class="bps-connector <%= journey.roleplayDone ? 'bps-done' : '' %>" aria-hidden="true"></span>
+    <a href="<%= block.mission ? '/learn/' + block.id + '/uppdrag' : '#' %>"
+       class="bps-step <%= journey.missionDone ? 'bps-done' : (journey.roleplayDone ? 'bps-current' : 'bps-future') %>"
+       <% if (!block.mission) { %>aria-disabled="true" tabindex="-1"<% } %>
+       title="Steg 3: Veckans uppdrag IRL">
+      <span class="bps-icon"><% if (journey.missionDone) { %>✓<% } else { %>🎯<% } %></span>
+      <span class="bps-label">Gör</span>
+    </a>
+    <span class="bps-connector <%= journey.missionDone ? 'bps-done' : '' %>" aria-hidden="true"></span>
+    <a href="<%= block.reflections && block.reflections.length ? '/learn/' + block.id + '/reflektion' : '#' %>"
+       class="bps-step <%= journey.reflectionDone ? 'bps-done' : (journey.missionDone ? 'bps-current' : 'bps-future') %>"
+       <% if (!block.reflections || !block.reflections.length) { %>aria-disabled="true" tabindex="-1"<% } %>
+       title="Steg 4: Reflektera">
+      <span class="bps-icon"><% if (journey.reflectionDone) { %>✓<% } else { %>💭<% } %></span>
+      <span class="bps-label">Reflektera</span>
+    </a>
+  </nav>
   <% } %>
 
-  <!-- Goal-modal vid första besöket (bara om inga steg gjorda än).
-       Visas INTE för:
-       - Användare som precis registrerade sig (?welcome=1) — för mycket att
-         välja mellan när de aldrig sett appen. Låt dem bara läsa först.
-       - Block 1 (inledning) — starter-blocket ska vara helt linjärt. Modal
-         passar bättre på block 2+ där de redan förstår 4-stegs-strukturen. -->
-  <% if (!isTeaser && journey && journey.stepsCompleted === 0 && !welcome && block.id !== 'inledning') { %>
-  <div class="goal-modal-backdrop" id="goalModal" role="dialog" aria-labelledby="goalTitle" aria-modal="true">
-    <div class="goal-modal">
-      <button class="goal-close" onclick="closeGoalModal()" aria-label="Stäng">✕</button>
-      <h2 id="goalTitle">Hur vill du jobba med det här blocket idag?</h2>
-      <p class="goal-sub">Alla 4 steg behövs för verkligt lärande — men du väljer var du börjar.</p>
-      <div class="goal-options">
-        <a href="#tab-theory" onclick="closeGoalModal(); showTab('theory', document.getElementById('tab-btn-theory')); return false;" class="goal-option">
-          <div class="go-icon">📚</div>
-          <div class="go-text">
-            <strong>Lär</strong>
-            <span>Ge mig teorin först</span>
-          </div>
-        </a>
-        <% if (block.roleplays && block.roleplays.length) { %>
-        <a href="/learn/<%= block.id %>/ova" onclick="closeGoalModal();" class="goal-option">
-          <div class="go-icon">🎭</div>
-          <div class="go-text">
-            <strong>Öva</strong>
-            <span>Jag vill träna direkt med Jocke</span>
-          </div>
-        </a>
-        <% } %>
-        <% if (block.mission) { %>
-        <a href="/learn/<%= block.id %>/uppdrag" onclick="closeGoalModal();" class="goal-option">
-          <div class="go-icon">🎯</div>
-          <div class="go-text">
-            <strong>Handla</strong>
-            <span>Ge mig ett konkret uppdrag för veckan</span>
-          </div>
-        </a>
-        <% } %>
-        <% if (block.quickVersion) { %>
-        <a href="/learn/<%= block.id %>/snabb" onclick="closeGoalModal();" class="goal-option">
-          <div class="go-icon">⚡</div>
-          <div class="go-text">
-            <strong>Snabbversion</strong>
-            <span>2 min — jag har bråttom</span>
-          </div>
-        </a>
-        <% } %>
-      </div>
-      <button class="goal-skip" onclick="closeGoalModal()">Visa allt istället →</button>
-    </div>
-  </div>
-  <script>
-    (function(){
-      var key = 'goal-seen-<%= block.id %>';
-      try {
-        if (localStorage.getItem(key)) {
-          var m = document.getElementById('goalModal');
-          if (m) m.style.display = 'none';
-        }
-      } catch(e) {}
-    })();
-    function closeGoalModal() {
-      try { localStorage.setItem('goal-seen-<%= block.id %>', '1'); } catch(e) {}
-      var m = document.getElementById('goalModal');
-      if (m) m.style.display = 'none';
-    }
-  </script>
-  <% } %>
+  <!-- ═════════════════════════════════════════════════════════════════════
+       LINJÄR LEKTIONS-FLOW
+       Outcome → Video → Action → Teori → Bottom-CTA
+       Tabs ersatta av en sammanhållen scrollyta. Quiz på egen route.
+  ═════════════════════════════════════════════════════════════════════ -->
 
-  <!-- Tabs -->
-  <div class="tabs-wrapper">
-    <div class="tabs" role="tablist" aria-label="Block <%= block.title %>">
-      <button class="tab active" id="tab-btn-theory" data-tab="theory" onclick="showTab('theory', this)" role="tab" aria-selected="true" aria-controls="tab-theory" tabindex="0">📖 Teori</button>
-      <button class="tab" id="tab-btn-video" data-tab="video" onclick="showTab('video', this)" role="tab" aria-selected="false" aria-controls="tab-video" tabindex="-1">🎬 Video</button>
-      <button class="tab" id="tab-btn-quiz" data-tab="quiz" onclick="showTab('quiz', this)" role="tab" aria-selected="false" aria-controls="tab-quiz" tabindex="-1">🧠 Prov</button>
-    </div>
-  </div>
+  <% if (isTeaser) { %>
 
-  <div class="tab-content-wrapper">
-
-    <% if (isTeaser) { %>
-
-      <!-- ── TEASER MODE — theory preview + paywall ──────────────────── -->
-      <div id="tab-theory" class="tab-content active" role="tabpanel" aria-labelledby="tab-btn-theory">
+    <!-- ── TEASER MODE — theory preview + paywall ──────────────────── -->
+    <div class="lesson-wrap">
+      <section class="lesson-section lesson-theory">
         <div class="theory-body teaser-preview">
           <%- block.teaser %>
         </div>
@@ -409,104 +292,77 @@
             <p class="teaser-price-hint">Avsluta när som helst. Säker betalning via Stripe.</p>
           </div>
         </div>
-      </div>
+      </section>
+    </div>
 
-      <div id="tab-video" class="tab-content" role="tabpanel" aria-labelledby="tab-btn-video">
-        <div class="teaser-locked-tab">
-          <div class="teaser-lock-icon">🎬</div>
-          <h3>Videogenomgång: <%= block.title %></h3>
-          <p>En kuraterad videogenomgång som visualiserar och fördjupar teorin. Ingår i Premium.</p>
-          <a href="/upgrade" class="teaser-upgrade-cta">⭐ Uppgradera →</a>
-        </div>
-      </div>
+  <% } else { %>
 
-      <div id="tab-quiz" class="tab-content" role="tabpanel" aria-labelledby="tab-btn-quiz">
-        <div class="teaser-locked-tab">
-          <div class="teaser-lock-icon">🧠</div>
-          <h3>Prov: <%= block.title %></h3>
-          <p>10 frågor som bekräftar att du verkligen förstått blocket. Din progress sparas. Ingår i Premium.</p>
-          <a href="/upgrade" class="teaser-upgrade-cta">⭐ Uppgradera →</a>
-        </div>
-      </div>
+    <div class="lesson-wrap">
 
-    <% } else { %>
+      <!-- ─── 1. VIDEO — primär leverans ─────────────────────────────── -->
+      <section class="lesson-section lesson-video" aria-labelledby="lesson-video-h">
+        <h2 id="lesson-video-h" class="lesson-section-eyebrow">🎬 Videogenomgång</h2>
+        <% if (block.youtubeId) { %>
+          <div class="video-embed">
+            <iframe
+              src="https://www.youtube.com/embed/<%= block.youtubeId %>?rel=0&modestbranding=1"
+              title="<%= block.title %>"
+              frameborder="0"
+              loading="lazy"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowfullscreen
+            ></iframe>
+          </div>
+        <% } else { %>
+          <!-- Subtil placeholder, INTE stor tom 16:9 — undvik halvfärdig-känsla -->
+          <div class="video-pending-card">
+            <span class="vpc-icon" aria-hidden="true">🎬</span>
+            <div class="vpc-body">
+              <strong>Videogenomgång kommer snart.</strong>
+              <span>Layouten är förberedd — spelaren landar här när Joakim laddar upp inspelningen. Under tiden: läs teorin nedan och hoppa in i övningen.</span>
+            </div>
+          </div>
+        <% } %>
+      </section>
 
-      <!-- ── FULL ACCESS MODE ────────────────────────────────────────── -->
+      <!-- ─── 2. ACTION-CARD — driv från konsumtion till handling ────── -->
+      <% if (block.roleplays && block.roleplays.length) { %>
+        <section class="lesson-section lesson-action">
+          <div class="action-card">
+            <div class="action-card-eyebrow">⚡ Gör detta nu</div>
+            <h3 class="action-card-title">Träna det du precis sett — med Jocke</h3>
+            <p class="action-card-desc">
+              <%= block.roleplays.length %> rollspel där du tränar teknikerna i tryggt läge. Jocke spelar kunden. <strong>3 minuter</strong> kan flytta nålen mer än en hel teorisida till.
+            </p>
+            <a href="/learn/<%= block.id %>/ova" class="action-card-cta">🎭 Starta rollspel →</a>
+          </div>
+        </section>
+      <% } %>
 
-      <!-- THEORY -->
-      <div id="tab-theory" class="tab-content active" role="tabpanel" aria-labelledby="tab-btn-theory">
+      <!-- ─── 3. TEORI — studiematerial under videon ─────────────────── -->
+      <section class="lesson-section lesson-theory" aria-labelledby="lesson-theory-h">
+        <h2 id="lesson-theory-h" class="lesson-section-eyebrow">📖 Studiematerial — fördjupa det videon visar</h2>
         <div class="theory-body">
           <%- block.theory %>
         </div>
-        <!-- Bottom nudge toward quiz (shown after reading) -->
-        <div class="theory-cta-row">
-          <button class="theory-quiz-nudge" onclick="showTab('quiz', document.querySelector('[data-tab=quiz]'))">
-            🧠 Redo för provet? Testa dina kunskaper →
-          </button>
+      </section>
+
+      <!-- ─── 4. BOTTOM-CTA — server-beräknat nästa-steg ─────────────── -->
+      <% if (typeof nextBestStep !== 'undefined' && nextBestStep) { %>
+      <section class="lesson-section lesson-next" aria-label="Nästa steg">
+        <div class="next-step-card">
+          <div class="nsc-eyebrow">Nästa steg</div>
+          <div class="nsc-icon" aria-hidden="true"><%= nextBestStep.icon %></div>
+          <h3 class="nsc-title"><%= nextBestStep.label %></h3>
+          <p class="nsc-desc"><%= nextBestStep.desc %></p>
+          <a href="<%= nextBestStep.href %>" class="nsc-cta"><%= nextBestStep.label %> →</a>
         </div>
-      </div>
+      </section>
+      <% } %>
 
-      <!-- VIDEO -->
-      <div id="tab-video" class="tab-content" role="tabpanel" aria-labelledby="tab-btn-video">
-        <% if (block.youtubeId) { %>
-          <div class="video-wrapper">
-            <div class="video-label">Videogenomgång: <strong><%= block.title %></strong></div>
-            <div class="video-embed">
-              <iframe
-                src="https://www.youtube.com/embed/<%= block.youtubeId %>?rel=0&modestbranding=1"
-                title="<%= block.title %>"
-                frameborder="0"
-                loading="lazy"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                allowfullscreen
-              ></iframe>
-            </div>
-          </div>
-        <% } else { %>
-          <div class="video-coming-soon">
-            <div class="video-coming-icon">🎬</div>
-            <h3>Video kommer snart</h3>
-            <p>Joakim spelar in videogenomgången för <strong><%= block.title %></strong> just nu. Vi lägger upp den så fort den är klar.</p>
-            <p class="video-coming-sub">Under tiden — läs teorin och kör provet. Allt väsentligt finns där.</p>
-          </div>
-        <% } %>
-      </div>
+    </div>
 
-      <!-- QUIZ -->
-      <div id="tab-quiz" class="tab-content" role="tabpanel" aria-labelledby="tab-btn-quiz">
-        <div class="quiz-wrapper" id="quizWrapper">
-          <div class="quiz-header">
-            <h2>🧠 Prov — <%= block.title %></h2>
-            <p>10 frågor. Välj ett svar per fråga och klicka sedan "Rätta provet".</p>
-          </div>
-
-          <form id="quizForm">
-            <% block.quiz.forEach(function(q, qi) { %>
-              <fieldset class="quiz-question" id="qq-<%= qi %>">
-                <legend class="quiz-q-text"><span class="q-num" aria-hidden="true"><%= qi + 1 %></span> <%= q.q %></legend>
-                <div class="quiz-options">
-                  <% q.options.forEach(function(opt, oi) { %>
-                    <label class="quiz-option" data-qi="<%= qi %>" data-oi="<%= oi %>">
-                      <input type="radio" name="q<%= qi %>" value="<%= oi %>" />
-                      <span class="option-letter" aria-hidden="true"><%= ['A','B','C','D'][oi] %></span>
-                      <span><%= opt %></span>
-                    </label>
-                  <% }); %>
-                </div>
-              </fieldset>
-            <% }); %>
-
-            <button type="button" class="quiz-submit-btn" onclick="submitQuiz()">Rätta provet →</button>
-          </form>
-
-          <!-- Result panel (hidden until submitted) -->
-          <div id="quizResult" class="quiz-result" style="display:none;"></div>
-        </div>
-      </div>
-
-    <% } %>
-
-  </div>
+  <% } %>
 
   <!-- Block navigation -->
   </main>
@@ -585,14 +441,11 @@
     })();
 
     // ── Keyboard navigation ─────────────────────────────────────────────────────
-    // Left/Right arrow → prev/next block (when not in an input/textarea/tab)
+    // Left/Right arrow → prev/next block (when not in an input/textarea)
     document.addEventListener('keydown', function(e) {
       const tag = document.activeElement.tagName;
       const inInput = tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT';
       if (inInput) return;
-      // Don't navigate blocks when arrow keys are used inside the tablist
-      const inTab = document.activeElement.getAttribute('role') === 'tab';
-      if (inTab) return;
 
       <% const kbIdx = blocks.findIndex(b => b.id === block.id); %>
       if (e.key === 'ArrowLeft') {
@@ -612,172 +465,28 @@
       }
     });
 
-    // ── Tabs ────────────────────────────────────────────────────────────────
-
-    function showTab(name, btn) {
-      document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
-      document.querySelectorAll('.tab').forEach(el => {
-        el.classList.remove('active');
-        el.setAttribute('aria-selected', 'false');
-        el.setAttribute('tabindex', '-1');
-      });
-      document.getElementById('tab-' + name).classList.add('active');
-      btn.classList.add('active');
-      btn.setAttribute('aria-selected', 'true');
-      btn.setAttribute('tabindex', '0');
-    }
-
-    // Arrow-key navigation within the tablist (ARIA pattern)
+    // ── Legacy anchor-redirect ──────────────────────────────────────────────
+    // Gamla URL:er / länkar med #tab-quiz, #tab-video, #tab-theory ska inte 404:a.
+    // #tab-quiz → ny prov-route. #tab-theory → scrolla till teori-sektionen.
+    // #tab-video → scrolla till video-sektionen.
     (function() {
-      const tabBtns = Array.from(document.querySelectorAll('.tabs [role="tab"]'));
-      tabBtns.forEach((btn, i) => {
-        btn.addEventListener('keydown', function(e) {
-          let next = -1;
-          if (e.key === 'ArrowRight') next = (i + 1) % tabBtns.length;
-          else if (e.key === 'ArrowLeft') next = (i - 1 + tabBtns.length) % tabBtns.length;
-          else if (e.key === 'Home') next = 0;
-          else if (e.key === 'End') next = tabBtns.length - 1;
-          if (next !== -1) {
-            e.preventDefault();
-            showTab(tabBtns[next].dataset.tab, tabBtns[next]);
-            tabBtns[next].focus();
-          }
-        });
-      });
-    })();
-
-    <% if (!isTeaser) { %>
-    // ── Quiz ────────────────────────────────────────────────────────────────
-
-    const correctAnswers = <%- JSON.stringify(block.quiz.map(q => q.answer)).replace(/<\/script>/gi, '<\\/script>') %>;
-
-    function submitQuiz() {
-      const form = document.getElementById('quizForm');
-      let score = 0;
-      let allAnswered = true;
-
-      correctAnswers.forEach((correct, qi) => {
-        const selected = form.querySelector(`input[name="q${qi}"]:checked`);
-        if (!selected) { allAnswered = false; return; }
-
-        const value = parseInt(selected.value);
-        const questionEl = document.getElementById('qq-' + qi);
-        const options = questionEl.querySelectorAll('.quiz-option');
-
-        options.forEach(opt => {
-          opt.style.pointerEvents = 'none';
-          const oi = parseInt(opt.dataset.oi);
-          if (oi === correct) {
-            opt.classList.add('correct');
-          } else if (oi === value && value !== correct) {
-            opt.classList.add('wrong');
-          }
-        });
-
-        if (value === correct) score++;
-      });
-
-      if (!allAnswered) {
-        // Find first unanswered question and scroll to it with inline error
-        let errorEl = document.getElementById('quiz-inline-error');
-        if (!errorEl) {
-          errorEl = document.createElement('p');
-          errorEl.id = 'quiz-inline-error';
-          errorEl.setAttribute('role', 'alert');
-          errorEl.style.cssText = 'color:#f87171;font-size:.875rem;margin:.75rem 0 0;font-weight:600;';
-          document.querySelector('.quiz-submit-btn').insertAdjacentElement('beforebegin', errorEl);
-        }
-        errorEl.textContent = '⚠️ Svara på alla frågor innan du rättar provet.';
-
-        // Scroll to and highlight first unanswered question
-        for (let i = 0; i < correctAnswers.length; i++) {
-          if (!form.querySelector(`input[name="q${i}"]:checked`)) {
-            const unansweredEl = document.getElementById('qq-' + i);
-            safeScrollIntoView(unansweredEl, { block: 'center' });
-            unansweredEl.classList.add('unanswered-highlight');
-            setTimeout(() => unansweredEl.classList.remove('unanswered-highlight'), 2000);
-            break;
-          }
-        }
+      const h = window.location.hash;
+      if (!h) return;
+      if (h === '#tab-quiz') {
+        window.location.replace('/learn/<%= block.id %>/prov');
         return;
       }
-
-      // Clear inline error if all answered
-      const errEl = document.getElementById('quiz-inline-error');
-      if (errEl) errEl.remove();
-
-      const resultEl = document.getElementById('quizResult');
-      const pct = Math.round((score / correctAnswers.length) * 100);
-      const passed = pct >= 60;
-      const emoji = pct >= 80 ? '🏆' : pct >= 60 ? '👍' : '📚';
-      const msg   = pct >= 80 ? 'Utmärkt! Du behärskar det här blocket.'
-                  : pct >= 60 ? 'Bra jobbat! Lite mer repetition gör dig till expert.'
-                  : 'Läs igenom teorin igen — du klarar det!';
-
-      <% const blockIdx = blocks.findIndex(b => b.id === block.id); %>
-      <% const nextBlock = blocks[blockIdx + 1]; %>
-
-      let nextBtnHtml = '';
-      if (passed) {
-        <% if (nextBlock) { %>
-          <% if (role === 'free' && !freeBlockIds.includes(nextBlock.id)) { %>
-            nextBtnHtml = `<a href="/upgrade" class="next-block-btn upgrade-next">⭐ Lås upp Block <%= blockIdx + 2 %>: <%= nextBlock.title %> →</a>`;
-          <% } else { %>
-            nextBtnHtml = `<a href="/learn/<%= nextBlock.id %>" class="next-block-btn">Nästa block: <%= nextBlock.title %> →</a>`;
-          <% } %>
-        <% } else { %>
-          nextBtnHtml = `<a href="/learn" class="next-block-btn">🏆 Du har klarat alla block! Se översikt →</a>`;
-        <% } %>
+      const target = h === '#tab-theory' ? document.getElementById('lesson-theory-h')
+                   : h === '#tab-video'  ? document.getElementById('lesson-video-h')
+                   : null;
+      if (target) {
+        // Stripa hash så bookmarken är ren, scrolla mjukt till sektionen
+        history.replaceState(null, '', window.location.pathname);
+        target.scrollIntoView({ behavior: prefersReducedMotion ? 'auto' : 'smooth', block: 'start' });
       }
+    })();
 
-      resultEl.innerHTML = `
-        <div class="result-score">${emoji} ${score} / ${correctAnswers.length} rätt (${pct}%)</div>
-        <p class="result-msg">${msg}</p>
-        <div class="result-actions">
-          <button onclick="retryQuiz()" class="retry-btn">Försök igen</button>
-          ${nextBtnHtml}
-        </div>
-      `;
-      resultEl.style.display = 'block';
-      resultEl.setAttribute('tabindex', '-1');
-      safeScrollIntoView(resultEl, {});
-      setTimeout(() => resultEl.focus({ preventScroll: true }), prefersReducedMotion ? 0 : 400); // focus after scroll completes
-      document.querySelector('.quiz-submit-btn').style.display = 'none';
-
-      // Save result to server
-      fetch('/quiz-result', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-csrf-token': '<%= csrfToken %>',
-        },
-        body: JSON.stringify({ blockId: '<%= block.id %>', score, total: correctAnswers.length }),
-      }).catch(() => {});
-    }
-
-    function retryQuiz() {
-      // Clear inline error if present
-      const prevErr = document.getElementById('quiz-inline-error');
-      if (prevErr) prevErr.remove();
-
-      // Reset all radio buttons
-      const form = document.getElementById('quizForm');
-      form.querySelectorAll('input[type="radio"]').forEach(r => r.checked = false);
-
-      // Remove correct/wrong styling and re-enable clicks
-      form.querySelectorAll('.quiz-option').forEach(opt => {
-        opt.classList.remove('correct', 'wrong');
-        opt.style.pointerEvents = '';
-      });
-
-      // Hide result panel, show submit button
-      document.getElementById('quizResult').style.display = 'none';
-      document.querySelector('.quiz-submit-btn').style.display = '';
-
-      // Scroll to top of quiz
-      safeScrollIntoView(document.getElementById('quizWrapper'), {});
-    }
-    <% } %>
+    // (Quiz bor på /learn/:id/prov — egen sida nu. Ingen inline-quiz-JS här.)
 
     // ── Jocke chat (premium users only) ─────────────────────────────────────
     <% if (!isTeaser) { %>

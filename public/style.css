@@ -4080,3 +4080,300 @@ body.dash-page {
 
 /* Skip-to-main always shows focus ring on :focus too */
 .skip-to-main:focus { outline: 2px solid #fff; outline-offset: 3px; }
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   LESSON-PAGE — linjär flow (ersätter tabs på block-sidan)
+   Section-stack: progress-strip → video → action-card → teori → next-step
+   Mobile-first; alla sektioner full-width inom lesson-wrap.
+═══════════════════════════════════════════════════════════════════════════════ */
+
+.lesson-wrap {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 0 1.25rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.lesson-section { margin: 0; }
+
+.lesson-section-eyebrow {
+  display: block;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #94a3b8;
+  margin: 0 0 0.85rem;
+}
+
+/* ── Progress-strip — kompakt 4-stegs-orientering ──────────────────────── */
+.block-progress-strip {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  max-width: 900px;
+  margin: 0 auto 1.25rem;
+  padding: 0.65rem 1rem;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 999px;
+}
+
+.bps-step {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.4rem 0.7rem;
+  border-radius: 999px;
+  text-decoration: none;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #94a3b8;
+  background: transparent;
+  transition: background 0.15s, color 0.15s;
+  flex-shrink: 0;
+  touch-action: manipulation;
+}
+.bps-step:hover { background: rgba(99,102,241,0.1); color: #c7d2fe; }
+.bps-step[aria-disabled="true"] { opacity: 0.45; pointer-events: none; }
+
+.bps-step.bps-current {
+  background: rgba(99,102,241,0.15);
+  color: #a5b4fc;
+  border: 1px solid rgba(99,102,241,0.3);
+}
+.bps-step.bps-done {
+  color: #34d399;
+}
+.bps-step.bps-done .bps-icon { color: #10b981; }
+.bps-step.bps-future { color: #475569; }
+
+.bps-icon { font-size: 0.95rem; line-height: 1; }
+.bps-label { font-size: 0.78rem; }
+
+.bps-connector {
+  flex: 1;
+  height: 2px;
+  min-width: 8px;
+  background: rgba(255,255,255,0.08);
+  border-radius: 1px;
+}
+.bps-connector.bps-done { background: rgba(16,185,129,0.4); }
+
+@media (max-width: 540px) {
+  .block-progress-strip { padding: 0.55rem 0.65rem; gap: 0.2rem; }
+  .bps-label { display: none; } /* bara ikoner på smala skärmar */
+  .bps-step { padding: 0.4rem 0.55rem; min-width: 36px; justify-content: center; }
+  .bps-icon { font-size: 1.1rem; }
+}
+
+/* ── Video-pending-card (subtil, INTE stor tom 16:9) ──────────────────── */
+.video-pending-card {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1.1rem 1.25rem;
+  background: linear-gradient(135deg, rgba(99,102,241,0.06), rgba(139,92,246,0.04));
+  border: 1px dashed rgba(99,102,241,0.3);
+  border-radius: 12px;
+}
+.vpc-icon { font-size: 1.6rem; flex-shrink: 0; opacity: 0.8; }
+.vpc-body { display: flex; flex-direction: column; gap: 0.2rem; }
+.vpc-body strong { color: #e2e8f0; font-size: 0.95rem; font-weight: 700; }
+.vpc-body span { color: #94a3b8; font-size: 0.85rem; line-height: 1.5; }
+
+@media (max-width: 540px) {
+  .video-pending-card { flex-direction: column; align-items: flex-start; padding: 1rem; }
+}
+
+/* ── Action-card — "Gör detta nu" CTA efter video ─────────────────────── */
+.action-card {
+  padding: 1.5rem 1.75rem;
+  background: linear-gradient(145deg, rgba(251,191,36,0.08), rgba(245,158,11,0.03));
+  border: 1px solid rgba(251,191,36,0.3);
+  border-radius: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.action-card-eyebrow {
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #fbbf24;
+}
+.action-card-title {
+  margin: 0;
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #f1f5f9;
+  line-height: 1.3;
+}
+.action-card-desc {
+  color: #cbd5e1;
+  font-size: 0.92rem;
+  line-height: 1.55;
+  margin: 0 0 0.5rem;
+}
+.action-card-desc strong { color: #fef3c7; }
+
+.action-card-cta {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  padding: 0.85rem 1.4rem;
+  min-height: 48px;
+  background: linear-gradient(135deg, #fbbf24, #f59e0b);
+  color: #0f172a;
+  border-radius: 10px;
+  text-decoration: none;
+  font-weight: 700;
+  font-size: 0.95rem;
+  transition: transform 0.1s, box-shadow 0.2s;
+  touch-action: manipulation;
+}
+.action-card-cta:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(245,158,11,0.35);
+}
+
+@media (max-width: 540px) {
+  .action-card { padding: 1.25rem 1.1rem; }
+  .action-card-title { font-size: 1.05rem; }
+  .action-card-cta { width: 100%; justify-content: center; }
+}
+
+/* ── Next-step-card — bottom-CTA (server-beräknat nästa steg) ──────────── */
+.next-step-card {
+  padding: 1.75rem 1.75rem 1.5rem;
+  background: linear-gradient(145deg, #1e293b, #0f172a);
+  border: 1px solid rgba(99,102,241,0.3);
+  border-radius: 16px;
+  position: relative;
+  overflow: hidden;
+}
+.next-step-card::before {
+  content: '';
+  position: absolute;
+  top: -40px;
+  right: -40px;
+  width: 160px;
+  height: 160px;
+  background: radial-gradient(circle, rgba(99,102,241,0.18), transparent 70%);
+  border-radius: 50%;
+  pointer-events: none;
+}
+.nsc-eyebrow {
+  position: relative; z-index: 1;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #a5b4fc;
+  margin-bottom: 0.6rem;
+}
+.nsc-icon {
+  position: relative; z-index: 1;
+  font-size: 2rem;
+  line-height: 1;
+  margin-bottom: 0.4rem;
+}
+.nsc-title {
+  position: relative; z-index: 1;
+  font-size: 1.3rem;
+  font-weight: 800;
+  color: #f1f5f9;
+  margin: 0 0 0.5rem;
+  line-height: 1.25;
+}
+.nsc-desc {
+  position: relative; z-index: 1;
+  color: #cbd5e1;
+  font-size: 0.95rem;
+  line-height: 1.55;
+  margin: 0 0 1.25rem;
+}
+.nsc-cta {
+  position: relative; z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  padding: 0.95rem 1.5rem;
+  min-height: 48px;
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  color: #fff;
+  border-radius: 10px;
+  text-decoration: none;
+  font-weight: 700;
+  font-size: 0.95rem;
+  transition: transform 0.1s, box-shadow 0.2s;
+  touch-action: manipulation;
+}
+.nsc-cta:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(99,102,241,0.4);
+}
+
+@media (max-width: 540px) {
+  .next-step-card { padding: 1.5rem 1.25rem 1.25rem; }
+  .nsc-title { font-size: 1.1rem; }
+  .nsc-cta { width: 100%; justify-content: center; }
+}
+
+/* ── Prov-page (egen route /learn/:id/prov) ─────────────────────────────── */
+.prov-page-wrap {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 1.5rem 1.25rem 6rem;
+}
+.prov-header {
+  margin-bottom: 1.5rem;
+}
+.prov-eyebrow {
+  display: inline-block;
+  padding: 0.3rem 0.8rem;
+  background: rgba(99,102,241,0.15);
+  color: #a5b4fc;
+  border: 1px solid rgba(99,102,241,0.3);
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-bottom: 0.85rem;
+}
+.prov-header h1 {
+  font-size: 1.6rem;
+  font-weight: 800;
+  color: #f1f5f9;
+  margin: 0 0 0.6rem;
+  line-height: 1.25;
+}
+.prov-lead {
+  color: #cbd5e1;
+  font-size: 0.95rem;
+  line-height: 1.6;
+  margin: 0;
+}
+.prov-prev-score {
+  margin-top: 1rem;
+  padding: 0.7rem 1rem;
+  background: rgba(16,185,129,0.08);
+  border: 1px solid rgba(16,185,129,0.25);
+  border-radius: 10px;
+  color: #34d399;
+  font-size: 0.88rem;
+}
+.prov-prev-score strong { color: #6ee7b7; }
+
+@media (max-width: 540px) {
+  .prov-header h1 { font-size: 1.3rem; }
+  .prov-lead { font-size: 0.9rem; }
+}
+
+/* Prov-page mobile bottom-padding så app-bottom-nav inte täcker innehåll */
+@media (max-width: 768px) {
+  .prov-page-wrap { padding-bottom: 6rem !important; }
+}
