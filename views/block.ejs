@@ -38,8 +38,18 @@
     <div>
       <h1><%= block.title %></h1>
       <p><%= block.subtitle %></p>
+      <% if (block.outcomeTitle) { %>
+        <p class="block-hero-outcome">
+          <span class="bho-eyebrow">Efter detta block</span>
+          <span class="bho-text"><%= block.outcomeTitle %></span>
+        </p>
+      <% } %>
       <% if (!isTeaser) { %>
-        <span class="block-read-time">📖 ~<%= readTime %> min läsning</span>
+        <span class="block-read-time">
+          📖 ~<%= readTime %> min läsning
+          <% if (block.youtubeId) { %> · 🎬 ~10 min video<% } %>
+          <% if (block.roleplays && block.roleplays.length) { %> · 🎭 ~<%= Math.max(3, block.roleplays.length * 3) %> min övning<% } %>
+        </span>
       <% } %>
     </div>
     <% if (isTeaser) { %>
@@ -298,6 +308,28 @@
   <% } else { %>
 
     <div class="lesson-wrap">
+
+      <!-- ─── 0. OUTCOME-CARD — vad du kommer kunna efter blocket ────── -->
+      <% if (block.tldr || (block.concreteScripts && block.concreteScripts.length)) { %>
+      <section class="lesson-section lesson-outcome" aria-labelledby="lesson-outcome-h">
+        <div class="outcome-card">
+          <div class="outcome-card-eyebrow">🎯 Det här ska sitta efter blocket</div>
+          <% if (block.tldr) { %>
+            <p class="outcome-card-tldr"><%= block.tldr %></p>
+          <% } %>
+          <% if (block.concreteScripts && block.concreteScripts.length) { %>
+            <div class="outcome-card-scripts">
+              <h3 id="lesson-outcome-h" class="outcome-card-scripts-title">Konkret — formuleringar du kommer kunna säga:</h3>
+              <ul>
+                <% block.concreteScripts.forEach(function(s) { %>
+                  <li><%= s %></li>
+                <% }); %>
+              </ul>
+            </div>
+          <% } %>
+        </div>
+      </section>
+      <% } %>
 
       <!-- ─── 1. VIDEO — primär leverans ─────────────────────────────── -->
       <section class="lesson-section lesson-video" aria-labelledby="lesson-video-h">

@@ -1087,6 +1087,35 @@ textarea:focus {
   opacity: 0.85;
 }
 
+/* Hero-outcome — "Efter detta block: <outcomeTitle>" */
+.block-hero-outcome {
+  display: block;
+  margin-top: 0.75rem;
+  margin-bottom: 0.5rem;
+  padding: 0.55rem 0.85rem;
+  background: rgba(255,255,255,0.1);
+  border-left: 3px solid rgba(255,255,255,0.4);
+  border-radius: 0 8px 8px 0;
+  opacity: 1 !important;
+  font-size: 0.95rem !important;
+  line-height: 1.45;
+}
+.block-hero-outcome .bho-eyebrow {
+  display: block;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  opacity: 0.7;
+  margin-bottom: 0.2rem;
+}
+.block-hero-outcome .bho-text {
+  display: block;
+  font-weight: 700;
+  font-size: 1rem;
+  color: #fff;
+}
+
 /* ── Tabs ───────────────────────────────────────────────────────── */
 
 .tabs-wrapper {
@@ -4167,6 +4196,99 @@ body.dash-page {
   .bps-label { display: none; } /* bara ikoner på smala skärmar */
   .bps-step { padding: 0.4rem 0.55rem; min-width: 36px; justify-content: center; }
   .bps-icon { font-size: 1.1rem; }
+}
+
+/* ── Outcome-card — "Det här ska sitta efter blocket" ──────────────────
+   Visas direkt efter progress-strip, innan video. Primar hela scrollen
+   med outcome + 2 konkreta formuleringar användaren kommer kunna säga.
+   Action-orienterat, inte material-orienterat. */
+.outcome-card {
+  padding: 1.5rem 1.75rem;
+  background: linear-gradient(145deg, rgba(99,102,241,0.08), rgba(139,92,246,0.04));
+  border: 1px solid rgba(99,102,241,0.25);
+  border-radius: 14px;
+  position: relative;
+  overflow: hidden;
+}
+.outcome-card::before {
+  content: '';
+  position: absolute;
+  top: -30px;
+  right: -30px;
+  width: 140px;
+  height: 140px;
+  background: radial-gradient(circle, rgba(99,102,241,0.12), transparent 70%);
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.outcome-card-eyebrow {
+  position: relative; z-index: 1;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #a5b4fc;
+  margin-bottom: 0.85rem;
+}
+
+.outcome-card-tldr {
+  position: relative; z-index: 1;
+  color: #e2e8f0;
+  font-size: 0.98rem;
+  line-height: 1.65;
+  margin: 0 0 1.25rem;
+}
+.outcome-card-tldr:last-child { margin-bottom: 0; }
+
+.outcome-card-scripts {
+  position: relative; z-index: 1;
+  padding-top: 1rem;
+  border-top: 1px solid rgba(255,255,255,0.08);
+}
+.outcome-card-scripts-title {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #cbd5e1;
+  margin: 0 0 0.7rem;
+  text-transform: none;
+  letter-spacing: 0;
+}
+.outcome-card-scripts ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+.outcome-card-scripts li {
+  position: relative;
+  padding: 0.7rem 0.85rem 0.7rem 2.25rem;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 8px;
+  color: #e2e8f0;
+  font-size: 0.92rem;
+  line-height: 1.5;
+  font-style: italic;
+}
+.outcome-card-scripts li::before {
+  content: '"';
+  position: absolute;
+  left: 0.85rem;
+  top: 0.45rem;
+  font-size: 1.6rem;
+  font-weight: 800;
+  color: #a5b4fc;
+  font-style: normal;
+  line-height: 1;
+}
+
+@media (max-width: 540px) {
+  .outcome-card { padding: 1.25rem 1.1rem; }
+  .outcome-card-tldr { font-size: 0.92rem; }
+  .outcome-card-scripts li { font-size: 0.88rem; padding: 0.65rem 0.75rem 0.65rem 2rem; }
 }
 
 /* ── Video-pending-card (subtil, INTE stor tom 16:9) ──────────────────── */
