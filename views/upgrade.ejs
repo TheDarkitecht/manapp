@@ -130,15 +130,24 @@
           </div>
         </div>
 
-        <!-- Pro-tier-kort — guld-accent -->
+        <!-- Pro-tier-kort — guld-accent + 24h gratis-trial highlight -->
         <div class="up-checkout-card" style="background:linear-gradient(145deg, rgba(251,191,36,0.08), rgba(245,158,11,0.03));border-color:rgba(251,191,36,0.35);margin-top:1rem;position:relative;">
-          <div class="up-checkout-badge" style="background:linear-gradient(135deg,#fbbf24,#f59e0b);color:#0f172a;">⚡ För seriösa säljare</div>
+          <div class="up-checkout-badge" style="background:linear-gradient(135deg,#fbbf24,#f59e0b);color:#0f172a;">🎁 Gratis i 24h</div>
           <div style="font-size:0.8rem;letter-spacing:0.1em;text-transform:uppercase;color:#fbbf24;font-weight:700;margin-bottom:0.4rem;">Pro</div>
           <div class="up-checkout-price">
             <span class="up-price-amount">599 kr</span>
             <span class="up-price-period">/mån</span>
           </div>
           <p class="up-price-sub" style="color:#fde68a;">Allt i Premium — PLUS feedback på dina verkliga samtal</p>
+
+          <!-- Trial-highlight — KRITISKT för konvertering. Står inte på /pro paywall annars. -->
+          <div style="margin:1rem 0;padding:0.85rem 1rem;background:rgba(251,191,36,0.12);border:1px solid rgba(251,191,36,0.3);border-radius:10px;">
+            <div style="color:#fbbf24;font-weight:800;font-size:0.85rem;margin-bottom:0.25rem;">⏰ Prova 24h gratis</div>
+            <div style="color:#fde68a;font-size:0.82rem;line-height:1.5;">
+              Ladda upp ett samtal idag — ingen debitering förrän efter 24 timmar.
+              Avbryt när som helst i ditt konto. Inga frågor.
+            </div>
+          </div>
 
           <ul class="up-checkout-list">
             <li>🎙️ <strong>Call-upload + AI-feedback</strong> (15/mån, 60 min/samtal)</li>
@@ -150,7 +159,7 @@
           <form method="POST" action="/upgrade/checkout" onsubmit="checkoutLoading(this)">
             <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
             <input type="hidden" name="tier" value="pro" />
-            <button type="submit" class="up-checkout-btn" style="background:linear-gradient(135deg,#fbbf24,#f59e0b);color:#0f172a;">Gå Pro →</button>
+            <button type="submit" class="up-checkout-btn" style="background:linear-gradient(135deg,#fbbf24,#f59e0b);color:#0f172a;">🎁 Prova Pro gratis 24h →</button>
           </form>
 
           <p class="up-guarantee" style="color:#fbbf24;">Detta är vad som skiljer "lära sig teori" från "bli bättre på riktigt".</p>

@@ -3456,7 +3456,18 @@ app.get('/upgrade/success', requireLogin, (req, res) => {
   // to this URL and get an unearned premium session for 8 hours.
   const freshUser = findUserById(req.session.userId);
   if (freshUser) req.session.role = freshUser.role;
-  res.render('upgrade-success', { username: req.session.username });
+
+  // Tier-medveten render: Pro-användare ska INTE få "Premium aktiverat"-text.
+  // Trial-aktiv flagga skiljer "🎁 Trial startad" från "✅ Köp slutfört".
+  const isPro = freshUser && freshUser.role === 'pro';
+  const trialActive = isPro && freshUser.pro_trial_end_at && new Date(freshUser.pro_trial_end_at) > new Date();
+
+  res.render('upgrade-success', {
+    username: req.session.username,
+    tier: freshUser ? freshUser.role : 'premium',
+    isPro,
+    trialActive,
+  });
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════

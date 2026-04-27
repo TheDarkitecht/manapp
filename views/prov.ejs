@@ -164,10 +164,14 @@
 
       let nextBtnHtml = '';
       if (passed) {
-        // Efter godkänt prov → sänd användaren till nästa pedagogiska steg (öva med Jocke),
-        // INTE direkt till nästa block. Det är där produkten faktiskt levererar värde.
-        <% if (block.roleplays && block.roleplays.length) { %>
+        // Efter godkänt prov → sänd användaren till nästa pedagogiska steg.
+        // Free-användare har ingen access till rollspel (premium feature) — vilseled inte
+        // genom att lova "Öva med Jocke" och sedan redirect:a till /upgrade. Var ärlig.
+        <% if (block.roleplays && block.roleplays.length && role !== 'free') { %>
           nextBtnHtml += `<a href="/learn/<%= block.id %>/ova" class="next-block-btn">🎭 Nästa: Öva med Jocke →</a>`;
+        <% } else if (block.roleplays && block.roleplays.length && role === 'free') { %>
+          // Free-user: lås upp rollspel = uppgradera
+          nextBtnHtml += `<a href="/upgrade" class="next-block-btn upgrade-next">🔓 Lås upp rollspel — Premium →</a>`;
         <% } else if (nextBlock) { %>
           <% if (role === 'free' && !freeBlockIds.includes(nextBlock.id)) { %>
             nextBtnHtml += `<a href="/upgrade" class="next-block-btn upgrade-next">⭐ Lås upp Block <%= blockIdx + 2 %>: <%= nextBlock.title %> →</a>`;

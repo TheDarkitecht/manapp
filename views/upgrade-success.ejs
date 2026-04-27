@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Välkommen till Premium — Joakim Jaksen</title>
+  <title>Välkommen till <%= isPro ? 'Pro' : 'Premium' %> — Joakim Jaksen</title>
   <meta name="robots" content="noindex" />
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎯</text></svg>" />
   <link rel="stylesheet" href="/style.css" />
@@ -22,38 +22,82 @@
       <div class="us-glow"></div>
 
       <div class="us-icon">🎉</div>
-      <div class="us-badge">⭐ Premium aktiverat</div>
-      <h1><%= username %>, du är inne.</h1>
-      <p class="us-sub">Ditt konto är nu Premium. Du har tillgång till alla 20 block, AI-assistenten Jocke och allt som hjälper dig bli en bättre säljare — från och med nu.</p>
 
-      <!-- Next steps -->
+      <% if (isPro && trialActive) { %>
+        <div class="us-badge" style="background:linear-gradient(135deg,#fbbf24,#f59e0b);color:#0f172a;">🎁 Pro-trial aktiverad</div>
+        <h1><%= username %>, du är inne.</h1>
+        <p class="us-sub">
+          Ditt Pro-trial är igång — du har <strong>24 timmar</strong> att utforska samtalsanalysen. Inget debiteras förrän efter trial. Avbryt när som helst i ditt konto.
+        </p>
+      <% } else if (isPro) { %>
+        <div class="us-badge" style="background:linear-gradient(135deg,#fbbf24,#f59e0b);color:#0f172a;">🎙️ Pro aktiverat</div>
+        <h1><%= username %>, du är inne.</h1>
+        <p class="us-sub">
+          Ditt konto är nu Pro. Du har Premium + samtalsanalys på riktiga kundsamtal — det enda som faktiskt flyttar nålen i längden.
+        </p>
+      <% } else { %>
+        <div class="us-badge">⭐ Premium aktiverat</div>
+        <h1><%= username %>, du är inne.</h1>
+        <p class="us-sub">Ditt konto är nu Premium. Du har tillgång till alla block, AI-assistenten Jocke och allt som hjälper dig bli en bättre säljare — från och med nu.</p>
+      <% } %>
+
+      <!-- Next steps — tier-anpassade -->
       <div class="us-steps">
-        <div class="us-step">
-          <div class="us-step-num">1</div>
-          <div class="us-step-text">
-            <strong>Fortsätt där du slutade</strong>
-            <span>Gå direkt till Block 3 och kör vidare. Alla block är nu öppna.</span>
+        <% if (isPro) { %>
+          <div class="us-step">
+            <div class="us-step-num">1</div>
+            <div class="us-step-text">
+              <strong>Ladda upp ditt första samtal</strong>
+              <span>Spela in ett kundsamtal (mobil/Zoom/Teams), ladda upp, få konkret feedback om ~30 sek. Detta är Pro-funktionen.</span>
+            </div>
           </div>
-        </div>
-        <div class="us-step">
-          <div class="us-step-num">2</div>
-          <div class="us-step-text">
-            <strong>Testa Jocke</strong>
-            <span>Din AI-säljcoach väntar på dig. Öva en invändning, träna ett öppningssamtal — direkt i dashboarden.</span>
+          <div class="us-step">
+            <div class="us-step-num">2</div>
+            <div class="us-step-text">
+              <strong>Träna med Jocke (AI-rollspel)</strong>
+              <span>Obegränsat antal rollspel. Öva invändningar, öppningssamtal, avslut — direkt i dashboarden.</span>
+            </div>
           </div>
-        </div>
-        <div class="us-step">
-          <div class="us-step-num">3</div>
-          <div class="us-step-text">
-            <strong>Kör ett prov per block</strong>
-            <span>Testa dig själv efter varje block. Din progress sparas automatiskt.</span>
+          <div class="us-step">
+            <div class="us-step-num">3</div>
+            <div class="us-step-text">
+              <strong>Gå igenom blocken systematiskt</strong>
+              <span>20+ block med teori, prov och uppdrag. Bygg grunden. Pro-feedback blir bättre när du har strukturen.</span>
+            </div>
           </div>
-        </div>
+        <% } else { %>
+          <div class="us-step">
+            <div class="us-step-num">1</div>
+            <div class="us-step-text">
+              <strong>Fortsätt där du slutade</strong>
+              <span>Alla block är nu öppna. Hoppa direkt in i nästa block i din resa.</span>
+            </div>
+          </div>
+          <div class="us-step">
+            <div class="us-step-num">2</div>
+            <div class="us-step-text">
+              <strong>Testa Jocke</strong>
+              <span>Din AI-säljcoach väntar. Öva en invändning, träna ett öppningssamtal — direkt i dashboarden.</span>
+            </div>
+          </div>
+          <div class="us-step">
+            <div class="us-step-num">3</div>
+            <div class="us-step-text">
+              <strong>Kör ett prov per block</strong>
+              <span>Testa dig själv efter varje block. Din progress sparas automatiskt.</span>
+            </div>
+          </div>
+        <% } %>
       </div>
 
       <div class="us-actions">
-        <a href="/learn" class="us-btn-primary">Börja lära dig nu →</a>
-        <a href="/dashboard" class="us-btn-secondary">Till dashboarden</a>
+        <% if (isPro) { %>
+          <a href="/pro/samtal/ny" class="us-btn-primary">🎙️ Ladda upp första samtalet →</a>
+          <a href="/learn" class="us-btn-secondary">Bläddra block</a>
+        <% } else { %>
+          <a href="/learn" class="us-btn-primary">Börja lära dig nu →</a>
+          <a href="/dashboard" class="us-btn-secondary">Till dashboarden</a>
+        <% } %>
       </div>
 
       <p class="us-fine">Frågor? Kontakta oss på <a href="mailto:info@joakimjaksen.se">info@joakimjaksen.se</a> — vi svarar snabbt.</p>
