@@ -27,7 +27,7 @@ const {
   getAllUsersWithEmail, getUsersForBroadcast,
   saveBroadcast, getBroadcastsForUser, getBroadcastById,
   enqueueEmail, getPendingEmails, markEmailSent, markEmailFailed, cleanupOldEmailQueue,
-  getAdminAnalytics, getUserAnalyticsProfile, getFunnelMetrics, getUserDataExport, getCohortRetention,
+  getAdminAnalytics, getAdminDigestStats, getUserAnalyticsProfile, getFunnelMetrics, getUserDataExport, getCohortRetention,
   getContinueTarget, getBlockTimeAnalytics,
   logPageView, updateLastPageViewDuration, cleanupOldPageViews, flushAnalytics,
   logFunnelEvent, getFunnelStats, getRecentFunnelEvents, backfillRegisterEvents,
@@ -1887,6 +1887,96 @@ app.get('/cron/digest', async (req, res) => {
   }
 
   res.json({ ok: true, dryRun, ...report });
+});
+
+/**
+ * Admin-veckodigest — söndag morgon-mejl till alla admins.
+ * Skyddas med CRON_SECRET så den kan triggas av Railway Cron eller manuellt.
+ *
+ * Trigger: GET /cron/admin-digest?key=<CRON_SECRET>[&dry=1]
+ * - dry=1 → returnera HTML i response istället för att skicka mejl
+ *
+ * Skickar till alla users med role='admin' som har email satt.
+ * Stats hämtas via getAdminDigestStats() — aggregerat över senaste 7 dagar.
+ */
+app.get('/cron/admin-digest', async (req, res) => {
+  const cronSecret = process.env.CRON_SECRET;
+  if (!cronSecret || req.query.key !== cronSecret) {
+    return res.status(403).json({ ok: false, error: 'Invalid cron key' });
+  }
+  const dryRun  = req.query.dry === '1';
+  const baseUrl = process.env.APP_URL || `${req.protocol}://${req.get('host')}`;
+
+  try {
+    const stats  = getAdminDigestStats();
+    const now    = new Date();
+    const start  = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    const fmtDate = (d) => d.toLocaleDateString('sv-SE', { day: 'numeric', month: 'short' });
+    const weekRange = `${fmtDate(start)} – ${fmtDate(now)}`;
+    const mail = emails.buildAdminDigestEmail({ stats, baseUrl, weekRange });
+
+    if (dryRun) {
+      res.setHeader('Content-Type', 'text/html; charset=utf-8');
+      return res.send(`
+        <div style="background:#f1f5f9;padding:1rem;color:#475569;font-family:system-ui;">
+          <strong>DRY RUN — inget skickat.</strong> Ämne: <em>${mail.subject}</em>
+        </div>
+        ${mail.html}
+      `);
+    }
+
+    // Hitta alla admin-konton med email
+    const admins = getAllUsers().filter(u => u.role === 'admin' && u.email);
+    if (!admins.length) return res.json({ ok: true, sent: 0, reason: 'no admin recipients' });
+
+    let sent = 0, failed = 0;
+    for (const admin of admins) {
+      try {
+        await sendEmailReliable({
+          to:      admin.email,
+          subject: mail.subject,
+          html:    mail.html,
+          kind:    'admin_digest',
+        });
+        sent++;
+      } catch (err) {
+        failed++;
+        console.error(`Admin digest failed för ${admin.email}:`, err.message);
+      }
+    }
+    res.json({ ok: true, sent, failed, recipients: admins.length });
+  } catch (err) {
+    console.error('Admin digest job error:', err.message);
+    notifyAdmin('warning', 'Admin digest cron failed', err.message, { error: err.message });
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+/**
+ * Förhandsgranska admin-digest med live data — open in browser för design-check.
+ * Skyddad av requireAdmin. Skickar INGET — bara renderar.
+ */
+app.get('/admin/test-admin-digest', requireLogin, requireAdmin, async (req, res) => {
+  const baseUrl = process.env.APP_URL || `${req.protocol}://${req.get('host')}`;
+  try {
+    const stats = getAdminDigestStats();
+    const now = new Date();
+    const start = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    const fmtDate = (d) => d.toLocaleDateString('sv-SE', { day: 'numeric', month: 'short' });
+    const weekRange = `${fmtDate(start)} – ${fmtDate(now)}`;
+    const mail = emails.buildAdminDigestEmail({ stats, baseUrl, weekRange });
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.send(`
+      <div style="background:#0f172a;padding:1rem;color:#94a3b8;font-family:system-ui;">
+        <strong>PREVIEW — admin-digest med LIVE data.</strong> Inget mejl skickas.<br>
+        Ämne: <em style="color:#a5b4fc;">${mail.subject}</em><br>
+        <a href="?send=1" onclick="return confirm('Skicka riktigt mejl till alla admin-konton?');" style="color:#34d399;">📧 Skicka på riktigt</a>
+      </div>
+      ${mail.html}
+    `);
+  } catch (err) {
+    res.status(500).send(`<pre style="color:#ef4444;padding:2rem;">Error: ${err.message}</pre>`);
+  }
 });
 
 /**

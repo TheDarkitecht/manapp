@@ -428,6 +428,190 @@ function buildTrialEndingSoon({ username, endsAtHuman, hoursLeft, proUrl, cancel
   return emailShell(content, unsubscribeUrl);
 }
 
+/**
+ * Veckodigest-mejl till admin (Joakim) — söndag morgon-uppdatering om
+ * plattformens hälsa. Returnerar { subject, html, text }.
+ *
+ * Designprincip: ingen meta-text, ingen "läsa mer"-byråkrati. Top tre rader
+ * = "vad som hände den här veckan". Resten = djup-data om man vill.
+ */
+function buildAdminDigestEmail({ stats, baseUrl, weekRange }) {
+  const t = stats.totals;
+  const w = stats.weekly;
+  const f = stats.funnel || {};
+  const cohort = f.cohortSize || 0;
+
+  const fmt = (n) => Number(n).toLocaleString('sv-SE');
+  const pct = (a, b) => b > 0 ? Math.round((a / b) * 100) : 0;
+
+  // Funnel-narrativet: hitta största droppoint i veckans cohort
+  let topDrop = null;
+  if (cohort > 0) {
+    const steps = [
+      ['register_completed', 'Registrerade', cohort],
+      ['first_dashboard_visit', 'Besökte dashboard', f.register_completed || cohort],
+      ['first_block_opened', 'Öppnade block', f.first_dashboard_visit || cohort],
+      ['first_quiz_attempted', 'Öppnade prov', f.first_block_opened || cohort],
+      ['first_quiz_passed', 'Klarade prov', f.first_quiz_attempted || cohort],
+      ['first_upgrade_visit', 'Besökte upgrade', f.first_quiz_passed || cohort],
+    ];
+    let maxDrop = 0;
+    for (const [k, label, prev] of steps) {
+      const count = f[k] || 0;
+      const drop = prev - count;
+      if (drop > maxDrop && prev > 0) {
+        maxDrop = drop;
+        topDrop = { from: label, to: k, drop, prev, current: count };
+      }
+    }
+  }
+
+  const alertsBlock = stats.alerts.length ? `
+    <div style="margin:1.5rem 0;padding:1rem 1.25rem;background:rgba(239,68,68,0.1);border-left:3px solid #ef4444;border-radius:6px;">
+      <div style="font-weight:700;color:#ef4444;margin-bottom:0.5rem;">⚠️ Värt att kolla</div>
+      <ul style="margin:0;padding-left:1.25rem;color:#475569;font-size:0.92rem;line-height:1.5;">
+        ${stats.alerts.map(a => `<li>${a}</li>`).join('')}
+      </ul>
+    </div>
+  ` : '';
+
+  const dropBlock = topDrop ? `
+    <p style="color:#475569;font-size:0.92rem;line-height:1.55;margin:0.75rem 0;">
+      <strong>📉 Största drop i veckans kohort:</strong>
+      ${topDrop.from} → ${topDrop.to.replace(/_/g, ' ')}.
+      ${fmt(topDrop.drop)} av ${fmt(topDrop.prev)} (${pct(topDrop.drop, topDrop.prev)}%) tappades här.
+    </p>
+  ` : '';
+
+  const topBlocksBlock = stats.topBlocks && stats.topBlocks.length ? `
+    <p style="color:#475569;font-size:0.92rem;margin:0.75rem 0 0;line-height:1.5;">
+      <strong>🏆 Mest avklarade block:</strong>
+      ${stats.topBlocks.map(b => `${b.block_id} (${b.completions})`).join(' · ')}
+    </p>
+  ` : '';
+
+  const subject = `📊 Veckodigest: ${fmt(w.newUsers)} nya, ${fmt(w.premiumConvs + w.proConvs)} konverteringar, MRR ${fmt(t.mrr)} kr`;
+
+  const html = `
+<!DOCTYPE html>
+<html lang="sv"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#f8fafc;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#1e293b;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f8fafc;padding:32px 16px;">
+  <tr><td align="center">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;background:#fff;border-radius:14px;overflow:hidden;box-shadow:0 4px 24px rgba(15,23,42,0.06);">
+      <tr><td style="padding:24px 28px 12px;">
+        <p style="margin:0 0 4px;color:#94a3b8;font-size:0.78rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;">Veckodigest · ${weekRange}</p>
+        <h1 style="margin:0;color:#0f172a;font-size:1.4rem;font-weight:800;">Plattformens vecka</h1>
+      </td></tr>
+
+      <!-- Headline-siffror -->
+      <tr><td style="padding:8px 28px;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+          <tr>
+            <td style="padding:14px 0;border-bottom:1px solid #f1f5f9;">
+              <div style="display:inline-block;width:60%;vertical-align:top;">
+                <div style="color:#475569;font-size:0.85rem;">Nya users</div>
+                <div style="color:#0f172a;font-size:1.6rem;font-weight:800;">${fmt(w.newUsers)}</div>
+              </div>
+              <div style="display:inline-block;width:35%;vertical-align:top;text-align:right;">
+                <div style="color:#475569;font-size:0.85rem;">Aktiva 7d</div>
+                <div style="color:#0f172a;font-size:1.6rem;font-weight:800;">${fmt(w.activeUsers)}</div>
+              </div>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:14px 0;border-bottom:1px solid #f1f5f9;">
+              <div style="display:inline-block;width:48%;vertical-align:top;">
+                <div style="color:#475569;font-size:0.85rem;">Premium-konv (7d)</div>
+                <div style="color:#0f172a;font-size:1.4rem;font-weight:800;">⭐ ${fmt(w.premiumConvs)}</div>
+              </div>
+              <div style="display:inline-block;width:48%;vertical-align:top;text-align:right;">
+                <div style="color:#475569;font-size:0.85rem;">Pro-konv (7d)</div>
+                <div style="color:#0f172a;font-size:1.4rem;font-weight:800;">🎙️ ${fmt(w.proConvs)}</div>
+              </div>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:14px 0;border-bottom:1px solid #f1f5f9;">
+              <div style="display:inline-block;width:60%;vertical-align:top;">
+                <div style="color:#475569;font-size:0.85rem;">Total MRR-est.</div>
+                <div style="color:#10b981;font-size:1.6rem;font-weight:800;">${fmt(t.mrr)} kr/mån</div>
+              </div>
+              <div style="display:inline-block;width:35%;vertical-align:top;text-align:right;font-size:0.85rem;color:#475569;">
+                <div>${fmt(t.premiumUsers)} Premium</div>
+                <div>${fmt(t.proUsers)} Pro</div>
+                <div>${fmt(t.freeUsers)} Free</div>
+              </div>
+            </td>
+          </tr>
+        </table>
+      </td></tr>
+
+      <!-- Engagement -->
+      <tr><td style="padding:8px 28px 16px;">
+        <h2 style="margin:16px 0 8px;color:#0f172a;font-size:1rem;font-weight:700;">📚 Engagemang denna vecka</h2>
+        <p style="margin:6px 0;color:#475569;font-size:0.92rem;line-height:1.55;">
+          ${fmt(w.quizPasses)} prov klarade ·
+          ${fmt(w.roleplayVisits)} började öva ·
+          ${fmt(w.proCalls)} samtalsanalyser uppladdade
+        </p>
+        ${topBlocksBlock}
+      </td></tr>
+
+      ${cohort > 0 ? `
+      <!-- Funnel-snapshot -->
+      <tr><td style="padding:0 28px 16px;">
+        <h2 style="margin:8px 0;color:#0f172a;font-size:1rem;font-weight:700;">🔍 Veckans kohort (${fmt(cohort)} nya)</h2>
+        ${dropBlock}
+        <p style="margin:0;color:#475569;font-size:0.85rem;">
+          <a href="${baseUrl}/admin/funnel?days=7" style="color:#6366f1;text-decoration:none;">Öppna full funnel-rapport →</a>
+        </p>
+      </td></tr>
+      ` : ''}
+
+      ${alertsBlock ? `<tr><td style="padding:0 28px;">${alertsBlock}</td></tr>` : ''}
+
+      <!-- Quick links -->
+      <tr><td style="padding:0 28px 24px;">
+        <h2 style="margin:16px 0 8px;color:#0f172a;font-size:1rem;font-weight:700;">🛠️ Quick-links</h2>
+        <p style="margin:0;color:#475569;font-size:0.88rem;line-height:1.6;">
+          <a href="${baseUrl}/admin" style="color:#6366f1;text-decoration:none;">Admin-dashboard</a> ·
+          <a href="${baseUrl}/admin/funnel" style="color:#6366f1;text-decoration:none;">Funnel</a> ·
+          <a href="${baseUrl}/admin/analytics" style="color:#6366f1;text-decoration:none;">Analytics</a> ·
+          <a href="${baseUrl}/admin/audit" style="color:#6366f1;text-decoration:none;">Audit-log</a>
+        </p>
+      </td></tr>
+
+      <tr><td style="padding:16px 28px 24px;background:#f8fafc;border-top:1px solid #e2e8f0;">
+        <p style="margin:0;color:#94a3b8;font-size:0.75rem;text-align:center;">
+          Auto-genererat söndag morgon · Plattformen är fortfarande igång
+        </p>
+      </td></tr>
+    </table>
+  </td></tr>
+</table>
+</body></html>`;
+
+  // Plain-text fallback för clienter som inte renderar HTML
+  const text = [
+    `📊 VECKODIGEST · ${weekRange}`,
+    '',
+    `Nya users: ${w.newUsers}`,
+    `Aktiva 7d: ${w.activeUsers}`,
+    `Premium-konv: ${w.premiumConvs}  ·  Pro-konv: ${w.proConvs}`,
+    `MRR-est: ${fmt(t.mrr)} kr/mån (${t.premiumUsers} Premium, ${t.proUsers} Pro, ${t.freeUsers} Free)`,
+    '',
+    `Engagemang: ${w.quizPasses} prov klarade · ${w.roleplayVisits} öva-besök · ${w.proCalls} samtalsanalyser`,
+    '',
+    topDrop ? `Största drop i veckans kohort: ${topDrop.from} → ${topDrop.to}: ${topDrop.drop}/${topDrop.prev} (${pct(topDrop.drop, topDrop.prev)}%) tappade.` : '',
+    stats.alerts.length ? `\n⚠️ Att kolla: ${stats.alerts.join('; ')}` : '',
+    '',
+    `Funnel-rapport: ${baseUrl}/admin/funnel`,
+  ].filter(Boolean).join('\n');
+
+  return { subject, html, text };
+}
+
 module.exports = {
   createUnsubscribeToken,
   verifyUnsubscribeToken,
@@ -435,6 +619,7 @@ module.exports = {
   buildReengagement,
   buildBlockCompletion,
   buildTrialEndingSoon,
+  buildAdminDigestEmail,
   isDigestEligible,
   isReengagementEligible,
 };

@@ -897,6 +897,97 @@ function updateUserName(userId, firstName, lastName) {
   return { ok: true, firstName: clean1, lastName: clean2 };
 }
 
+/**
+ * Veckodigest-stats för admin-mejl. Snapshot av plattformens hälsa senaste
+ * 7 dagar — körs en gång per vecka, aggregerar utan att hamra DB.
+ *
+ * Returnerar { totals, weekly, funnel, queue, topBlocks, alerts }.
+ */
+function getAdminDigestStats() {
+  const run = sql => {
+    const s = db.prepare(sql); s.step();
+    const r = s.getAsObject(); s.free(); return r;
+  };
+  const runRows = (sql, binds = []) => {
+    const s = db.prepare(sql);
+    if (binds.length) s.bind(binds);
+    const rows = [];
+    while (s.step()) rows.push(s.getAsObject());
+    s.free();
+    return rows;
+  };
+
+  // Totals (current state)
+  const totalUsers   = run('SELECT COUNT(*) AS n FROM users').n;
+  const premiumUsers = run("SELECT COUNT(*) AS n FROM users WHERE role = 'premium'").n;
+  const proUsers     = run("SELECT COUNT(*) AS n FROM users WHERE role = 'pro'").n;
+  const freeUsers    = run("SELECT COUNT(*) AS n FROM users WHERE role = 'free'").n;
+
+  // MRR-estimat: 199 × premium + 599 × pro (pro inkl. trials → överestimat
+  // tidigt men korrigerar sig efter 24h när trials konverterar/avslutas)
+  const mrr = (premiumUsers * 199) + (proUsers * 599);
+
+  // Veckans aktivitet (senaste 7 dagar)
+  const weeklyNewUsers       = run("SELECT COUNT(*) AS n FROM users WHERE created_at >= datetime('now', '-7 days')").n;
+  const weeklyActiveUsers    = run("SELECT COUNT(*) AS n FROM users WHERE last_login >= datetime('now', '-7 days')").n;
+  const weeklyPremiumConvs   = run("SELECT COUNT(*) AS n FROM funnel_events WHERE event_name = 'upgrade_completed_premium' AND occurred_at >= datetime('now', '-7 days')").n;
+  const weeklyProConvs       = run("SELECT COUNT(*) AS n FROM funnel_events WHERE event_name = 'upgrade_completed_pro' AND occurred_at >= datetime('now', '-7 days')").n;
+  const weeklyQuizPasses     = run("SELECT COUNT(*) AS n FROM funnel_events WHERE event_name = 'first_quiz_passed' AND occurred_at >= datetime('now', '-7 days')").n;
+  const weeklyRoleplayVisits = run("SELECT COUNT(*) AS n FROM funnel_events WHERE event_name = 'first_roleplay_visit' AND occurred_at >= datetime('now', '-7 days')").n;
+  const weeklyProCalls       = run("SELECT COUNT(*) AS n FROM pro_call_analyses WHERE created_at >= datetime('now', '-7 days')").n;
+
+  // Funnel-snapshot för veckans nya kohort: vart tappar de mest?
+  const cohortIds = runRows("SELECT id FROM users WHERE created_at >= datetime('now', '-7 days')").map(r => r.id);
+  const cohortSize = cohortIds.length;
+  const funnel = { cohortSize };
+  if (cohortIds.length) {
+    const placeholders = cohortIds.map(() => '?').join(',');
+    const events = runRows(
+      `SELECT event_name, COUNT(DISTINCT user_id) AS n FROM funnel_events WHERE user_id IN (${placeholders}) GROUP BY event_name`,
+      cohortIds
+    );
+    for (const e of events) funnel[e.event_name] = e.n;
+  }
+
+  // Email-queue-status — varning om backlog
+  const queuePending = run("SELECT COUNT(*) AS n FROM email_queue WHERE status = 'pending'").n;
+  const queueFailed  = run("SELECT COUNT(*) AS n FROM email_queue WHERE status = 'failed' AND created_at >= datetime('now', '-7 days')").n;
+
+  // Top 3 mest avklarade block senaste 7 dagar
+  const topBlocks = runRows(
+    `SELECT block_id, COUNT(*) AS completions
+     FROM block_progress
+     WHERE completed = 1 AND completed_at >= datetime('now', '-7 days')
+     GROUP BY block_id ORDER BY completions DESC LIMIT 3`
+  );
+
+  // Alerts — saker admin bör titta på
+  const alerts = [];
+  if (queuePending > 20) alerts.push(`Email-kön har ${queuePending} pending-mejl — Resend kan vara nere`);
+  if (queueFailed > 5) alerts.push(`${queueFailed} mejl gav permanent fail senaste veckan — kolla email_queue.last_error`);
+  if (cohortSize > 5 && (funnel.first_block_opened || 0) < cohortSize * 0.5) {
+    alerts.push('Mindre än 50% av nya users öppnar ens ett block — onboarding-friction?');
+  }
+  if (weeklyNewUsers === 0) alerts.push('0 nya users den här veckan — ingen trafik?');
+
+  return {
+    totals: { totalUsers, premiumUsers, proUsers, freeUsers, mrr },
+    weekly: {
+      newUsers:       weeklyNewUsers,
+      activeUsers:    weeklyActiveUsers,
+      premiumConvs:   weeklyPremiumConvs,
+      proConvs:       weeklyProConvs,
+      quizPasses:     weeklyQuizPasses,
+      roleplayVisits: weeklyRoleplayVisits,
+      proCalls:       weeklyProCalls,
+    },
+    funnel,
+    queue: { pending: queuePending, failed: queueFailed },
+    topBlocks,
+    alerts,
+  };
+}
+
 function getUserStats() {
   const run = sql => {
     const s = db.prepare(sql); s.step();
@@ -3506,6 +3597,7 @@ module.exports = {
   enqueueEmail, getPendingEmails, markEmailSent, markEmailFailed, cleanupOldEmailQueue,
   // Admin analytics
   getAdminAnalytics,
+  getAdminDigestStats,
   getUserAnalyticsProfile,
   getFunnelMetrics,
   getUserDataExport,
