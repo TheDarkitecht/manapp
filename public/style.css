@@ -4060,6 +4060,9 @@ body.dash-page {
   .tab-content-wrapper { padding-bottom: 5rem !important; }
   .block-nav-footer  { margin-bottom: 3.5rem !important; }
   .pro-wrap          { padding-bottom: 6rem !important; } /* /pro pages */
+  .ova-wrap          { padding-bottom: 6rem !important; } /* /learn/:id/ova */
+  .rp-wrap           { padding-bottom: 6rem !important; } /* /learn/:id/ova/:rpid */
+  .snabb-wrap, .uppdrag-wrap, .reflektion-wrap { padding-bottom: 6rem !important; }
 
   /* Chat bubble: lift it above the bottom nav */
   .chat-bubble { bottom: 5rem !important; }

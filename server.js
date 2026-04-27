@@ -2606,6 +2606,7 @@ app.get('/account', requireLogin, async (req, res) => {
     nameOk:           req.query.nameOk === '1',
     trialCancelled:   req.query.trialCancelled === '1',
     trialCancelError: req.query.trialCancelError || null,
+    portalError:      req.query.portalError || null,
     invoices,
     csrfToken:        generateCsrfToken(req),
   });
@@ -3871,19 +3872,24 @@ app.post('/billing/portal', requireLogin, blockWhenImpersonating, verifyCsrf, as
   const user    = findUserById(req.session.userId);
   const baseUrl = process.env.APP_URL || `${req.protocol}://${req.get('host')}`;
 
+  // Tidigare: tyst redirect till /dashboard. Nu: tydligt felmeddelande på /account.
   if (!user?.stripe_customer_id) {
-    return res.redirect('/dashboard');
+    return res.redirect('/account?portalError=no_customer');
   }
 
   try {
     const session = await stripe.billingPortal.sessions.create({
       customer:   user.stripe_customer_id,
-      return_url: `${baseUrl}/dashboard`,
+      return_url: `${baseUrl}/account`, // returnera till /account istället för /dashboard
     });
     res.redirect(303, session.url);
   } catch (err) {
     console.error('Billing portal error:', err.message);
-    res.redirect('/dashboard');
+    notifyAdmin('warning', 'Stripe billing portal failed',
+      `User ${user?.username} kunde inte öppna billing portal. Kan blockera cancel/uppdatering av betalning.`,
+      { userId: user?.id, customerId: user?.stripe_customer_id, error: err.message }
+    );
+    res.redirect('/account?portalError=stripe');
   }
 });
 

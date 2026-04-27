@@ -92,8 +92,10 @@
       </div>
     </form>
 
-    <!-- Mark as done -->
-    <form method="POST" action="/learn/<%= block.id %>/ova/<%= roleplay.id %>/klar" class="rp-done-form">
+    <!-- Mark as done — döljs initialt, visas efter 1+ turn så användare inte
+         klickar "klart" innan de tränat något (vilket markerade Steg 2 som
+         klart med 0 övning) -->
+    <form method="POST" action="/learn/<%= block.id %>/ova/<%= roleplay.id %>/klar" class="rp-done-form" id="rpDoneForm" style="display:none;">
       <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
       <input type="hidden" name="turnCount" id="rpTurnCount" value="0" />
       <button type="submit" class="rp-btn-complete">✓ Markera rollspelet som klart</button>
@@ -153,11 +155,17 @@
       const readyPrompt = document.getElementById('rpReadyPrompt');
       const doneHint = document.getElementById('rpDoneHint');
 
+      // Visa "markera klart"-formet först efter att de tränat lite
+      const doneForm = document.getElementById('rpDoneForm');
+
       function updateTurnsUI() {
         if (turnsText) turnsText.textContent = 'Replikrunda ' + turns;
         const target = 10; // 100% = 10 turns
         const pct = Math.min(100, Math.round((turns / target) * 100));
         if (turnsFill) turnsFill.style.width = pct + '%';
+        // Reveal done-form efter första utbytet (turn 1+) — innan dess är det
+        // missvisande att kunna "markera klart" utan att ha skrivit en enda replik
+        if (doneForm && turns >= 1) doneForm.style.display = '';
         // Tips-text per nivå
         if (turnsTip) {
           if (turns === 0) {
@@ -230,8 +238,57 @@
           form.requestSubmit();
         }
       });
+
+      // ── Draft-skydd: spara textarea till localStorage så användaren inte
+      // tappar oavslutad replik vid oavsiktligt page-reload eller back-button.
+      // Auto-save var ~500ms (debounced), rensa när skickad.
+      const DRAFT_KEY = 'rp-draft:' + blockId + ':' + rpId;
+      let saveTimer = null;
+      try {
+        const savedDraft = localStorage.getItem(DRAFT_KEY);
+        if (savedDraft) input.value = savedDraft;
+      } catch(_){}
+      input.addEventListener('input', function() {
+        clearTimeout(saveTimer);
+        saveTimer = setTimeout(() => {
+          try { localStorage.setItem(DRAFT_KEY, input.value); } catch(_){}
+        }, 500);
+      });
+      // Rensa draft när replik skickas (sendMessage töms input → trigga via form-submit-hook)
+      const origSendMessage = window.sendMessage;
+      window.sendMessage = function(text) {
+        try { localStorage.removeItem(DRAFT_KEY); } catch(_){}
+        return origSendMessage(text);
+      };
     })();
   </script>
+
+  <!-- ── Mobile bottom navigation ─────────────────────────────────────────── -->
+  <nav class="app-bottom-nav">
+    <a href="/dashboard" class="app-bottom-nav-item">
+      <span class="abn-icon">🏠</span>
+      <span class="abn-label">Hem</span>
+    </a>
+    <a href="/learn" class="app-bottom-nav-item active">
+      <span class="abn-icon">📚</span>
+      <span class="abn-label">Utbildning</span>
+    </a>
+    <a href="/ordbok" class="app-bottom-nav-item">
+      <span class="abn-icon">📖</span>
+      <span class="abn-label">Ordbok</span>
+    </a>
+    <% if (role === 'free') { %>
+      <a href="/upgrade" class="app-bottom-nav-item abn-upgrade">
+        <span class="abn-icon">⭐</span>
+        <span class="abn-label">Premium</span>
+      </a>
+    <% } else { %>
+      <a href="/logout" class="app-bottom-nav-item">
+        <span class="abn-icon">🚪</span>
+        <span class="abn-label">Logga ut</span>
+      </a>
+    <% } %>
+  </nav>
 
   <script src="/heartbeat.js" defer></script>
 </body>

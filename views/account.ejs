@@ -209,6 +209,17 @@
         Uppdatera betalkort, ladda ner kvitton, pausa eller säg upp —
         allt via Stripes säkra kundportal.
       </p>
+      <% if (typeof portalError !== 'undefined' && portalError) { %>
+        <div role="alert" aria-live="assertive" style="margin-bottom:1rem;padding:0.85rem 1rem;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);border-radius:10px;color:#fca5a5;font-size:0.85rem;line-height:1.5;">
+          <% if (portalError === 'no_customer') { %>
+            ⚠️ Vi hittade ingen Stripe-koppling till ditt konto. Om du nyligen köpte prenumeration kan det ta några minuter — testa om en stund. Annars: mejla <strong>info@joakimjaksen.se</strong>.
+          <% } else if (portalError === 'stripe') { %>
+            ⚠️ Stripe-portalen kunde inte öppnas just nu. Försök igen om en stund eller mejla <strong>info@joakimjaksen.se</strong> — vi hjälper dig manuellt.
+          <% } else { %>
+            ⚠️ Något gick fel med Stripe-portalen. Mejla <strong>info@joakimjaksen.se</strong> så löser vi det.
+          <% } %>
+        </div>
+      <% } %>
       <form method="POST" action="/billing/portal" style="margin:0;">
         <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
         <button type="submit" style="padding:0.75rem 1.25rem;background:rgba(139,92,246,0.12);color:#c4b5fd;border:1px solid rgba(139,92,246,0.3);border-radius:10px;font-weight:600;font-size:0.9rem;cursor:pointer;">

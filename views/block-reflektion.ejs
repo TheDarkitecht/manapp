@@ -95,6 +95,33 @@
 
   </main>
 
+  <!-- ── Mobile bottom navigation ─────────────────────────────────────────── -->
+  <nav class="app-bottom-nav">
+    <a href="/dashboard" class="app-bottom-nav-item">
+      <span class="abn-icon">🏠</span>
+      <span class="abn-label">Hem</span>
+    </a>
+    <a href="/learn" class="app-bottom-nav-item active">
+      <span class="abn-icon">📚</span>
+      <span class="abn-label">Utbildning</span>
+    </a>
+    <a href="/ordbok" class="app-bottom-nav-item">
+      <span class="abn-icon">📖</span>
+      <span class="abn-label">Ordbok</span>
+    </a>
+    <% if (role === 'free') { %>
+      <a href="/upgrade" class="app-bottom-nav-item abn-upgrade">
+        <span class="abn-icon">⭐</span>
+        <span class="abn-label">Premium</span>
+      </a>
+    <% } else { %>
+      <a href="/logout" class="app-bottom-nav-item">
+        <span class="abn-icon">🚪</span>
+        <span class="abn-label">Logga ut</span>
+      </a>
+    <% } %>
+  </nav>
+
   <script src="/heartbeat.js" defer></script>
 </body>
 </html>
