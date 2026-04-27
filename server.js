@@ -2751,6 +2751,14 @@ app.get('/integritetspolicy', (req, res) => {
   });
 });
 
+// /privacy som engelskspråkig alias — samma sida (privacy.ejs är på svenska)
+app.get('/privacy', (req, res) => {
+  res.render('privacy', {
+    username: req.session?.username || null,
+    role:     req.session?.role || null,
+  });
+});
+
 // ── Ordbok ────────────────────────────────────────────────────────────────────
 
 // ── /nyheter — broadcast-arkiv för users ─────────────────────────────────────

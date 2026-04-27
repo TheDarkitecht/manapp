@@ -30,12 +30,13 @@
 
       <h2>1. Vilka uppgifter samlar vi in?</h2>
       <ul>
-        <li><strong>Kontouppgifter</strong> — användarnamn, e-postadress, lösenord (krypterat med bcrypt, aldrig i klartext)</li>
+        <li><strong>Kontouppgifter</strong> — för- och efternamn, användarnamn, e-postadress, lösenord (krypterat med bcrypt, aldrig i klartext)</li>
         <li><strong>GDPR-samtycke</strong> — tidpunkt och att samtycke givits</li>
-        <li><strong>Aktivitetsdata</strong> — quizresultat och avklarade block (kopplat till ditt konto)</li>
-        <li><strong>Anteckningar</strong> — sådant du själv skriver in på plattformen</li>
-        <li><strong>Betalningsinformation</strong> — hanteras uteslutande av Stripe. Vi lagrar aldrig kortuppgifter.</li>
-        <li><strong>Tekniska loggdata</strong> — IP-adress och timestamp vid inloggning (för säkerhet och missbruksskydd)</li>
+        <li><strong>Aktivitetsdata</strong> — quizresultat, avklarade block, rollspels-genomföranden, reflektioner och anteckningar du skriver (kopplat till ditt konto)</li>
+        <li><strong>Användningsstatistik</strong> — vilka sidor i appen du besöker och tidpunkter, för att förbättra plattformen och se var användare kör fast (lagras server-side, ingen cookie)</li>
+        <li><strong>Pro-tier samtalsanalys</strong> — om du laddar upp ljudfiler för analys: ljudfilen raderas efter transkribering, endast textversionen sparas på ditt konto. Du kan radera samtalsanalyser när som helst.</li>
+        <li><strong>Betalningsinformation</strong> — hanteras uteslutande av Stripe. Vi lagrar aldrig kortuppgifter, bara Stripe customer ID + faktureringshistorik.</li>
+        <li><strong>Tekniska loggdata</strong> — IP-adress (anonymiserad till /24-prefix vid lagring) och timestamp vid inloggning, för säkerhet och missbruksskydd</li>
       </ul>
 
       <h2>2. Varför behandlar vi dina uppgifter?</h2>
@@ -44,7 +45,9 @@
         <tbody>
           <tr><td>Tillhandahålla plattformen och ditt konto</td><td>Avtal (GDPR art. 6.1.b)</td></tr>
           <tr><td>Behandla betalningar via Stripe</td><td>Avtal (GDPR art. 6.1.b)</td></tr>
-          <tr><td>Skicka transaktionsmejl (välkomst, lösenordsåterställning)</td><td>Berättigat intresse (GDPR art. 6.1.f)</td></tr>
+          <tr><td>Skicka transaktionsmejl (välkomst, lösenordsåterställning, kvitton)</td><td>Avtal (GDPR art. 6.1.b)</td></tr>
+          <tr><td>Pedagogiska påminnelse-mejl (block-progress, veckodigest, re-engagement)</td><td>Berättigat intresse (GDPR art. 6.1.f) — kan opt-out:as när som helst</td></tr>
+          <tr><td>Förbättra plattformen via aktivitets- och funnel-statistik</td><td>Berättigat intresse (GDPR art. 6.1.f)</td></tr>
           <tr><td>Missbruksskydd och säkerhet</td><td>Berättigat intresse (GDPR art. 6.1.f)</td></tr>
           <tr><td>GDPR-dokumentation</td><td>Rättslig förpliktelse (GDPR art. 6.1.c)</td></tr>
         </tbody>
@@ -74,11 +77,29 @@
       </ul>
 
       <h2>6. Cookies</h2>
-      <p>Vi använder en session-cookie (HttpOnly, Secure) för att hålla dig inloggad. Den raderas när webbläsaren stängs eller efter 8 timmar. Vi sätter inga spårningscookies eller annons-cookies utan ditt samtycke.</p>
+      <p>Vi använder en <strong>session-cookie</strong> (HttpOnly, Secure, SameSite=Lax) för att hålla dig inloggad — den är "strictly necessary" enligt ePrivacy-direktivet och kräver inte ditt samtycke. Den raderas när webbläsaren stängs eller efter 8 timmar inaktivitet.</p>
+      <p>Vi sätter <strong>inga</strong> spårningscookies, annons-cookies eller tredjepartscookies. Vår användningsstatistik (se §1) lagras server-side, kopplad till ditt konto — ingen cookie skickas till annan part.</p>
 
-      <h2>7. Kontakt</h2>
-      <p>Vid frågor om din data: kontakta oss via plattformens support.<br>
-      <strong>Brilliant Values Global AB</strong> — organisationsnummer: 559023-2624</p>
+      <h2>7. Mejl-utskick och opt-out</h2>
+      <p>Vi skickar två kategorier av mejl:</p>
+      <ul>
+        <li><strong>Transaktionsmejl</strong> — välkomstmejl, lösenordsåterställning, kvitton, trial-påminnelser. Dessa kan inte stängas av eftersom de är nödvändiga för tjänsten.</li>
+        <li><strong>Pedagogiska påminnelse-mejl</strong> — t.ex. "🎯 Du klarade Block X", veckodigest, re-engagement efter inaktivitet. Skickas under berättigat intresse (GDPR art. 6.1.f). <strong>Du kan stänga av dessa när som helst</strong> via:
+          <ul>
+            <li>Länken "Avregistrera" längst ner i varje mejl, eller</li>
+            <li>Inställningar → mejl-preferenser i ditt konto</li>
+          </ul>
+        </li>
+      </ul>
+      <p>Vi skickar <strong>aldrig</strong> mejl med tredjeparts marknadsföring eller säljer/delar din e-postadress.</p>
+
+      <h2>8. Kontakt</h2>
+      <p>Vid frågor om din data, för att utöva dina GDPR-rättigheter, eller för att klaga: kontakta oss via plattformens support eller mejla <strong>info@joakimjaksen.se</strong>.</p>
+      <p><strong>Personuppgiftsansvarig:</strong><br>
+      Brilliant Values Global AB<br>
+      Organisationsnummer: 559023-2624<br>
+      Sverige</p>
+      <p>Du kan också vända dig till tillsynsmyndigheten <a href="https://www.imy.se" target="_blank" rel="noopener">Integritetsskyddsmyndigheten (IMY)</a> om du anser att vi inte hanterar dina uppgifter korrekt.</p>
 
     </div>
   </div>

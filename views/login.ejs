@@ -107,8 +107,10 @@
           <label class="gdpr-label">
             <input type="checkbox" name="gdpr" value="1" required />
             <span>
-              Jag godkänner att mina uppgifter (namn, e-post och lösenord i krypterad form) lagras och behandlas i enlighet med
-              <button type="button" class="link-btn" onclick="openPrivacy()">integritetspolicyn</button>.
+              Jag godkänner att mina uppgifter behandlas enligt
+              <button type="button" class="link-btn" onclick="openPrivacy()">integritetspolicyn</button>
+              och accepterar
+              <a href="/terms" target="_blank" rel="noopener" class="link-btn" style="text-decoration:underline;">användarvillkoren</a>.
             </span>
           </label>
 
@@ -132,30 +134,41 @@
         <button class="modal-close-btn" aria-label="Stäng integritetspolicy">✕</button>
       </div>
       <div class="privacy-body">
-        <p><strong>Senast uppdaterad:</strong> April 2026</p>
+        <p><strong>Senast uppdaterad:</strong> April 2026 · Personuppgiftsansvarig: Brilliant Values Global AB (org.nr 559023-2624)</p>
 
         <h4>Vilka uppgifter samlar vi in?</h4>
-        <p>Vi samlar in ditt <strong>förnamn</strong> och <strong>efternamn</strong> (för personlig kommunikation), din <strong>e-postadress</strong> och ditt <strong>lösenord i krypterad form</strong> (vi lagrar aldrig ditt lösenord i klartext). Vi sparar även tidpunkten för din registrering och ditt GDPR-godkännande.</p>
-
-        <h4>Varför samlar vi in uppgifterna?</h4>
-        <p>Uppgifterna används uteslutande för att ge dig tillgång till plattformen, skicka relevant kommunikation om ditt konto och förbättra tjänsten.</p>
-
-        <h4>Hur länge sparas uppgifterna?</h4>
-        <p>Dina uppgifter sparas så länge ditt konto är aktivt. Du kan när som helst begära att ditt konto raderas.</p>
-
-        <h4>Delar vi dina uppgifter?</h4>
-        <p>Nej. Vi delar inte dina personuppgifter med tredje part i marknadsföringssyfte.</p>
-
-        <h4>Dina rättigheter (GDPR)</h4>
         <ul>
-          <li>Rätt till tillgång — begär en kopia av dina uppgifter</li>
-          <li>Rätt till rättelse — begär att felaktiga uppgifter korrigeras</li>
-          <li>Rätt till radering — begär att ditt konto och uppgifter raderas</li>
-          <li>Rätt att återkalla samtycke — kontakta oss så raderar vi ditt konto</li>
+          <li><strong>Kontouppgifter</strong> — för- och efternamn, e-post, krypterat lösenord (bcrypt — aldrig i klartext)</li>
+          <li><strong>Aktivitetsdata</strong> — quizresultat, avklarade block, rollspel, anteckningar du själv skriver</li>
+          <li><strong>Användningsstatistik</strong> — sidor du besöker, för att förbättra plattformen (server-side, ingen cookie)</li>
+          <li><strong>Pro-tier samtal</strong> — om du laddar upp ljud: filen raderas efter transkribering, endast text sparas</li>
+          <li><strong>Tekniska loggdata</strong> — IP (anonymiserad till /24) + tidsstämpel, för säkerhet</li>
         </ul>
 
-        <h4>Kontakt</h4>
-        <p>Vid frågor om din data — kontakta oss via plattformens support.</p>
+        <h4>Varför + rättslig grund</h4>
+        <p>Avtal (kontot, betalning), berättigat intresse (säkerhet, plattformsförbättring, pedagogiska påminnelse-mejl), rättslig förpliktelse (GDPR-dokumentation).</p>
+
+        <h4>Mejl-utskick</h4>
+        <p>Transaktionsmejl (välkomst, lösenord, kvitton) kan inte stängas av. Pedagogiska påminnelser (block-progress, veckodigest) kan opt-out:as när som helst via länk i mejlet eller i ditt konto. Vi delar <strong>aldrig</strong> din e-post med tredje part.</p>
+
+        <h4>Cookies</h4>
+        <p>Endast en strictly-necessary session-cookie (HttpOnly, Secure) för inloggning. Inga spårnings-, annons- eller tredjepartscookies.</p>
+
+        <h4>Tredjepartsleverantörer</h4>
+        <p>Stripe (betalning), Resend (mejl), Cloudflare Turnstile (CAPTCHA), Cloudflare R2 (offsite-backup), Railway (hosting), Groq (AI). Alla med GDPR-DPA på plats.</p>
+
+        <h4>Dina GDPR-rättigheter</h4>
+        <ul>
+          <li>Tillgång — begär kopia av dina uppgifter</li>
+          <li>Rättelse — begär korrigering</li>
+          <li>Radering — radera ditt konto direkt i appen (Inställningar → Radera konto)</li>
+          <li>Dataportabilitet — exportera din data som JSON i appen</li>
+          <li>Invändning, återkalla samtycke, klagomål till IMY (imy.se)</li>
+        </ul>
+
+        <p style="margin-top:1rem;"><strong>Fullständig integritetspolicy:</strong> <a href="/privacy" target="_blank" rel="noopener">öppna i ny flik</a> · <strong>Användarvillkor:</strong> <a href="/terms" target="_blank" rel="noopener">öppna i ny flik</a></p>
+
+        <p style="font-size:0.85rem;color:#94a3b8;">Frågor: <a href="mailto:info@joakimjaksen.se">info@joakimjaksen.se</a></p>
       </div>
     </div>
   </div>
