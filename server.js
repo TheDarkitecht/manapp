@@ -30,6 +30,7 @@ const {
   getAdminAnalytics, getUserAnalyticsProfile, getFunnelMetrics, getUserDataExport, getCohortRetention,
   getContinueTarget, getBlockTimeAnalytics,
   logPageView, updateLastPageViewDuration, cleanupOldPageViews, flushAnalytics,
+  logFunnelEvent, getFunnelStats, getRecentFunnelEvents, backfillRegisterEvents,
   sessionGet, sessionSet, sessionDestroy, sessionCleanupExpired,
   isStripeEventProcessed, markStripeEventProcessed, cleanupOldStripeEvents,
   getAdminNotesForUser, addAdminNote, deleteAdminNote,
@@ -261,6 +262,10 @@ app.post('/webhook', express.raw({ type: 'application/json' }), async (req, res)
       // Store Stripe customer ID for future webhook lookups
       if (sess.customer) setStripeCustomerId(userId, sess.customer);
       console.log(`✅ User ${userId} upgraded to ${tier}`);
+
+      // Funnel: upgrade slutförd — pengar har faktiskt rört sig (eller trial startad).
+      // Per tier eftersom premium- och pro-konvertering är separata processer.
+      logFunnelEvent(userId, 'upgrade_completed_' + tier, { tier });
 
       // ── Pro-trial-tracking: om detta var en Pro-subscription med trial,
       // fetch:a subscriptionen för att få trial_end-timestamp.
@@ -1015,6 +1020,9 @@ app.post('/register', registerLimiter, async (req, res) => {
     return res.render('login', { error: null, success: null, turnstileSiteKey: TURNSTILE_SITE_KEY,
       registerError: result.error });
 
+  // Funnel: registrering klar (kohort-startpunkt)
+  logFunnelEvent(result.userId, 'register_completed');
+
   // ── Referral-spårning: om sessionen har en pending ref, associera nu ──────
   try {
     const pendingRef = req.session.pendingReferralCode;
@@ -1182,6 +1190,9 @@ app.post('/reset-password/:token', verifyCsrf, async (req, res) => {
 // ── Dashboard ─────────────────────────────────────────────────────────────────
 
 app.get('/dashboard', requireLogin, (req, res) => {
+  // Funnel: första dashboard-besök (idempotent — INSERT OR IGNORE)
+  logFunnelEvent(req.session.userId, 'first_dashboard_visit');
+
   const notes       = getNotesByUserId(req.session.userId);
   const progress    = getBlockProgress(req.session.userId);
   const completed   = getCompletedBlockCount(req.session.userId);
@@ -1406,6 +1417,10 @@ app.get('/learn/:id', requireLogin, (req, res) => {
   const hasAccess  = isPremiumOrHigher(req.session.role);
   const isTeaser   = isPremium && !hasAccess;
 
+  // Funnel: första block-öppning (oavsett vilket block). Inkluderar teaser-besök
+  // — det är fortfarande en aktivering signal ("användaren utforskar content").
+  logFunnelEvent(req.session.userId, 'first_block_opened', { blockId: block.id, isTeaser });
+
   const progress   = getBlockProgress(req.session.userId);
   const blockProg  = progress[block.id] || {};
 
@@ -1466,6 +1481,10 @@ app.get('/learn/:id/prov', requireLogin, (req, res) => {
   const block = resolveBlock(req, res);
   if (!block) return;
   if (!block.quiz || !block.quiz.length) return res.redirect('/learn/' + block.id);
+
+  // Funnel: första prov-besök
+  logFunnelEvent(req.session.userId, 'first_quiz_attempted', { blockId: block.id });
+
   const journey = getJourneyStatus(req.session.userId, block.id);
   res.render('prov', {
     username:     req.session.username,
@@ -1509,6 +1528,10 @@ app.get('/learn/:id/snabb', requireLogin, (req, res) => {
 app.get('/learn/:id/ova', requireLogin, (req, res) => {
   const block = resolveBlock(req, res, { requiresPremium: true });
   if (!block) return;
+
+  // Funnel: första rollspels-besök — premium killer feature engagement
+  logFunnelEvent(req.session.userId, 'first_roleplay_visit', { blockId: block.id });
+
   const journey  = getJourneyStatus(req.session.userId, block.id);
   const history  = getRoleplaysForBlock(req.session.userId, block.id);
   const completedIds = new Set(history.map(h => h.roleplay_id));
@@ -1648,6 +1671,13 @@ app.post('/quiz-result', requireLogin, quizLimiter, verifyCsrf, async (req, res)
   if (!hasAccess) return res.json({ ok: false });
 
   const result = saveQuizResult(req.session.userId, blockId, scoreNum, totalNum);
+
+  // Funnel: första gången användaren passar (>=60%) ett quiz — central aktivering
+  // (visar att de inte bara öppnat material utan faktiskt absorberat det)
+  if (scoreNum / totalNum >= 0.6) {
+    logFunnelEvent(req.session.userId, 'first_quiz_passed', { blockId, score: scoreNum, total: totalNum });
+  }
+
   // Svara direkt — mail triggas fire-and-forget så användaren inte väntar
   res.json({ ok: true });
 
@@ -2763,6 +2793,67 @@ app.get('/admin', requireLogin, requireAdmin, (req, res) => {
 const analyticsCache = { data: null, fetchedAt: 0 };
 const ANALYTICS_CACHE_TTL_MS = 60 * 1000;
 
+// ── Funnel-rapport: aktivering + konvertering per kohort ────────────────────
+// Visar var i funneln användare droppar av — register → dashboard → block →
+// quiz → upgrade. Kohort:as på registreringsdatum (default senaste 30 dagar).
+app.get('/admin/funnel', requireLogin, requireAdmin, (req, res) => {
+  const days = Math.min(Math.max(parseInt(req.query.days) || 30, 1), 365);
+  const stats = getFunnelStats({ days });
+  const recent = getRecentFunnelEvents(40);
+
+  // Hjälpare: bygg rad med count + procent mot total + drop sedan föregående steg
+  function row(key, label, icon, prevCount) {
+    const count = stats.events[key] || 0;
+    const pctOfTotal = stats.totalRegistered > 0 ? Math.round((count / stats.totalRegistered) * 1000) / 10 : 0;
+    const pctOfPrev  = prevCount > 0 ? Math.round((count / prevCount) * 1000) / 10 : 0;
+    const drop       = Math.max(0, prevCount - count);
+    return { key, label, icon, count, pctOfTotal, pctOfPrev, drop, prevCount };
+  }
+
+  // Aktivering: strikt linjär progression från registrering → engagemang
+  const activation = [];
+  let prev = stats.totalRegistered;
+  const actDefs = [
+    ['register_completed',     'Registrerade',         '📝'],
+    ['first_dashboard_visit',  'Besökte dashboard',    '🏠'],
+    ['first_block_opened',     'Öppnade ett block',    '📚'],
+    ['first_quiz_attempted',   'Försökte sig på prov', '🧠'],
+    ['first_quiz_passed',      'Klarade prov (≥60%)',  '✅'],
+    ['first_roleplay_visit',   'Besökte rollspel',     '🎭'],
+    ['first_upgrade_visit',    'Besökte /upgrade',     '👀'],
+  ];
+  for (const [k, l, i] of actDefs) {
+    const r = row(k, l, i, prev);
+    activation.push(r);
+    prev = r.count;
+  }
+
+  // Konvertering Premium: branch från upgrade-visit → klick → slutförd
+  const upgradeVisitCount = stats.events['first_upgrade_visit'] || 0;
+  const conversionPremium = [
+    row('first_upgrade_visit',       'Besökte /upgrade',           '👀', stats.totalRegistered),
+    row('upgrade_clicked_premium',   'Klickade köp Premium',       '💳', upgradeVisitCount),
+    row('upgrade_completed_premium', 'Premium-konvertering',       '⭐', stats.events['upgrade_clicked_premium'] || 0),
+  ];
+
+  // Konvertering Pro: branch från upgrade-visit → klick → slutförd (24h-trial)
+  const conversionPro = [
+    row('first_upgrade_visit',     'Besökte /upgrade',           '👀', stats.totalRegistered),
+    row('upgrade_clicked_pro',     'Klickade köp Pro',           '⚡', upgradeVisitCount),
+    row('upgrade_completed_pro',   'Pro-konvertering (trial)',   '🎯', stats.events['upgrade_clicked_pro'] || 0),
+  ];
+
+  res.render('admin-funnel', {
+    username: req.session.username,
+    days,
+    stats,
+    activation,
+    conversionPremium,
+    conversionPro,
+    recent,
+  });
+});
+
 app.get('/admin/analytics', requireLogin, requireAdmin, (req, res) => {
   const now = Date.now();
   let analytics, funnel, cohorts;
@@ -3262,6 +3353,8 @@ app.get('/upgrade', requireLogin, (req, res) => {
   if (isPremiumOrHigher(req.session.role)) {
     return res.redirect('/dashboard');
   }
+  // Funnel: första /upgrade-besök — visar att användaren övervägt köp
+  logFunnelEvent(req.session.userId, 'first_upgrade_visit');
   res.render('upgrade', {
     username:  req.session.username,
     role:      req.session.role,
@@ -3276,6 +3369,10 @@ app.post('/upgrade/checkout', requireLogin, blockWhenImpersonating, verifyCsrf, 
   // Hindra duplicerad checkout
   if (targetTier === 'premium' && isPremiumOrHigher(currentRole)) return res.redirect('/dashboard');
   if (targetTier === 'pro' && isProOrHigher(currentRole)) return res.redirect('/dashboard');
+
+  // Funnel: upgrade-klick — användaren har faktiskt klickat "köp X"-knappen.
+  // Mätning per tier eftersom premium- och pro-funnel är olika historier.
+  logFunnelEvent(req.session.userId, 'upgrade_clicked_' + targetTier, { tier: targetTier });
 
   // Pro-trial: env-var-styrd. TRIAL_DAYS_PRO=1 → 24h gratis.
   // Sätt till 0 för att stänga av trial helt.
@@ -3860,6 +3957,13 @@ app.use((err, req, res, _next) => {
 
 async function startServer() {
   await initDatabase();
+
+  // Backfill funnel-events: register_completed för alla befintliga users.
+  // Idempotent (INSERT OR IGNORE) — säker att köra varje startup. Använder
+  // users.created_at som timestamp (vi vet exakt när de registrerade sig).
+  // Andra events backfill:as INTE — vi har inte exakta timestamps för
+  // dashboard/block/quiz historiskt och vill inte ljuga om data.
+  try { backfillRegisterEvents(); } catch (err) { console.error('backfillRegisterEvents error:', err.message); }
 
   // ── Production security checks ─────────────────────────────────────────────
   if (isProd) {

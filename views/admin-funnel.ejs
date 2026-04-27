@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin — Funnel</title>
+  <meta name="robots" content="noindex" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📊</text></svg>" />
+  <link rel="stylesheet" href="/style.css" />
+  <style>
+    .fn-wrap { max-width: 1100px; margin: 0 auto; padding: 2rem 1.25rem 4rem; }
+    .fn-nav { display:flex;gap:0.5rem;margin-bottom:1.5rem;font-size:0.9rem;flex-wrap:wrap; }
+    .fn-nav a {
+      padding: 0.5rem 1rem; background: rgba(255,255,255,0.04); color: #cbd5e1;
+      text-decoration: none; border-radius: 8px; border: 1px solid rgba(255,255,255,0.08);
+    }
+    .fn-nav a:hover { border-color: rgba(99,102,241,0.4); color: #f1f5f9; }
+
+    .fn-header { margin-bottom: 1.5rem; }
+    .fn-header h1 { color:#f1f5f9;margin:0 0 0.4rem;font-size:1.5rem; }
+    .fn-header p { color:#94a3b8;margin:0;line-height:1.55;font-size:0.9rem; }
+
+    .fn-window {
+      display:inline-flex;gap:0.4rem;flex-wrap:wrap;margin-bottom:1.5rem;
+      background: rgba(255,255,255,0.04);
+      padding:0.4rem;border-radius:10px;border:1px solid rgba(255,255,255,0.08);
+    }
+    .fn-window a {
+      padding: 0.45rem 0.9rem;border-radius:7px;color:#94a3b8;text-decoration:none;font-size:0.85rem;font-weight:600;
+    }
+    .fn-window a.active { background: rgba(99,102,241,0.2); color:#a5b4fc; }
+    .fn-window a:hover { color:#f1f5f9; }
+
+    .fn-cohort-banner {
+      padding: 1rem 1.25rem; background: rgba(99,102,241,0.08);
+      border:1px solid rgba(99,102,241,0.25); border-radius:10px;
+      margin-bottom: 1.5rem; color:#cbd5e1;font-size:0.9rem;line-height:1.5;
+    }
+    .fn-cohort-banner strong { color:#a5b4fc; font-size:1.1rem; }
+
+    .fn-section {
+      background: rgba(255,255,255,0.025); border:1px solid rgba(255,255,255,0.06);
+      border-radius:14px; padding:1.5rem; margin-bottom:1.5rem;
+    }
+    .fn-section h2 {
+      color:#f1f5f9;font-size:1.1rem;margin:0 0 0.4rem;font-weight:700;
+    }
+    .fn-section .section-desc { color:#94a3b8;font-size:0.85rem;margin:0 0 1.25rem; }
+
+    .fn-table { width:100%;border-collapse:collapse;font-size:0.9rem; }
+    .fn-table th, .fn-table td { padding:0.7rem 0.75rem;text-align:left;border-bottom:1px solid rgba(255,255,255,0.06); }
+    .fn-table th { color:#64748b;font-weight:600;font-size:0.78rem;text-transform:uppercase;letter-spacing:0.05em; }
+    .fn-table td { color:#cbd5e1; }
+    .fn-table tr:last-child td { border-bottom:none; }
+    .fn-table .fn-step-icon { font-size:1.1rem; }
+    .fn-table .fn-step-label { color:#e2e8f0;font-weight:600; }
+    .fn-table .fn-count { color:#f1f5f9;font-weight:700;font-size:1rem; }
+    .fn-table .fn-pct { color:#94a3b8;font-variant-numeric:tabular-nums; }
+    .fn-table .fn-drop { color:#fb7185;font-size:0.8rem; }
+    .fn-table .fn-drop.high { color:#ef4444;font-weight:700; }
+    .fn-table .fn-drop.zero { color:#10b981; }
+
+    .fn-bar { display:inline-block;height:6px;background:rgba(255,255,255,0.08);border-radius:3px;width:80px;overflow:hidden;vertical-align:middle;margin-right:0.5rem; }
+    .fn-bar-fill { height:100%;background:linear-gradient(90deg,#6366f1,#8b5cf6);transition:width 0.3s; }
+
+    .fn-recent { font-size:0.82rem;color:#94a3b8; }
+    .fn-recent table { width:100%;border-collapse:collapse; }
+    .fn-recent td, .fn-recent th { padding:0.5rem 0.6rem;border-bottom:1px solid rgba(255,255,255,0.05); }
+    .fn-recent th { font-weight:600;color:#64748b;font-size:0.72rem;text-transform:uppercase;letter-spacing:0.05em; }
+    .fn-recent code { background:rgba(99,102,241,0.1);color:#a5b4fc;padding:0.15rem 0.45rem;border-radius:4px;font-size:0.78rem; }
+
+    .fn-empty { color:#475569;font-style:italic;padding:1.5rem;text-align:center;font-size:0.88rem; }
+
+    @media (max-width: 640px) {
+      .fn-wrap { padding: 1.5rem 1rem 4rem; }
+      .fn-section { padding: 1.25rem 1rem; }
+      .fn-table th, .fn-table td { padding:0.5rem 0.4rem;font-size:0.82rem; }
+      .fn-bar { display:none; } /* spara plats på smala skärmar */
+    }
+  </style>
+</head>
+<body class="dash-page">
+
+<a href="#main" class="skip-to-main">Hoppa till innehåll</a>
+
+<main id="main" class="fn-wrap">
+  <nav class="fn-nav">
+    <a href="/admin">← Admin</a>
+    <a href="/admin/analytics">📈 Analytics</a>
+    <a href="/admin/audit">📋 Audit-log</a>
+    <a href="/admin/funnel" style="background:rgba(99,102,241,0.15);color:#a5b4fc;border-color:rgba(99,102,241,0.4);">📊 Funnel</a>
+  </nav>
+
+  <header class="fn-header">
+    <h1>📊 Funnel-rapport</h1>
+    <p>Var i flödet droppar användare av? Kohort:as på registreringsdatum (senaste <strong><%= days %></strong> dagar). Eventen fångar förstagångs-handling per användare — INSERT OR IGNORE-semantik.</p>
+  </header>
+
+  <div class="fn-window" role="group" aria-label="Tidsfönster">
+    <% [7, 30, 90, 365].forEach(function(d) { %>
+      <a href="/admin/funnel?days=<%= d %>" class="<%= days === d ? 'active' : '' %>"><%= d %> dagar</a>
+    <% }); %>
+  </div>
+
+  <div class="fn-cohort-banner">
+    <strong><%= stats.totalRegistered %></strong> användare registrerade sig de senaste <%= days %> dagarna.
+    <% if (stats.totalRegistered === 0) { %>
+      <br><span style="color:#94a3b8;font-size:0.82rem;">Ingen kohort att analysera. Vänta på trafik eller bredda fönstret.</span>
+    <% } %>
+  </div>
+
+  <!-- ─── AKTIVERINGS-FUNNEL ─────────────────────────────────────────── -->
+  <section class="fn-section">
+    <h2>🚀 Aktiverings-funnel</h2>
+    <p class="section-desc">Linjär progression från registrering till upgrade-intent. "Drop" = användare som inte tagit nästa steg.</p>
+
+    <% if (stats.totalRegistered === 0) { %>
+      <div class="fn-empty">Inga registreringar i fönstret.</div>
+    <% } else { %>
+      <table class="fn-table">
+        <thead>
+          <tr>
+            <th></th>
+            <th>Steg</th>
+            <th>Antal</th>
+            <th>% av kohort</th>
+            <th>% från föregående</th>
+            <th>Drop</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% activation.forEach(function(s) { %>
+            <tr>
+              <td><span class="fn-step-icon"><%= s.icon %></span></td>
+              <td class="fn-step-label"><%= s.label %></td>
+              <td class="fn-count"><%= s.count %></td>
+              <td class="fn-pct">
+                <span class="fn-bar"><span class="fn-bar-fill" style="width:<%= s.pctOfTotal %>%;"></span></span>
+                <%= s.pctOfTotal %>%
+              </td>
+              <td class="fn-pct"><%= s.pctOfPrev %>%</td>
+              <td class="fn-drop <%= s.drop > s.prevCount * 0.5 && s.prevCount > 5 ? 'high' : (s.drop === 0 ? 'zero' : '') %>">
+                <% if (s.drop === 0 && s.prevCount > 0) { %>±0<% } else { %>−<%= s.drop %><% } %>
+              </td>
+            </tr>
+          <% }); %>
+        </tbody>
+      </table>
+    <% } %>
+  </section>
+
+  <!-- ─── KONVERTERING PREMIUM ───────────────────────────────────────── -->
+  <section class="fn-section">
+    <h2>⭐ Konvertering — Premium (199 kr/mån)</h2>
+    <p class="section-desc">Från /upgrade-besök till slutförd köp. Branchar från Aktiverings-funnel-steg 7.</p>
+
+    <% if (stats.totalRegistered === 0) { %>
+      <div class="fn-empty">Inga registreringar i fönstret.</div>
+    <% } else { %>
+      <table class="fn-table">
+        <thead>
+          <tr><th></th><th>Steg</th><th>Antal</th><th>% av kohort</th><th>% från föregående</th><th>Drop</th></tr>
+        </thead>
+        <tbody>
+          <% conversionPremium.forEach(function(s) { %>
+            <tr>
+              <td><span class="fn-step-icon"><%= s.icon %></span></td>
+              <td class="fn-step-label"><%= s.label %></td>
+              <td class="fn-count"><%= s.count %></td>
+              <td class="fn-pct">
+                <span class="fn-bar"><span class="fn-bar-fill" style="width:<%= s.pctOfTotal %>%;"></span></span>
+                <%= s.pctOfTotal %>%
+              </td>
+              <td class="fn-pct"><%= s.pctOfPrev %>%</td>
+              <td class="fn-drop <%= s.drop > s.prevCount * 0.5 && s.prevCount > 5 ? 'high' : (s.drop === 0 ? 'zero' : '') %>">
+                <% if (s.drop === 0 && s.prevCount > 0) { %>±0<% } else { %>−<%= s.drop %><% } %>
+              </td>
+            </tr>
+          <% }); %>
+        </tbody>
+      </table>
+    <% } %>
+  </section>
+
+  <!-- ─── KONVERTERING PRO ───────────────────────────────────────────── -->
+  <section class="fn-section">
+    <h2>🎯 Konvertering — Pro (599 kr/mån, 24h trial)</h2>
+    <p class="section-desc">Från /upgrade-besök till påbörjad Pro-trial. "upgrade_completed_pro" inkluderar trials som inte avslutats än — separat trial-konvertering kan adderas senare när vi har fler datapunkter.</p>
+
+    <% if (stats.totalRegistered === 0) { %>
+      <div class="fn-empty">Inga registreringar i fönstret.</div>
+    <% } else { %>
+      <table class="fn-table">
+        <thead>
+          <tr><th></th><th>Steg</th><th>Antal</th><th>% av kohort</th><th>% från föregående</th><th>Drop</th></tr>
+        </thead>
+        <tbody>
+          <% conversionPro.forEach(function(s) { %>
+            <tr>
+              <td><span class="fn-step-icon"><%= s.icon %></span></td>
+              <td class="fn-step-label"><%= s.label %></td>
+              <td class="fn-count"><%= s.count %></td>
+              <td class="fn-pct">
+                <span class="fn-bar"><span class="fn-bar-fill" style="width:<%= s.pctOfTotal %>%;"></span></span>
+                <%= s.pctOfTotal %>%
+              </td>
+              <td class="fn-pct"><%= s.pctOfPrev %>%</td>
+              <td class="fn-drop <%= s.drop > s.prevCount * 0.5 && s.prevCount > 5 ? 'high' : (s.drop === 0 ? 'zero' : '') %>">
+                <% if (s.drop === 0 && s.prevCount > 0) { %>±0<% } else { %>−<%= s.drop %><% } %>
+              </td>
+            </tr>
+          <% }); %>
+        </tbody>
+      </table>
+    <% } %>
+  </section>
+
+  <!-- ─── SENASTE EVENTS (debug) ─────────────────────────────────────── -->
+  <section class="fn-section fn-recent">
+    <h2 style="color:#f1f5f9;font-size:1.05rem;margin:0 0 0.4rem;">🔧 Senaste 40 events (alla kohorter, för debug)</h2>
+    <p class="section-desc" style="margin-bottom:1rem;">Sanity-check att events faktiskt loggas. Om ett event saknas här efter du själv triggat det → instrumentering har glapp.</p>
+    <% if (!recent.length) { %>
+      <div class="fn-empty">Inga events än.</div>
+    <% } else { %>
+      <table>
+        <thead>
+          <tr>
+            <th>När</th>
+            <th>Event</th>
+            <th>Användare</th>
+            <th>Roll</th>
+            <th>Metadata</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% recent.forEach(function(e) { %>
+            <tr>
+              <td><%= e.occurred_at %></td>
+              <td><code><%= e.event_name %></code></td>
+              <td><%= e.username || '#' + e.user_id %></td>
+              <td><%= e.role || '?' %></td>
+              <td style="font-size:0.75rem;color:#64748b;"><%= e.metadata || '' %></td>
+            </tr>
+          <% }); %>
+        </tbody>
+      </table>
+    <% } %>
+  </section>
+
+</main>
+
+<script src="/heartbeat.js" defer></script>
+</body>
+</html>

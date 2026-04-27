@@ -355,6 +355,20 @@ async function initDatabase() {
     )
   `);
 
+  // Funnel-events: en rad per (user_id, event_name) — first-occurrence-only.
+  // Skiljer sig från page_views (rå GET-traffic, dups) och audit-log (admin-actions).
+  // Drivs av aktivering/konvertering: register → dashboard → block → quiz → upgrade.
+  db.run(`
+    CREATE TABLE IF NOT EXISTS funnel_events (
+      id          INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id     INTEGER NOT NULL,
+      event_name  TEXT    NOT NULL,
+      metadata    TEXT,
+      occurred_at TEXT    NOT NULL DEFAULT (datetime('now')),
+      FOREIGN KEY (user_id) REFERENCES users(id)
+    )
+  `);
+
   // Migration: add new columns if they don't exist yet.
   // SQLite doesn't support "ADD COLUMN IF NOT EXISTS" so we catch errors.
   const migrations = [
@@ -419,6 +433,11 @@ async function initDatabase() {
     // Page-view tracking index
     "CREATE INDEX IF NOT EXISTS idx_page_views_user_date ON page_views(user_id, visited_at DESC)",
     "CREATE INDEX IF NOT EXISTS idx_page_views_path      ON page_views(path)",
+    // Funnel-events: UNIQUE på (user_id, event_name) → INSERT OR IGNORE ger
+    // automatisk first-occurrence-only-semantik. Index på (event_name, occurred_at)
+    // för aggregat-queries över tidsfönster.
+    "CREATE UNIQUE INDEX IF NOT EXISTS idx_funnel_events_unique     ON funnel_events(user_id, event_name)",
+    "CREATE INDEX IF NOT EXISTS idx_funnel_events_event_date ON funnel_events(event_name, occurred_at)",
     // Session store index
     "CREATE INDEX IF NOT EXISTS idx_sessions_expires     ON sessions(expires_at)",
     // Admin notes index (för snabb lookup per target user)
@@ -1851,6 +1870,107 @@ function updateLastPageViewDuration(userId, durationMs) {
   } catch (err) {
     console.error('updateLastPageViewDuration failed:', err.message);
   }
+}
+
+// ── Funnel events ─────────────────────────────────────────────────────────────
+// Stateful business events för konverteringsanalys. UNIQUE-index på
+// (user_id, event_name) gör att INSERT OR IGNORE ger first-occurrence-only.
+// Används av /admin/funnel för att se var i funneln användare droppar av.
+
+/**
+ * Logga ett funnel-event. Idempotent — andra anropet med samma (user, event)
+ * blir no-op tack vare UNIQUE-index. Skriv aldrig synkront till disk här
+ * (analytics-batchen klarar det), så detta blockerar inte hot-path.
+ */
+function logFunnelEvent(userId, eventName, metadata = null) {
+  if (!userId || !eventName) return;
+  try {
+    db.run(
+      `INSERT OR IGNORE INTO funnel_events (user_id, event_name, metadata)
+       VALUES (?, ?, ?)`,
+      [userId, eventName.slice(0, 80), metadata ? JSON.stringify(metadata).slice(0, 500) : null]
+    );
+    _markAnalyticsDirty();
+  } catch (err) {
+    console.error('logFunnelEvent failed:', err.message);
+  }
+}
+
+/**
+ * Backfill register_completed för befintliga users (kallas en gång vid startup).
+ * Använder users.created_at som timestamp — vi vet exakt när dom registrerade.
+ * Andra events kan inte backfill:as utan att ljuga om data, så de stannar
+ * forward-only ("Funnel-data sedan deploy-datum").
+ */
+function backfillRegisterEvents() {
+  try {
+    db.run(
+      `INSERT OR IGNORE INTO funnel_events (user_id, event_name, occurred_at)
+       SELECT id, 'register_completed', COALESCE(created_at, datetime('now')) FROM users`
+    );
+    saveDb();
+  } catch (err) {
+    console.error('backfillRegisterEvents failed:', err.message);
+  }
+}
+
+/**
+ * Aggregat-rapport: hur många UNIKA users har triggat varje event i fönstret.
+ * Returnerar { totalRegistered, events: { event_name: count, ... }, windowDays }.
+ *
+ * Tidsfönstret avser registreringsdatum — dvs. vi kohort:ar på "users som
+ * registrerade sig de senaste N dagar" och tittar på vilka events de triggat
+ * (oavsett när events triggades). Det är mest användbart för aktivering-analys.
+ */
+function getFunnelStats({ days = 30 } = {}) {
+  const cutoff = new Date(Date.now() - days * 86400 * 1000).toISOString();
+
+  // Cohort: users registrerade i fönstret
+  const cohortS = db.prepare(`SELECT id FROM users WHERE created_at >= ?`);
+  cohortS.bind([cutoff]);
+  const cohort = [];
+  while (cohortS.step()) cohort.push(cohortS.getAsObject().id);
+  cohortS.free();
+
+  if (!cohort.length) return { totalRegistered: 0, events: {}, windowDays: days, cohortSize: 0 };
+
+  // Räkna unika users per event INOM cohorten
+  const placeholders = cohort.map(() => '?').join(',');
+  const evS = db.prepare(
+    `SELECT event_name, COUNT(DISTINCT user_id) AS user_count
+     FROM funnel_events
+     WHERE user_id IN (${placeholders})
+     GROUP BY event_name`
+  );
+  evS.bind(cohort);
+  const events = {};
+  while (evS.step()) {
+    const r = evS.getAsObject();
+    events[r.event_name] = r.user_count;
+  }
+  evS.free();
+
+  return {
+    totalRegistered: cohort.length,
+    events,
+    windowDays: days,
+    cohortSize: cohort.length,
+  };
+}
+
+/**
+ * Lista de senaste N events (för debugging "varför ser inte mitt event upp?").
+ */
+function getRecentFunnelEvents(limit = 50) {
+  return rowsQuery(
+    `SELECT fe.id, fe.user_id, fe.event_name, fe.metadata, fe.occurred_at,
+            u.username, u.email, u.role
+     FROM funnel_events fe
+     LEFT JOIN users u ON u.id = fe.user_id
+     ORDER BY fe.occurred_at DESC
+     LIMIT ?`,
+    [Math.min(limit, 200)]
+  );
 }
 
 // ── Session-store primitives ──────────────────────────────────────────────────
@@ -3394,6 +3514,8 @@ module.exports = {
   getBlockTimeAnalytics,
   // Page-view tracking
   logPageView, updateLastPageViewDuration, cleanupOldPageViews, flushAnalytics,
+  // Funnel events (aktivering/konvertering)
+  logFunnelEvent, getFunnelStats, getRecentFunnelEvents, backfillRegisterEvents,
   // Session store
   sessionGet, sessionSet, sessionDestroy, sessionCleanupExpired,
   // Stripe idempotency
