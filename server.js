@@ -45,6 +45,7 @@ const {
 const gamification = require('./gamification');
 const emails = require('./emails');
 const proAnalysis = require('./proCallAnalysis');
+const { notifyAdmin } = require('./services/alerting');
 const multer = require('multer');
 
 // Multer för Pro call-upload: in-memory (files raderas efter transkribering), max 100 MB
@@ -234,6 +235,11 @@ app.post('/webhook', express.raw({ type: 'application/json' }), async (req, res)
     event = stripe.webhooks.constructEvent(req.body, sig, secret);
   } catch (err) {
     console.error('Webhook signature failed:', err.message);
+    // Larmar critical — om webhooks inte verifieras kan vi inte uppgradera betalande users
+    notifyAdmin('critical', 'Stripe webhook signature failed',
+      'En webhook från Stripe avvisades pga ogiltig signatur. Antingen är STRIPE_WEBHOOK_SECRET fel, eller fejk-trafik. Inga uppgraderingar går igenom medan detta pågår.',
+      { error: err.message, sigPreview: String(sig || '').slice(0, 30) }
+    );
     return res.status(400).send(`Webhook Error: ${err.message}`);
   }
 
@@ -911,6 +917,13 @@ app.post('/login', loginLimiter, async (req, res) => {
     if (user) {
       const result = recordFailedLogin(user.id);
       if (result.locked) {
+        // Larma warning — admin-konto låst = potentiellt riktig attack
+        const isAdmin = user.role === 'admin';
+        notifyAdmin(isAdmin ? 'critical' : 'warning',
+          `Account locked: ${user.username}${isAdmin ? ' (ADMIN)' : ''}`,
+          `Konto låst i 15 min efter 5 misslyckade login-försök. ${isAdmin ? 'ADMIN-konto — möjlig riktad attack.' : 'Möjlig brute-force eller user glömde lösenord.'}`,
+          { userId: user.id, username: user.username, email: user.email, role: user.role, ip: req.ip }
+        );
         return res.render('login', {
           error: 'Kontot är nu låst i 15 minuter pga för många misslyckade försök.',
           registerError: null, success: null, turnstileSiteKey: TURNSTILE_SITE_KEY,
@@ -2793,6 +2806,37 @@ app.get('/admin', requireLogin, requireAdmin, (req, res) => {
 const analyticsCache = { data: null, fetchedAt: 0 };
 const ANALYTICS_CACHE_TTL_MS = 60 * 1000;
 
+// ── Test-endpoint: skicka en alert till webhook för att verifiera config ──
+app.get('/admin/alert-test', requireLogin, requireAdmin, (req, res) => {
+  const level = ['info', 'warning', 'critical'].includes(req.query.level)
+    ? req.query.level : 'warning';
+  notifyAdmin(level, `Test-alert (${level})`,
+    `Detta är ett test-larm utlöst manuellt av admin "${req.session.username}" från /admin/alert-test. Om du ser detta meddelande i din webhook fungerar alerting.`,
+    { triggeredBy: req.session.username, level, ts: new Date().toISOString() }
+  );
+  const isConfigured = !!process.env.ADMIN_ALERT_WEBHOOK_URL;
+  res.send(`
+    <!DOCTYPE html><html lang="sv"><head><meta charset="UTF-8"><title>Alert-test</title>
+    <style>body{font-family:system-ui;background:#0f172a;color:#e2e8f0;padding:2rem;text-align:center;min-height:100vh;margin:0;box-sizing:border-box;}
+    .w{max-width:540px;margin:3rem auto;padding:2rem;background:#1e293b;border-radius:14px;border:1px solid rgba(255,255,255,0.08);}
+    h1{margin:0 0 0.75rem;} a{color:#a5b4fc;}
+    code{background:rgba(99,102,241,0.15);padding:0.15rem 0.45rem;border-radius:4px;color:#a5b4fc;font-size:0.85rem;}</style></head>
+    <body><div class="w">
+      <h1>${isConfigured ? '✅' : '⚠️'} Alert skickad (${level})</h1>
+      <p style="color:#cbd5e1;line-height:1.6;">
+        ${isConfigured
+          ? 'Test-alert skickad till din konfigurerade webhook. Kolla i Slack/Discord — om du inte ser den inom ~10 sekunder är webhook-URL:en fel.'
+          : '<code>ADMIN_ALERT_WEBHOOK_URL</code> är inte satt på Railway, så alert gick BARA till console-loggar. Sätt env-varen för att få push-larm.'
+        }
+      </p>
+      <p style="color:#94a3b8;font-size:0.88rem;">
+        Test andra nivåer: <a href="?level=info">info</a> · <a href="?level=warning">warning</a> · <a href="?level=critical">critical</a>
+      </p>
+      <p><a href="/admin">← Till admin</a></p>
+    </div></body></html>
+  `);
+});
+
 // ── Funnel-rapport: aktivering + konvertering per kohort ────────────────────
 // Visar var i funneln användare droppar av — register → dashboard → block →
 // quiz → upgrade. Kohort:as på registreringsdatum (default senaste 30 dagar).
@@ -3441,6 +3485,11 @@ app.post('/upgrade/checkout', requireLogin, blockWhenImpersonating, verifyCsrf, 
     res.redirect(303, session.url);
   } catch (err) {
     console.error('Stripe error:', err.message);
+    // Larma — Stripe checkout failure = direkt förlorad betalning
+    notifyAdmin('critical', 'Stripe checkout-creation failed',
+      `User ${user?.username || req.session.userId} (${user?.email || '?'}) försökte starta ${targetTier}-checkout men Stripe API failade. Förlorad konvertering om det inte fixas snabbt.`,
+      { tier: targetTier, userId: req.session.userId, email: user?.email, error: err.message }
+    );
     res.render('upgrade', {
       username:  req.session.username,
       role:      req.session.role,
@@ -3976,6 +4025,14 @@ async function startServer() {
   // dashboard/block/quiz historiskt och vill inte ljuga om data.
   try { backfillRegisterEvents(); } catch (err) { console.error('backfillRegisterEvents error:', err.message); }
 
+  // Heads-up: alerting-helper är konfigurerad om ADMIN_ALERT_WEBHOOK_URL satt.
+  // Logga konfig-status så admin ser i Railway-loggar om alerting fungerar.
+  if (process.env.ADMIN_ALERT_WEBHOOK_URL) {
+    console.log('🔔 Admin-alerting aktiverad (webhook satt)');
+  } else {
+    console.warn('⚠️  ADMIN_ALERT_WEBHOOK_URL ej satt — kritiska fel går endast till Railway-loggar (inga push-larm)');
+  }
+
   // ── Production security checks ─────────────────────────────────────────────
   if (isProd) {
     const warnings = [];
@@ -4077,10 +4134,13 @@ async function startServer() {
 
   // Email retry-queue worker: processar pending mejl var 60:e sek.
   // Säkerställer att mejl inte tappas pga tillfälliga Resend-fel.
+  // Larmar om ALLA mejl i en batch failar (= systemiskt problem, ej enstaka kund).
   const emailWorker = async () => {
     if (!resend) return;
     const pending = getPendingEmails(20);
     if (!pending.length) return;
+    let failed = 0;
+    let succeeded = 0;
     for (const mail of pending) {
       try {
         await resend.emails.send({
@@ -4090,12 +4150,22 @@ async function startServer() {
           html:    mail.html,
         });
         markEmailSent(mail.id);
+        succeeded++;
         // Resend free tier 10/sec — rate-limit safety
         await new Promise(r => setTimeout(r, 100));
       } catch (err) {
         markEmailFailed(mail.id, err.message);
+        failed++;
         console.error(`📧 Email queue retry-${mail.attempts + 1} failed for ${mail.to_email}: ${err.message}`);
       }
+    }
+    // Hela batchen failade = Resend nere eller config fel. Larma critical.
+    // Per-mejl-fail spammar bara — ALL fail = systemiskt = vi måste agera.
+    if (failed >= 3 && succeeded === 0) {
+      notifyAdmin('critical', 'Email queue: ALL sends failing',
+        `Email-queue-worker fick 0 OK, ${failed} fail i en batch om ${pending.length}. Resend nere, fel API-key, eller rate-limited? Mejl köas men levereras inte.`,
+        { failed, succeeded, batchSize: pending.length, lastError: pending[0]?.last_error || null }
+      );
     }
   };
   setTimeout(emailWorker, 30 * 1000); // första körning 30s efter startup
@@ -4107,16 +4177,29 @@ async function startServer() {
   // Daglig snapshot + "latest.db" som overwritas varje gång. Retention 90d.
   // Körs första gången 5 min efter startup (sluss dagliga snapshots något),
   // sen var 24:e timme. Cleanup av gamla snapshots dagligen.
+  // Larmar critical om backup failar — utan offsite har vi inget skydd mot
+  // Railway disk-corruption.
   const dbBackupR2 = require('./services/dbBackup');
+  const runR2Backup = async () => {
+    try {
+      const result = await dbBackupR2.uploadDailyBackup();
+      if (!result.ok) {
+        notifyAdmin('critical', 'R2 DB-backup failed',
+          `Daglig DB-backup till R2 misslyckades. Reason: ${result.reason}. Utan offsite-backup är vi exponerade mot Railway disk-failure tills detta fixas.`,
+          { reason: result.reason }
+        );
+      }
+      await dbBackupR2.cleanupOldR2Backups(90);
+    } catch (err) {
+      notifyAdmin('critical', 'R2 DB-backup threw',
+        'uploadDailyBackup() kastade — oväntat. Kolla Railway-loggar.',
+        { error: err.message }
+      );
+    }
+  };
   if (dbBackupR2.isR2Enabled()) {
-    setTimeout(async () => {
-      await dbBackupR2.uploadDailyBackup();
-      await dbBackupR2.cleanupOldR2Backups(90);
-    }, 5 * 60 * 1000);
-    setInterval(async () => {
-      await dbBackupR2.uploadDailyBackup();
-      await dbBackupR2.cleanupOldR2Backups(90);
-    }, 24 * 60 * 60 * 1000);
+    setTimeout(runR2Backup, 5 * 60 * 1000);
+    setInterval(runR2Backup, 24 * 60 * 60 * 1000);
   } else {
     console.warn('⚠️  R2 not configured — offsite DB-backups disabled (only local backups exist)');
   }
