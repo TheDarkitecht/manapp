@@ -10,6 +10,7 @@
 const proAnalysis = require('../proCallAnalysis');
 const prompts     = require('./prompts/feedback');
 const transcribeService = require('./transcribe');
+const { fetchWithTimeout, TIMEOUT } = require('./fetchTimeout');
 
 const GROQ_API_URL = 'https://api.groq.com/openai/v1';
 
@@ -192,7 +193,7 @@ async function identifySpeakers(rawText, apiKey) {
     throw new Error('För kort text för diarization (min 20 tecken)');
   }
 
-  const res = await fetch(`${GROQ_API_URL}/chat/completions`, {
+  const res = await fetchWithTimeout(`${GROQ_API_URL}/chat/completions`, {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${apiKey}`,
@@ -207,7 +208,7 @@ async function identifySpeakers(rawText, apiKey) {
       max_tokens:  4000, // diarization output är ungefär samma längd som input + labels
       temperature: 0.1,  // deterministiskt — vi vill inte ha kreativitet här
     }),
-  });
+  }, TIMEOUT.llm);
 
   if (!res.ok) {
     const errText = await res.text();
@@ -245,7 +246,7 @@ async function analyzeWithPrompt(transcript, apiKey, { promptVersion, userTitle 
   }
   messages.push({ role: 'user', content: userContent });
 
-  const res = await fetch(`${GROQ_API_URL}/chat/completions`, {
+  const res = await fetchWithTimeout(`${GROQ_API_URL}/chat/completions`, {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${apiKey}`,
@@ -257,7 +258,7 @@ async function analyzeWithPrompt(transcript, apiKey, { promptVersion, userTitle 
       max_tokens:  cfg.maxTokens,
       temperature: cfg.temperature,
     }),
-  });
+  }, TIMEOUT.llm);
 
   if (!res.ok) {
     const errText = await res.text();
@@ -390,7 +391,7 @@ async function extractObjections(transcript, apiKey) {
     return []; // för kort för meningsfull extraction
   }
 
-  const res = await fetch(`${GROQ_API_URL}/chat/completions`, {
+  const res = await fetchWithTimeout(`${GROQ_API_URL}/chat/completions`, {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${apiKey}`,
@@ -406,7 +407,7 @@ async function extractObjections(transcript, apiKey) {
       temperature: 0.1,
       response_format: { type: 'json_object' },
     }),
-  });
+  }, TIMEOUT.llm);
 
   if (!res.ok) {
     const errText = await res.text();
@@ -484,7 +485,7 @@ async function generateCaseStudy(transcript, analysis, apiKey, { methodology, sa
     analysis || '(ingen feedback tillgänglig)',
   ].filter(line => line !== null).join('\n');
 
-  const res = await fetch(`${GROQ_API_URL}/chat/completions`, {
+  const res = await fetchWithTimeout(`${GROQ_API_URL}/chat/completions`, {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${apiKey}`,
@@ -499,7 +500,7 @@ async function generateCaseStudy(transcript, analysis, apiKey, { methodology, sa
       max_tokens:  2000,
       temperature: 0.5,
     }),
-  });
+  }, TIMEOUT.llm);
 
   if (!res.ok) {
     const errText = await res.text();

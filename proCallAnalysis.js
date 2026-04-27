@@ -2,6 +2,8 @@
 // Pro-tier: call-upload-analyser via Groq (Whisper + LLM)
 // Pure funktions: ingen DB-access, ingen filhantering — enbart API-anrop.
 
+const { fetchWithTimeout, TIMEOUT } = require('./services/fetchTimeout');
+
 const GROQ_API_URL = 'https://api.groq.com/openai/v1';
 const WHISPER_MODEL = 'whisper-large-v3-turbo'; // Snabbast + billigast
 const LLM_MODEL = 'llama-3.3-70b-versatile';
@@ -24,11 +26,12 @@ async function transcribeAudio(audioBuffer, filename, apiKey) {
   form.append('response_format', 'verbose_json');
   form.append('temperature', '0');
 
-  const res = await fetch(`${GROQ_API_URL}/audio/transcriptions`, {
+  // Whisper kan ta 30-60s för en 60-min ljudfil → längre timeout (90s)
+  const res = await fetchWithTimeout(`${GROQ_API_URL}/audio/transcriptions`, {
     method: 'POST',
     headers: { Authorization: `Bearer ${apiKey}` },
     body: form,
-  });
+  }, TIMEOUT.upload);
 
   if (!res.ok) {
     const errText = await res.text();
@@ -85,7 +88,8 @@ VIKTIGT:
 
   const userContent = `${userTitle ? `SAMTAL: "${userTitle}"\n\n` : ''}TRANSKRIBERING:\n\n${transcript}`;
 
-  const res = await fetch(`${GROQ_API_URL}/chat/completions`, {
+  // LLM-completions: ~5-15s normalt → 30s timeout med marginal
+  const res = await fetchWithTimeout(`${GROQ_API_URL}/chat/completions`, {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${apiKey}`,
@@ -100,7 +104,7 @@ VIKTIGT:
       max_tokens: 2000,
       temperature: 0.4,
     }),
-  });
+  }, TIMEOUT.llm);
 
   if (!res.ok) {
     const errText = await res.text();

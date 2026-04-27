@@ -46,6 +46,7 @@ const gamification = require('./gamification');
 const emails = require('./emails');
 const proAnalysis = require('./proCallAnalysis');
 const { notifyAdmin } = require('./services/alerting');
+const { fetchWithTimeout, TIMEOUT } = require('./services/fetchTimeout');
 const multer = require('multer');
 
 // Multer för Pro call-upload: in-memory (files raderas efter transkribering), max 100 MB
@@ -968,15 +969,26 @@ app.post('/register', registerLimiter, async (req, res) => {
       return res.render('login', { error: null, success: null, turnstileSiteKey: TURNSTILE_SITE_KEY,
         registerError: 'Verifiera att du inte är en robot.' });
     }
-    const verify = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ secret: turnstileSecret, response: turnstileToken }),
-    });
-    const result = await verify.json();
-    if (!result.success) {
+    try {
+      const verify = await fetchWithTimeout('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ secret: turnstileSecret, response: turnstileToken }),
+      }, TIMEOUT.fast);
+      const result = await verify.json();
+      if (!result.success) {
+        return res.render('login', { error: null, success: null, turnstileSiteKey: TURNSTILE_SITE_KEY,
+          registerError: 'CAPTCHA-verifiering misslyckades. Försök igen.' });
+      }
+    } catch (err) {
+      // Turnstile down/timeout → blockera registrering hellre än att släppa förbi
+      // (open-fail = bot-vågor som dränker DB). Larma så vi vet om Cloudflare hänger.
+      console.error('Turnstile verify error:', err.message);
+      notifyAdmin('warning', 'Turnstile verify failed/timeout',
+        'Registreringar blockas tills detta löser sig — open-fail är värre.',
+        { error: err.message });
       return res.render('login', { error: null, success: null, turnstileSiteKey: TURNSTILE_SITE_KEY,
-        registerError: 'CAPTCHA-verifiering misslyckades. Försök igen.' });
+        registerError: 'Verifiering kunde inte slutföras just nu. Försök igen om en stund.' });
     }
   }
 
