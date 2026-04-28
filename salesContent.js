@@ -142,6 +142,28 @@ const blocks = [
       </ul>
       <p>Det är därför varje block är byggt med teori + quickVersion + rollspel + veckouppdrag + reflektionsprompts. Det är inte dekoration. Det är hela det pedagogiska systemet. Läser du bara teorin har du betalat för kunskap du tappar på 7 dagar. Gör du övningarna äger du den.</p>
 
+      <h3>Maker mode — varför kursen kräver att du gör, inte bara läser</h3>
+      <p>Det finns en princip som styr hela kursens design och som är värd att lyfta innan du går in i blocken: <strong>du utvecklas snabbast när du har ett konkret case, en deadline, en uppgift och feedback.</strong> Allt annat — passiv läsning, "att tänka på saken", planera att börja träna nästa månad — är illusionsarbete. Det känns som lärande men levererar inte.</p>
+      <p>Det är därför kursen är byggd med:</p>
+      <ul>
+        <li><strong>quickVersion per block</strong> — så du kan repetera kärnan på 5 min före nästa kundsamtal.</li>
+        <li><strong>Rollspel med Jocke</strong> — AI-coachen som spelar kund och pressar dig på riktiga invändningar.</li>
+        <li><strong>Veckouppdrag</strong> — något du faktiskt ska göra ute i fält, inte bara förstå intellektuellt.</li>
+        <li><strong>Reflektionsprompts</strong> — för att binda samman teori med din egen verkliga praktik.</li>
+      </ul>
+      <p>Den enklaste regeln för att få ut maximalt av kursen: <em>efter varje block — gör en sak skarpt inom 24 timmar</em>. Inte tre saker. En. Spela in din 30-sekunders-pitch. Skicka det där LinkedIn-meddelandet du tvekat på. Boka rollspelet med Jocke om en specifik invändning. Skriv reflektionen om gårdagens samtal. Det är vad jag kallar att stå i <em>maker mode</em> — du producerar något, lämnar in det, får feedback, förbättrar.</p>
+      <p>Säljare som passivt konsumerar utbildning utvecklas marginellt. Säljare som producerar, blir granskade, korrigerar — utvecklas exponentiellt. Skillnaden är inte begåvning. Det är arbetssättet. Resten av kursen kommer pressa dig att göra detta. Acceptera det redan nu — och ditt resultat blir ett helt annat.</p>
+
+      <h3>Beröm process, inte talang — hur du ger och tar feedback</h3>
+      <p>En sista princip om hur kursen är designad — och hur du ska tänka om dig själv under den. När du får feedback (från Jocke, från en kollega, från dig själv) — ska den landa på <strong>process och insats</strong>, inte på talang.</p>
+      <p>Skillnaden är inte semantisk. Den är psykologisk:</p>
+      <ul>
+        <li>❌ "Du är naturligt bra på sälj." → kunden har inget att jobba på. Bra dag = bekräftelse. Dålig dag = identitetskris.</li>
+        <li>✅ "Det märks att du tränat på öppningen — den satt mycket bättre idag. Nu ska vi slipa pausen efter första frågan." → konkret beteende, mätbar förbättring, riktning framåt.</li>
+      </ul>
+      <p>Carol Dwecks forskning på growth mindset visar samma sak konsekvent: människor som får beröm för insats utvecklas mer än de som får beröm för talang. För att de inte är rädda att misslyckas — misslyckande är bara data om vad som behöver tränas mer.</p>
+      <p>Tillämpa det här på dig själv genom hela kursen: när något går bra, fråga "<em>vad gjorde jag konkret som funkade?</em>" — inte "<em>jag är duktig på det här</em>". När något går dåligt, fråga "<em>vad behöver jag öva på?</em>" — inte "<em>jag suger på det här</em>". Den enkla skiftningen är skillnaden mellan en säljare som utvecklas i 10 år och en som platår:ar efter 2.</p>
+
       <h3>Den etiska grunden — sälj är inte manipulation</h3>
       <p>Innan vi går djupare: ett par ord om etik. Sälj blandas ofta ihop med manipulation — både av kritiker och av dåliga säljare själva. Det är två helt olika saker.</p>
       <p><strong>Manipulation</strong> är att få någon att göra något som inte är i deras intresse, genom att dölja information eller trigga rädsla/girighet på ett sätt de inte kan värdera. Skickligt manipulerande säljare vinner en affär och förlorar kunden (samt sitt rykte, långsiktigt).</p>
@@ -1171,6 +1193,20 @@ const blocks = [
       <p>Säljare som bara lyssnar på det första språket missar det viktigaste. Kunden säger "det låter intressant" men det andra språket säger "jag vill bara bli av med dig". Kunden säger "vi har inte budget" men det andra språket säger "jag är rädd för att göra ett misstag".</p>
       <p>Greenes poäng: träna dina <strong>observational skills</strong> — förmågan att faktiskt SE kunden, inte bara höra orden. Det är en färdighet. Den tränas. Den är oersättlig.</p>
 
+      <h3>Kunden är inte svår — kunden är data</h3>
+      <p><strong>Princip:</strong> sluta moralisera över kunden. Sluta tänka "den här kunden är jobbig", "den där är dum", "hen förstår inte värdet". Det leder ingenstans. Behandla istället varje beteende som <em>information</em>. Kunden är data. Din uppgift är att läsa datan, inte döma den.</p>
+      <p>Den principen är viktigare än alla decoding keys, alla personlighetsmodeller, alla pitchstrukturer. Den är operativsystemet under alltihop. För när du börjar moralisera tappar du både empati och precision. Du läser fel, för du är upptagen med att vara irriterad.</p>
+      <p><strong>Vanliga säljsituationer — översatta till data:</strong></p>
+      <ul>
+        <li><strong>Kunden är kort, avhuggen.</strong> ❌ Dålig tolkning: "Hen är otrevlig." → Du blir defensiv. ✅ Datatolkning: stress? tidspress? ointresse? möte som kommit illa? Diagnostisera först. Försvar inte ditt ego.</li>
+        <li><strong>Kunden försvarar sin gamla leverantör häftigt.</strong> ❌ Dålig tolkning: "Hen är inte mottaglig, släpp." ✅ Datatolkning: hen försvarar sitt tidigare beslut, alltså sin egen självbild. Det betyder att om du attackerar leverantören attackerar du indirekt kunden. Ändra approach.</li>
+        <li><strong>Kunden skjuter upp beslutet.</strong> ❌ Dålig tolkning: "Hen är obeslutsam, otydlig, slö." ✅ Datatolkning: risk i kundens huvud, intern friktion du inte ser, otydligt nästa steg från din sida, eller ej hanterad osäkerhet. Diagnostisera vilket.</li>
+        <li><strong>Kunden ställer fientliga frågor.</strong> ❌ Dålig tolkning: "Hen är aggressiv." ✅ Datatolkning: hen har bränts förut, eller hen testar din kompetens, eller hen är pressad uppifrån att ifrågasätta varje inköp. Vilket?</li>
+      </ul>
+      <p><strong>Vanligaste misstaget:</strong> säljaren tar kundens beteende personligt. "Jag gillar inte den här kunden." Resultatet: säljaren slutar lyssna, tappar nyfikenhet, missar signaler, och misslyckas med att hjälpa kunden köpa.</p>
+      <p><strong>Bättre reaktion:</strong> tänk som en doktor. En doktor blir inte arg på en patient som hostar konstigt — hen blir <em>nyfiken</em>. Vad signalerar den hostan? Vilket data är detta? På samma sätt: ditt kundsamtal är ett diagnostiskt arbete. Läs beteendet, sök orsaken, anpassa svaret.</p>
+      <p><strong>Övning idag:</strong> nästa gång du irriterar dig på en kunds beteende — stanna 3 sekunder. Fråga dig: <em>"Vilken information ger detta mig om vad som faktiskt pågår hos hen?"</em> Skriv ner svaret efter samtalet. Du kommer märka: 80% av "jobbiga kunder" är egentligen rädda eller pressade kunder. Och rädda eller pressade kunder kan du faktiskt hjälpa.</p>
+
       <h3>Sex konkreta signaler att läsa — "decoding keys"</h3>
       <p>Istället för att sortera kunden i en färg, läs av konkreta observerbara signaler. Sex av dem är särskilt användbara:</p>
       <ol>
@@ -1238,6 +1274,25 @@ const blocks = [
       </ul>
       <p>Kontexten är ofta osynlig. Men den styr mer än personligheten. Fråga dig alltid: <em>"Är det här personen — eller är det hens dag?"</em></p>
 
+      <h3>Självbilden — den enskilt viktigaste diagnos-frågan i ett invändningsläge</h3>
+      <p><strong>Princip:</strong> alla människor bär en självbild som de försvarar med hela kroppen. Den har tre universella drag som du kan diagnostisera i realtid:</p>
+      <ol>
+        <li><strong>"Jag är autonom"</strong> — *jag bestämmer själv, ingen pressar mig*. Vi väljer att lyda chefen, vi väljer att vara med i gruppen, vi väljer den här lösningen. Att kännas pressad är en av de starkaste obehagskänslorna människan har.</li>
+        <li><strong>"Jag är intelligent"</strong> — *i mitt område är jag smart, jag fattar bra beslut*. Inte Einstein i allt — men på mitt område. Att framstå som dum är social död.</li>
+        <li><strong>"Jag är en god/anständig människa"</strong> — *jag prioriterar rätt saker, jag stödjer rätt orsaker*. Få människor ser sig själva som själviska eller giriga, även när andra gör det.</li>
+      </ol>
+      <p>När en kund invänder mot ditt erbjudande försvarar hen sällan bara <em>positionen</em>. Hen försvarar en av dessa tre delar i sin självbild. Din uppgift som säljare är att diagnostisera <strong>vilken</strong> del — för svaret är helt olika beroende på det.</p>
+      <p><strong>Säljsituation — kund säger "vi är nöjda med vår nuvarande leverantör":</strong></p>
+      <ul>
+        <li>Försvarar hen sin <em>autonomi</em>? "Jag har redan bestämt mig och vill inte pressas." → Backa från press, ge utrymme: <em>"Helt rimligt. Det är ditt val. Jag vill bara att du har all information för att fatta det beslutet — när det blir aktuellt."</em></li>
+        <li>Försvarar hen sin <em>intelligens</em>? "Jag har redan utvärderat och valt — om jag byter erkänner jag att jag valde fel." → Validera valet: <em>"Det låter som att ni gjort en bra utvärdering. Jag är inte här för att säga att ni valt fel — jag är här om något ändras hos er."</em></li>
+        <li>Försvarar hen sin <em>godhet</em>? "Jag är lojal mot min nuvarande leverantör — jag är inte sån som hoppar mellan leverantörer." → Bekräfta moralen: <em>"Det är en kvalitet, inte en svaghet. När det blir aktuellt — om någonsin — vill jag att vi har redan pratats vid."</em></li>
+      </ul>
+      <p><strong>Vanligaste misstaget:</strong> säljaren behandlar varje invändning likadant. Argumenterar för sin produkt. Då utmanar hen oavsiktligt en av de tre — och försvaret förstärks. Walls go up forever.</p>
+      <p><strong>Bättre reaktion:</strong> innan du svarar, fråga dig: <em>"Vilken del av kundens självbild försvarar hen just nu?"</em> Sedan bekräfta DEN delen explicit. Då sänks försvaret och hen blir mottaglig.</p>
+      <p><strong>Övning:</strong> nästa invändning du möter — stanna en sekund och välj mellan A (autonomi), I (intelligens), G (godhet). Skriv på en post-it. Anpassa svaret. Notera resultatet i CRM. Efter 10 invändningar har du en personlig statistik på vilken som triggas oftast i din bransch.</p>
+      <p>Det här verktyget får sin fulla utvecklning i Block 10 (Invändningshantering). Här ger vi dig diagnos-rutinen. Där ger vi dig hela teknikbiblioteket.</p>
+
       <h3>Big Five — den enda forskningsbaserade personlighetsmodellen</h3>
       <p>Om du vill ha en personlighetsmodell som faktiskt håller vetenskapligt — kolla på <strong>Big Five / OCEAN</strong>. Det är den enda peer-reviewed-modellen med stabil empirisk grund:</p>
       <ul>
@@ -1250,6 +1305,43 @@ const blocks = [
       <p>För sälj: tänk på de fem dimensionerna som förståelseramar. En kund hög i conscientiousness vill ha struktur, deadlines och fullständiga fakta. En kund hög i openness gillar nya koncept och är tidiga adoptörer. En kund hög i neuroticism behöver extra riskreducering innan hen kan säga ja.</p>
       <p>Använd inte Big Five för att etikettera. Använd den som bakgrundsförståelse. Huvudverktyget är fortfarande decoding keys ovan — de är observerbara i stunden.</p>
 
+      <h3>Fyra kundbiaser som styr hur de tar beslut (även när de inte vet om det)</h3>
+      <p><strong>Princip:</strong> kunder är inte rationella. De tror sig vara det. Forskningen är obarmhärtig — Daniel Kahneman vann ekonomipriset 2002 för exakt den insikten. För säljaren betyder det: om du läser in din kund som rationell aktör som "väger för- och nackdelar", missar du sanningen om vad som faktiskt styr beslutet.</p>
+      <p>De fyra biaser som påverkar köpsbeslut mest:</p>
+
+      <p><strong>1. Confirmation Bias — varför kunder INTE byter</strong></p>
+      <p>När en kund redan valt en leverantör söker hens hjärna automatiskt bevis som bekräftar att valet var rätt. Negativa erfarenheter rationaliseras bort, positiva förstärks. Det är inte fusk — det är hur hjärnan fungerar.</p>
+      <ul>
+        <li><strong>Säljsituation:</strong> kunden säger "vår nuvarande leverantör är jättebra".</li>
+        <li><strong>Misstag:</strong> argumentera mot leverantören → triggar confirmation bias hårdare. Kunden hittar fler argument för leverantören i sitt huvud just genom att försvara den.</li>
+        <li><strong>Bättre reaktion:</strong> validera valet, men ställ frågor om SPECIFIKA situationer. <em>"Härligt att ni är nöjda. Får jag fråga — när det kommer till X-situation, hur löser de det åt er idag?"</em> Specifika frågor bryter den allmänna positiva känslan utan att utmana valet.</li>
+      </ul>
+
+      <p><strong>2. Conviction Bias — varför karisma slår substans</strong></p>
+      <p>Människor litar mer på den som uttrycker sig med stark övertygelse än på den som uttrycker nyanser och osäkerhet — även när nyanserna är intellektuellt mer ärliga. En säljare som säger "det här är 100% rätt för dig" landar starkare än en som säger "det skulle nog kunna passa beroende på era prioriteringar".</p>
+      <ul>
+        <li><strong>Säljsituation:</strong> du tävlar mot en konkurrent som lovar mer än de kan hålla.</li>
+        <li><strong>Misstag:</strong> matcha deras hyperbolik med din egen → tappar trovärdighet hos analytiska kunder.</li>
+        <li><strong>Bättre reaktion:</strong> uttryck stark övertygelse om de saker du faktiskt kan stå bakom till 100%. Om en konkret produktfunktion är världsklass — säg det med kropp och röst, inte med "det är ganska bra". Spara nyanseringen för det som faktiskt är nyanserat.</li>
+      </ul>
+
+      <p><strong>3. Group Bias — varför styrelsemöten fattar dåligt beslut</strong></p>
+      <p>I grupp tänker människor mer socialt än rationellt. De söker trygghet, status och riskminimering — inte sanning. Det innebär att en utmärkt lösning ofta dör i ett kommittémöte därför att ingen vågar driva beslutet, eller en dominant person sätter tonen.</p>
+      <ul>
+        <li><strong>Säljsituation:</strong> du har en intern champion som älskar din lösning — men sedan blir det "tyst i 4 veckor".</li>
+        <li><strong>Misstag:</strong> tro att championen kan driva beslutet ensam. Hen kan inte. I gruppen är hen plötsligt den som riskerar status om beslutet blir fel.</li>
+        <li><strong>Bättre reaktion:</strong> ge championen ammunition att MINSKA SOCIAL RISK. *"Här är 3 referenskunder i er bransch som löste exakt det här. Här är ROI-kalkylen styrelsen vill se. Här är riskreduceringsklausulen."* Du säljer inte din lösning till championen. Du säljer ett *intern-presentations-paket*.</li>
+      </ul>
+
+      <p><strong>4. Blame Bias — varför kunder upprepar samma misstag</strong></p>
+      <p>När det går fel är människans naturliga reaktion att skylla på något externt: leverantören, marknaden, ekonomin, oturen. Sällan på sig själv. Det betyder att kunder ofta upprepar samma misstag även om de byter leverantör — för de fixar inte rotorsaken.</p>
+      <ul>
+        <li><strong>Säljsituation:</strong> kund berättar att tre tidigare leverantörer "varit dåliga".</li>
+        <li><strong>Misstag:</strong> tro att din lösning blir den fjärde. Den blir det också om kunden inte förstår sin egen del i mönstret.</li>
+        <li><strong>Bättre reaktion:</strong> fråga försiktigt: <em>"Tre olika leverantörer, samma utmaning — kan det finnas något i hur ni jobbar med leverantörer som vi behöver justera tillsammans? Jag vill helst inte bli en fjärde 'dålig'."</em> Det blottar mönstret utan att skuldbelägga.</li>
+      </ul>
+      <p><strong>Övning:</strong> öppna ditt CRM. Gå igenom dina 5 senaste förlorade affärer. Vilken bias var i spel hos kunden? Hade du adresserat den explicit hade affären sett annorlunda ut. Skriv en mening per affär — det är ditt eget bias-bibliotek.</p>
+
       <h3>Toxic types — när du ska säga nej till en kund</h3>
       <p>Inte alla kunder är värda att vinna. Greene (Lag 4, <em>Law of Compulsive Behavior</em>) visar att vissa karaktärsmönster konsekvent leder till dåliga relationer. För säljare betyder det: lär dig känna igen dem INNAN affären är signerad.</p>
       <ul>
@@ -1259,6 +1351,23 @@ const blocks = [
         <li><strong>Dramatikern</strong> — varje samtal är en kris. Allt är brådskande, allt är katastrof, allt behöver special-hantering. Dränerar dig och dina supportresurser mer än affären är värd.</li>
       </ul>
       <p>Det är OK — faktiskt nödvändigt — att ibland tacka nej till en kund. En förlorad dålig affär är en vunnen pipeline för en bra affär.</p>
+
+      <h3>Magnetkunder — människor som drar in dig i sitt emotionella väder</h3>
+      <p><strong>Princip:</strong> vissa människor har en speciell förmåga att färga rummet de kommer in i. De är inte nödvändigtvis "toxic" i klassisk bemärkelse — de är bara starka emotionella aktörer som får dig att tappa balansen utan att du märker det. För säljaren är det livsviktigt att känna igen dem — för de stjäl tid, fokus och struktur.</p>
+      <p>Tre vanliga varianter:</p>
+      <ul>
+        <li><strong>Den charmiga magneten</strong> — kunden som är så trevlig, så engagerad, så positiv att du får dig själv att tro att affären är runt hörnet. Du investerar 8 möten, 20 mejl, en skräddarsydd presentation. Sedan — tystnad. Det var aldrig en riktig affär. Det var bara en charmig människa som ville prata.</li>
+        <li><strong>Den aggressiva magneten</strong> — kunden som pressar, ifrågasätter, kräver, hotar med konkurrenten. Du tappar din struktur. Du börjar svara reflexmässigt istället för strategiskt. Du sänker priset utan motkrav. Du lovar saker du borde sagt nej till. Och i slutet köper hen ändå inte, eller köper med villkor som kostar dig på lång sikt.</li>
+        <li><strong>Den dominanta magneten</strong> — kunden eller intressenten i mötet som tar över rummet. Hen pratar mest, hen sätter agendan, hen bestämmer riktningen. De andra håller med eller är tysta. Du säljer till en grupp men i praktiken bara till hen — och hens åsikter avgör vad gruppen "tycker".</li>
+      </ul>
+      <p><strong>Vanligaste misstaget:</strong> att inte märka att du är dragen in i magneten förrän det är försent. Du går från mötet uppspelt eller slut — utan klart nästa steg, utan dokumentation, utan struktur. Det är symtomet.</p>
+      <p><strong>Bättre reaktion:</strong> demystifiera personen. Bryt deras emotionella påverkan genom att medvetet återgå till fakta, process och nästa steg.</p>
+      <ul>
+        <li>Efter varje samtal med en magnet: skriv ner exakt vad som beslutades, vad som inte beslutades, och vad nästa konkreta steg är. Stäm av per mejl.</li>
+        <li>Sätt en process som inte beror på samtalets energi: kvalificeringsfrågor som ska besvaras, kriterier som ska uppfyllas, deadlines som ska respekteras. Magneten behandlas som varje annan kund — bara mer disciplinerat.</li>
+        <li>Dominanta i grupp: ställ explicit frågor till de andra. <em>"Anna, du har varit tyst — hur ser du på det här?"</em> Bryter dominansen och avslöjar gruppens verkliga åsikt.</li>
+      </ul>
+      <p><strong>Övning:</strong> tänk på din nuvarande pipeline. Finns en affär som har 7+ möten men ingen tydlig framdrift? Det är troligen en magnet. Sätt en hård deadline med konkret beslutskriterium den här veckan. Antingen rör sig affären — eller så blir den dödförklarad och du friar pipelinen.</p>
 
       <h3>Varningen: när typisering blir skadlig</h3>
       <p>Det här blocket handlar om att läsa av människor bättre. Men det finns en linje där "läsa av" blir "stereotypera" — och den linjen är farlig både etiskt och praktiskt.</p>
@@ -1523,6 +1632,25 @@ const blocks = [
         <p>"Anna, jag såg att ni just anställde två nya Account Executives och expanderar söderut. Grattis. Anledningen jag hör av mig: en av era branschkollegor, Företag Y, brottades med exakt samma scale-up-fas förra året — vi hjälpte dem korta onboardingen från 3 månader till 3 veckor. Är det något som skulle vara värdefullt att diskutera under 15 min?"</p>
       </blockquote>
       <p>Samma säljare. Samma produkt. En ringer kallt. Den andra öppnar med relevans. Konverteringsskillnaden är 5–10x.</p>
+
+      <h3>Frame som möjlighet, inte uppgift — vad kunden faktiskt köper</h3>
+      <p><strong>Princip:</strong> människor vill hellre välja en möjlighet än bli övertalade till en uppgift. Samma erbjudande kan presenteras som båda — och det är skillnaden mellan en kund som lutar sig framåt och en som backar undan.</p>
+      <p>Skillnaden:</p>
+      <ul>
+        <li><strong>Uppgift:</strong> "Du har problem X. Du måste lösa det. Här är vår lösning."</li>
+        <li><strong>Möjlighet:</strong> "Det finns något som händer just nu i er bransch som öppnat ett fönster för bolag i er position. Få utnyttjar det än. Det är vad jag vill prata om."</li>
+      </ul>
+      <p>Båda är sanna. Men möjlighets-framingen aktiverar belöningssystemet i hjärnan. Uppgifts-framingen aktiverar pliktkänsla — och pliktkänsla skjuts upp.</p>
+      <p><strong>Säljsituation:</strong> du ska kalldra en CFO på ett medelstort bolag.</p>
+      <p><strong>Misstag:</strong> öppna med problemet. <em>"Vi vet att 70% av medelstora bolag har ineffektiv rapportering — det kostar er X kronor i månaden."</em> CFO:n känner sig anklagad. Försvar går upp.</p>
+      <p><strong>Skicklig reaktion:</strong> öppna med möjligheten. <em>"Något har hänt i er bransch det senaste halvåret som öppnat ett tydligt fönster för bolag i er storlek att vinna fler affärer per säljare. Få av era konkurrenter har snappat upp det än. Anledningen jag ringer dig är att ni passar exakt profilen som drar nytta av det. Är det värt 15 min?"</em> CFO:n lutar sig framåt — vad är det jag missar?</p>
+      <p>Tre regler för möjlighets-framing:</p>
+      <ol>
+        <li><strong>Konkret och tidsbunden</strong> — inte "framtiden ser ljus ut" utan "det här fönstret finns nu, det fanns inte för 6 månader sedan, det kommer stängas".</li>
+        <li><strong>Kopplad till deras specifika mål</strong> — inte "den nya AI-revolutionen" utan "specifikt för er som kämpar med att skala säljteamet utan att tappa kvalitet".</li>
+        <li><strong>Begränsad utan falsk scarcity</strong> — det är OK att säga "vi tar bara 5 nya kunder per kvartal" om det är sant. Det är aldrig OK att hitta på "bara idag-priser" som inte stämmer. Falsk urgency dödar trovärdighet permanent.</li>
+      </ol>
+      <p><strong>Övning:</strong> ta din nuvarande kallpitch. Räkna förekomsterna av "problem", "kostar", "förlorar". Räkna förekomsterna av "möjlighet", "fönster", "vinst". Om förhållandet är fel — skriv om en variant där du framar exakt samma sak som möjlighet. Testa båda. Räkna svarsfrekvensen.</p>
 
       <h3>Grindvakten — din allierade, inte ditt hinder</h3>
       <p>I B2B når du beslutsfattaren ofta via receptionist eller assistent. De flesta säljare försöker lura eller undvika dem. Fel approach.</p>
@@ -2006,6 +2134,22 @@ const blocks = [
       </ol>
       <p>Upprepa per behov. 3 behov = 3 loop. När du är klar är kunden inte "sold" — kunden har <em>själv</em> sagt ja tre gånger till tre av sina egna problem.</p>
 
+      <h3>Låt kunden bidra — co-skapa lösningen istället för att presentera den färdig</h3>
+      <p><strong>Princip:</strong> människor köper lättare en lösning de varit med och format. Det är en av de starkaste fynden i påverkanspsykologi: ägarskap genom medskapande. När kunden lagt en pixel av sin egen idé i din lösning är det inte längre din lösning — det är vår lösning. Och vår lösning säljer sig själv.</p>
+      <p>De flesta säljare missar detta totalt. De levererar en perfekt-polerad presentation med svar på alla frågor — och kunden lyssnar artigt utan att engagera sig. Skickliga säljare gör motsatsen: de lämnar medvetet luckor som kunden får fylla i.</p>
+      <p><strong>Säljsituation:</strong> du presenterar en lösning för en CFO och hens team. Det är ett B2B-möte med flera intressenter.</p>
+      <p><strong>Misstag:</strong> köra hela presentationen som monolog. Slutfråga: "några frågor?". Kunden nickar artigt. Inget engagemang.</p>
+      <p><strong>Skicklig reaktion:</strong> bygg in kontributions-frågor genom hela presentationen. Konkreta exempel:</p>
+      <ul>
+        <li><em>"Vad skulle ni ändra här?"</em> — efter du visat ett första utkast på paketering.</li>
+        <li><em>"Vilken del av det här känns mest relevant för er just nu?"</em> — efter en sektion om funktionalitet.</li>
+        <li><em>"Om du skulle presentera detta internt på ert nästa ledningsmöte — vad behöver vara tydligare?"</em> — kraftfullt eftersom det får kunden att tänka som intern champion.</li>
+        <li><em>"Vilket av de tre alternativen skulle passa bäst politiskt hos er?"</em> — adresserar gruppdynamiken explicit.</li>
+        <li><em>"Vad har vi missat som ni skulle vilja ha med?"</em> — ge dem tillåtelse att forma.</li>
+      </ul>
+      <p>Vad som händer i kundens huvud: de går från åskådare till medskapare. Och medskapare blockerar inte sina egna förslag.</p>
+      <p><strong>Övning denna vecka:</strong> i din nästa presentation — bygg in 4 kontributions-frågor i förväg. Markera dem på dina slides så du inte glömmer. Notera efter mötet: när du lät kunden bidra, vad fick du för information du inte hade fått annars?</p>
+
       <h3>Ramverk 3: Storytelling — 22x mer minnesvärt</h3>
       <p>Stanfords Jennifer Aaker har forskat fram att berättelser är upp till 22 gånger mer minnesvärda än bara fakta. Du har 10 sekunders kundmöte — de minns storyn. Inte slide 14.</p>
       <p><strong>Storystrukturen (Donald Miller, Pixars modell):</strong></p>
@@ -2182,6 +2326,86 @@ const blocks = [
       <p>Vad som händer i kundens hjärna under bryggan: motståndet sjunker. Inte för att du sagt något smart — utan för att hen känner sig sedd. Och en sedd människa är öppen. En icke-sedd människa är defensiv.</p>
       <p>Den enklaste testen om du faktiskt bryggade — eller bara lät som att du gjorde det: <strong>brydde du dig på riktigt?</strong> Kände du faktiskt något när kunden sa det hen sa? Om svaret är ja — då hörde kunden det. Om svaret är nej — då hörde kunden DET också. Människor är finkalibrerade på falsk omtanke. Du lurar ingen längre än ett samtal.</p>
       <p>Det är därför de bästa säljarna inte är de mest vältränade — de är de som genuint är intresserade av människor. Tekniken är samma för alla. Det är substansen under som skiljer toppsäljaren från medelmåttan. Och det är därför hela detta block — alla bryggor, all LAER, alla 100m-loopar — bara fungerar om du först har den grundläggande inställningen rätt: <em>jag bryr mig om den här människan, även om hen inte köper</em>.</p>
+
+      <h3>Konfirmera självbilden — den enskilt mest underanvända invändningstekniken</h3>
+      <p><strong>Princip:</strong> när en kund invänder försvarar hen sällan bara <em>positionen</em>. Hen försvarar sin <strong>självbild</strong>. Du kan inte argumentera bort en självbild. Men du kan bekräfta den — och då sänks hela försvaret automatiskt.</p>
+      <p>Block 6 introducerade verktyget: kundens självbild har tre universella drag — <em>Autonomi</em> (jag bestämmer själv), <em>Intelligens</em> (jag fattar bra beslut) och <em>Godhet</em> (jag prioriterar rätt saker). Här ger vi tekniken: hur du faktiskt konfirmerar dem i ett invändningsläge.</p>
+
+      <h4>1. Autonomi-tekniken — "det är ditt val"</h4>
+      <p>Den enklaste och mest underanvända frasen i hela invändningshanteringen. Användarens autonomi är hens viktigaste självbildsförsvar — när hen känner sig pressad går hen omedelbart i motstånd, oavsett om din lösning är överlägsen.</p>
+      <ul>
+        <li><strong>Säljsituation:</strong> kunden tvekar mellan dig och konkurrenten. Du känner att du måste pusha för att stänga.</li>
+        <li><strong>Misstag:</strong> öka pressen. <em>"Vi måste bestämma idag, kampanjen går ut, sista chansen."</em> Triggar reaktion: kunden tackar nej för att slippa känna sig pressad.</li>
+        <li><strong>Bättre reaktion:</strong> uttryckligt erkännande av kundens autonomi: <em>"Jag pressar inte alls — det är helt ditt beslut. Jag vill bara att du har rätt information för att kunna ta det bra. Vad behöver du veta som du inte vet ännu?"</em> Pressen försvinner, kunden slappnar av, och kan nu faktiskt utvärdera värdet utan att kämpa mot dig.</li>
+      </ul>
+      <p>Praktiska fraser som signalerar autonomi:</p>
+      <ul>
+        <li><em>"Du bestämmer själv — jag är bara här för att stötta beslutet, inte ta det åt dig."</em></li>
+        <li><em>"Vi är inte rätt för alla — det är en av styrkorna med oss. Säg till om det inte stämmer för er."</em></li>
+        <li><em>"Vi vill inte gifta oss med dig — vi vill bara att du testar om det funkar."</em></li>
+      </ul>
+      <p>Paradoxen: när du explicit släpper kontrollen tar kunden ofta beslutet snabbare. För nu är det hens beslut — och hens hjärna kan börja jobba för det istället för emot.</p>
+
+      <h4>2. Intelligens-tekniken — håll med först, smyg sedan in motpunkten</h4>
+      <p>Att direkt motsäga kunden = du säger implicit att hen inte tänkt klart. Intelligens-självbilden går i försvar och allt du säger blir filtrerat genom motvilja.</p>
+      <ul>
+        <li><strong>Säljsituation:</strong> kunden invänder "det är för dyrt".</li>
+        <li><strong>Misstag:</strong> argumentera direkt mot priset. <em>"Egentligen är det inte dyrt om man räknar..."</em> → kunden hör "du har räknat fel".</li>
+        <li><strong>Bättre reaktion:</strong> börja med fullständig validering. <em>"Du har helt rätt. Det är en investering. Det var det första jag tänkte också när jag började jobba med det här. Det enda som fick mig att titta närmare — och det här är bara min reflektion — var när jag jämförde med vad alternativet faktiskt kostade. Får jag visa dig den jämförelsen?"</em></li>
+      </ul>
+      <p>Mekanismen: när du först säger "du har rätt" känner kundens hjärna sig validerad. Då slappnar intelligens-försvaret av. Sedan kan du föreslå ett perspektiv — och kunden upplever att hen <em>själv</em> kommit fram till det, inte att du tvingar på det.</p>
+      <p>En extra kraftfull variant: <strong>be om råd istället för att ge råd</strong>. Människor älskar att ge råd — det bekräftar deras intelligens. <em>"Jag är genuint intresserad — om du var i mitt skor, hur skulle du presentera det här för ett bolag som ert?"</em> Du får både insikt om kundens verkliga oro OCH en kund som mentalt redan börjat sälja för dig.</p>
+
+      <h4>3. Godhet-tekniken — frame det som en del av deras egna värderingar</h4>
+      <p>Människor vill se sig som etiska, lojala, ansvarsfulla. När du frame:ar ditt erbjudande som något som *hjälper kunden vara den hen redan vill vara*, sänks försvaret naturligt.</p>
+      <ul>
+        <li><strong>Säljsituation:</strong> kunden tvekar på en investering i sin egen utveckling/utbildning/hälsa.</li>
+        <li><strong>Misstag:</strong> argumentera för ROI eller egennytta. Triggar oro för att framstå som självisk.</li>
+        <li><strong>Bättre reaktion:</strong> frame det som godhet. <em>"Det här är inte en investering bara för dig — det är en investering i ditt team. När du blir vassare, blir de vassare. När du fattar bättre beslut påverkar det 12 personer som litar på dig."</em></li>
+      </ul>
+      <p>Praktiska fraser:</p>
+      <ul>
+        <li><em>"Som någon som tar ditt yrke på allvar..."</em></li>
+        <li><em>"Det här är vad ledare gör — investerar i sin förmåga att leverera för andra."</em></li>
+        <li><em>"För teamets skull, inte för din egen — vad krävs för att du ska kunna säga ja?"</em></li>
+      </ul>
+
+      <h4>4. Mental judo — för riktigt envisa</h4>
+      <p>Vissa kunder är så förankrade i sitt motstånd att direkt påverkan inte fungerar. Då kanaliserar du deras energi istället för att stå emot.</p>
+      <ul>
+        <li><strong>Säljsituation:</strong> kunden säger "jag tar aldrig beslut samma dag, det är min princip".</li>
+        <li><strong>Misstag:</strong> försök övertala hen att bryta principen. Du strider mot deras självbild som disciplinerad person.</li>
+        <li><strong>Bättre reaktion:</strong> validera principen helt. <em>"Det är klokt — jag respekterar det fullt ut. Faktiskt: jag skulle inte vilja jobba med någon som tog stora beslut impulsivt. Vi pratas vid på torsdag — vad behöver du tänka igenom till dess?"</em> Du har just bekräftat kundens intelligens + autonomi + godhet i samma fras. Och du har bokat ett nytt samtal med konkret agenda.</li>
+      </ul>
+      <p><strong>Acceptera-tajmingen-varianten:</strong> ibland är motståndet reflexmässigt, inte verkligt. Då fungerar det att <em>genuint acceptera</em> kundens position. <em>"Du har helt rätt — om timingen inte är rätt nu, så är den inte det. Vi pratas vid om 6 månader, jag sätter en påminnelse."</em> Det här ska vara äkta — du är beredd att avsluta samtalet. Är motståndet bara reflex kommer kunden ofta själv invända: <em>"Nej, vänta, jag säger inte att vi inte är intresserade..."</em> Är motståndet äkta — du har respekterat det. Båda utfall är professionella. Det här är inte en lurfälla — det är respekt för kundens autonomi.</p>
+
+      <h4>5. Diagnos först — VILKEN del försvarar de?</h4>
+      <p>Innan du väljer teknik — diagnostisera. Det är skillnaden mellan att slå fel och slå rätt. Lyssna på exakta ord:</p>
+      <ul>
+        <li><strong>Autonomi-signaler:</strong> "Jag pressas redan från flera håll", "jag bestämmer själv när jag är redo", "sluta tjat".</li>
+        <li><strong>Intelligens-signaler:</strong> "Jag har redan utvärderat", "vi gjorde grundliga analyser", "jag vet vad jag gör".</li>
+        <li><strong>Godhet-signaler:</strong> "Jag är lojal mot min nuvarande leverantör", "jag är inte sån som hoppar runt", "jag tänker på teamet".</li>
+      </ul>
+      <p>Tre olika invändningar — en på ytan ("nej tack") — men tre helt olika svar. Diagnos = halva jobbet.</p>
+
+      <h4>Övning denna vecka</h4>
+      <p>Nästa 5 invändningar du möter: före du svarar, identifiera (A/I/G). Skriv på post-it. Anpassa svaret. Notera resultatet. Efter 5 invändningar har du börjat bygga reflexen — och invändningar känns plötsligt mindre som motstånd och mer som information.</p>
+
+      <h3>Använd kundens egna ord — inte dina översättningar</h3>
+      <p><strong>Princip:</strong> kundens egna ord känns mer sanna för kunden än dina formuleringar. Det är en av de mest underanvända teknikerna i hela invändningshanteringen — och samtidigt den enklaste. Du behöver inte vara smart, kreativ eller övertygande. Du behöver bara <em>lyssna noga</em> och spegla tillbaka exakt det de sa.</p>
+      <p>Vad som händer i kundens hjärna när du använder hens egna ord: hen känner sig hörd och förstådd. Hen kan inte motsäga sina egna ord — det vore självmotsägelse. Och din lösning landar nu i kundens egen ram, inte i din.</p>
+      <p><strong>Säljsituation:</strong> kunden säger i ett discovery-möte: <em>"Vi vill ha mer kontroll utan mer administration."</em></p>
+      <p><strong>Misstag:</strong> i presentationen senare, översätta till säljspråk: <em>"Vår lösning ger er ökad transparens samtidigt som vi minskar processöverhead..."</em> Generiska buzzwords. Kunden hör inte sig själv.</p>
+      <p><strong>Skicklig reaktion:</strong> använd hens exakta fras tillbaka. <em>"Det jag hörde dig säga är att ni vill ha mer kontroll utan mer administration. Det är precis det vi ska bygga det här runt — mer kontroll, utan mer administration."</em> Kunden känner sig genomlyssnad. Hen själv satt orden — du satte ramen.</p>
+      <p>Specifikt vad du ska fånga upp:</p>
+      <ul>
+        <li><strong>Kundens exakta fraseringar av sina problem</strong> ("vi tappar tid", "min chef tappar tålamodet", "mina säljare hamnar efter")</li>
+        <li><strong>Kundens beslutskriterier</strong> ("vi måste hinna före Q3", "det får inte krångla för end-användaren", "ROI på 12 månader är vad min chef kräver")</li>
+        <li><strong>Kundens emotionella signaler</strong> ("frustrerande", "stressande", "viktigt att slippa")</li>
+        <li><strong>Specifika namn och siffror hen nämnde</strong> ("Anna i HR-teamet", "8 timmar per vecka", "1,2 MSEK")</li>
+      </ul>
+      <p>Använd dem ordagrant senare i samtalet, i offerten, i uppföljningsmejlet. Inte var du tror hen menade — vad hen <em>sa</em>.</p>
+      <p><strong>Övning:</strong> efter ditt nästa kundsamtal — skriv ner 3 exakta ord eller fraser kunden använde. Använd minst 2 av dem i nästa kommunikation (mejl, samtal, presentation). Notera kundens reaktion. Du kommer märka skillnaden direkt.</p>
 
       <h3>De fem typerna av invändningar</h3>
       <p>Det är avgörande att förstå <em>vilken typ</em> av invändning du möter — för svaret ser helt olika ut beroende på det.</p>
@@ -2726,6 +2950,38 @@ const blocks = [
         <li><strong>Transparent uppföljning</strong> — bygg förtroende för det långa loppet. <em>"Vi hör av oss månad 11–12 och stämmer av hur det gått. Oavsett vad."</em></li>
       </ul>
       <p>De tre tillsammans adresserar den största psykologiska bromsen i varje affär: rädslan att fatta ett beslut som visar sig vara fel. Ta bort rädslan — och avslutet går av sig själv.</p>
+
+      <h3>Tajming — läs kundens emotionella läge innan du stänger</h3>
+      <p><strong>Princip:</strong> samma kund, samma erbjudande, samma siffror — men olika emotionellt läge ger olika svar. Skickliga säljare läser inte bara köpsignaler ("vi" istället för "ni"). De läser <em>kundens emotionella tillstånd</em> just nu. För det avgör om en stängning landar eller havererar.</p>
+      <p>Två tillstånd som påverkar avslut dramatiskt:</p>
+
+      <p><strong>1. Plötslig vinst — kunden är i högvågs-läge</strong></p>
+      <p>När en kund just har stängt en stor affär själv, fått en kampanj att lyckas, blivit befordrad, eller på annat sätt nyligen "vunnit" — släpper hjärnan dopamin och kortisol stiger. I det läget är hen mer benägen att säga ja till nästa stora beslut. Energin är hög, optimismen är hög, riskaversionen är låg.</p>
+      <ul>
+        <li><strong>Säljsituation:</strong> du har ett möte bokat med en VP som just rapporterat ett rekordkvartal.</li>
+        <li><strong>Misstag:</strong> kör samma standardpitch som med en stressad kund. Du missar fönstret.</li>
+        <li><strong>Bättre reaktion:</strong> ankra större. Föreslå den större lösningen, inte den minsta. Be om större commitment än du normalt skulle vågat. *"Eftersom ni är i ett momentum-läge nu — låt oss göra det här ordentligt från start. Premium-paketet kommer ge er den hävstången du letar efter."*</li>
+      </ul>
+      <p>Varning: högvågs-kunder är också mer impulsiva. Det är ETISKT viktigt att inte utnyttja det. Sälj bara det som faktiskt löser deras problem. Det är PRAKTISKT viktigt också — en hög-impulsivt köpt produkt blir lätt en hög-impulsivt avslutad kund 6 månader senare.</p>
+
+      <p><strong>2. Plötslig förlust — kunden är i förlustaversion</strong></p>
+      <p>När en kund just förlorat något — missade kvartalet, förlorade en stor kund, fick budget skuren, sparkades en kollega — är hjärnan i skyddsläge. Hen söker säkerhet, inte expansion. Riskaversionen är på topp. Att fatta nya beslut känns som att riskera mer av det man redan tappat.</p>
+      <ul>
+        <li><strong>Säljsituation:</strong> du sitter mitt i en pitch när du märker att kundens tonläge skiftar — hen blev just informerad om något negativt internt.</li>
+        <li><strong>Misstag:</strong> ignorera signalen och köra på enligt plan. Du landar dövstum.</li>
+        <li><strong>Bättre reaktion:</strong> bromsa. Validera tillståndet utan att fråga om det. *"Det känns som att det här inte är rätt timing — om du behöver fokusera på något annat just nu förstår jag det. Ska vi boka om till nästa vecka?"* Du har just bekräftat kundens situation utan att tvinga fram en förklaring. Hen kommer minnas det.</li>
+      </ul>
+      <p>Vid förlustaversion: gå mot riskreducering om du måste sälja. Mindre paket. Kortare avtal. Tydligare reträttklausul. *"Vi vill inte att du tar någon stor risk just nu — låt oss börja med X och bevisa värdet. Om sex månader kan vi prata om utökning."* Du säljer säkerhet, inte tillväxt.</p>
+
+      <p><strong>3. Diagnos: hur läser du tillståndet?</strong></p>
+      <p>Innan ditt nästa möte — gör en 60-sekunders-research:</p>
+      <ul>
+        <li>LinkedIn: postade hen något senaste veckan? Energinivå?</li>
+        <li>Bolagsnyheter: någon stor händelse senaste 30 dagarna?</li>
+        <li>Inom mötet: första 2 minuters tonläge, energi, vad hen pratar om spontant.</li>
+      </ul>
+      <p>I 80% av fallen är kunden i ett "neutralt" tillstånd. Men i 20% är något stort på gång — vinst eller förlust — och det fönstret avgör om din stängning blir lätt eller omöjlig.</p>
+      <p><strong>Övning:</strong> nästa 5 möten — anteckna kundens tillstånd direkt efter mötet (högvåg / neutralt / förlustaversion). Korrelera mot om mötet ledde till framsteg eller stagnation. Du kommer se mönstret.</p>
 
       <h3>Hantera "nej" — det är sällan ett nej för alltid</h3>
       <p>Brent Adamson (The Challenger Sale) visar att 53% av B2B-kunder som inte köper från dig idag kommer köpa av någon i samma kategori inom 18 månader. Nej idag betyder ofta: fel tajming, fel prioritet, fel förutsättning.</p>
@@ -3889,6 +4145,47 @@ const blocks = [
       <p><strong>3. "Det stämmer" är det verkliga avslutet</strong> — målet är inte att höra "ja", enligt Voss. "Ja" är ofta ett defensiv-ja för att sluta prata om något svårt. Målet är att höra <em>"det stämmer"</em>. Det betyder att motparten känner sig djupt förstådd, och då öppnar de för samarbete. Sammanfatta deras position med så mycket empati att de säger det.</p>
       <p><strong>4. "Nej" är en öppning, inte ett slut.</strong> Voss vänder den klassiska säljvisdomen upp och ned. Människor är rädda att säga "ja" — det känns som en fälla. "Nej" är däremot tryggt. Så fråga frågor där "nej" är det trygga svaret: <em>"Skulle det vara orimligt att kika på siffrorna?"</em> — då säger kunden "nej" och hamnar plötsligt i samarbetsläge.</p>
 
+      <h3>Mental judo — kanalisera istället för att stå emot</h3>
+      <p><strong>Princip:</strong> i förhandling möter du ibland motparter som inte är logiska — de är låsta. De har bestämt sig, oavsett vad du säger. Argumentera, och du förstärker deras motstånd. <strong>Mental judo</strong> är motsatsen: använd deras egen energi istället för att stå emot. Som i japansk judo — du faller inte mot motståndarens kraft, du leder den i en riktning som tjänar dig.</p>
+      <p>Tre konkreta judo-grepp i förhandling:</p>
+
+      <p><strong>1. Använd deras egna ord</strong></p>
+      <p>När någon är låst — börja inte med dina ord. Börja med deras. Repetera deras position med så mycket empati att de känner sig fullständigt förstådda. Då slappnar försvaret av — och först då kan du föreslå alternativ.</p>
+      <ul>
+        <li><strong>Säljsituation:</strong> kunden säger "vi måste få ner priset 30%, annars går det inte".</li>
+        <li><strong>Misstag:</strong> argumentera. <em>"30% är omöjligt, vi kan max 10%."</em> → kunden låser sig hårdare.</li>
+        <li><strong>Bättre reaktion:</strong> använd hens egna ord först. <em>"Du säger att det måste ner 30% annars går det inte. Hjälp mig förstå — vad är det som gör att 30% är just nivån? Är det budgetkalkylen, är det jämförelse med konkurrent, är det internt tryck?"</em> Du har inte argumenterat. Du har bara reflekterat tillbaka — och bett om information som låser upp situationen.</li>
+      </ul>
+
+      <p><strong>2. Använd deras egen rigiditet</strong></p>
+      <p>När en motpart är riktigt envis och håller fast vid en princip — försök inte att bryta principen. Använd den. Hitta sätt där deras princip faktiskt leder dem till det du vill.</p>
+      <ul>
+        <li><strong>Säljsituation:</strong> motparten säger "vi har en strikt regel: alla leverantörer måste ha minst 5 års track record".</li>
+        <li><strong>Misstag:</strong> argumentera mot regeln. <em>"Men vi har bara 3 år, ändå är vi bättre än de etablerade!"</em> → de står ännu hårdare för principen.</li>
+        <li><strong>Bättre reaktion:</strong> bekräfta principen och använd den. <em>"Jag respekterar den regeln helt — det är klokt. Får jag fråga: våra grundare har sammanlagt 22 års erfarenhet i branschen från [tidigare bolag]. Räknas det som track record i den meningen ni avser?"</em> Du har använt regeln för att öppna en dörr.</li>
+      </ul>
+
+      <p><strong>3. Genuin acceptans — gå med motståndet, inte mot det</strong></p>
+      <p>När någon är så låst att inget direkt fungerar — sluta argumentera. Acceptera deras position fullständigt. Inte som en taktik, utan på riktigt — du är beredd att lämna förhandlingen. Det här är skillnaden mellan en manipulativ "reverse psychology" (försök lura kunden att invända) och äkta acceptans (respektera kundens beslut, även om det innebär att du inte stänger).</p>
+      <ul>
+        <li><strong>Säljsituation:</strong> kunden säger upprepat att hen "behöver mer tid" trots att tajming uppenbart är emot dem.</li>
+        <li><strong>Misstag:</strong> övertala att de ska bestämma nu. → kunden står ännu hårdare.</li>
+        <li><strong>Bättre reaktion:</strong> bekräfta deras position genuint. <em>"Det är klokt — det är ditt val. Bra projekt slussas inte genom under press. Låt oss inte ha det här samtalet just nu. Vi tar det när det är rätt timing — kanske om tre månader. Jag sätter en påminnelse."</em> Du är beredd att avsluta. Är motståndet reflexmässigt kommer kunden ofta själv invända ("nej, vänta..."). Är det äkta — du har gjort rätt. Båda utfallen är professionella.</li>
+      </ul>
+      <p>Skillnaden mot manipulation: din intention. Säger du så här för att <em>lura</em> kunden invända — det är manipulation och kunden känner det. Säger du så här för att du <em>genuint respekterar</em> kundens autonomi och tajming — det är professionalism, och kunden känner det också.</p>
+
+      <p><strong>Variant — ChatGPT-mjuk: gå med motståndet</strong></p>
+      <p>När en kund säger "jag vill inte ha något stort projekt" — sluta argumentera för att det <em>inte är stort</em>. Det blir en strid om definitioner. Använd istället deras riktning:</p>
+      <blockquote>
+        <p><em>"Bra. Då ska vi inte prata om något stort projekt. Då tittar vi på minsta möjliga test som visar om det här ens är värt din tid. Vad skulle räknas som en bra första testning för er?"</em></p>
+      </blockquote>
+      <p>Du har inte motbevisat hen. Du har använt hens position som riktning för en mindre, lättare öppning.</p>
+
+      <p><strong>Varför judo fungerar — och argumentation inte gör det</strong></p>
+      <p>När du argumenterar mot en låst motpart attackerar du implicit deras intelligens (du säger att de tänkt fel) eller deras autonomi (du försöker pressa dem) — se Block 6 om självbild. Båda triggar hårdare försvar.</p>
+      <p>När du istället <em>använder</em> deras position kanaliserar du den. Du står inte emot — du står med. Du säger inte "du har fel" — du säger "om det är så, då gör vi så här istället". Motpartens energi har nu en kanal som tjänar er båda.</p>
+      <p><strong>Övning:</strong> nästa gång du möter en låst motpart — innan du svarar, gör en sak: säg deras position tillbaka till dem ordagrant och fråga "har jag förstått dig rätt?". Inget annat. Den enkla rutinen löser 30% av låsningar utan att du säger något substantiellt nytt.</p>
+
       <h3>Ge aldrig något utan att ta något tillbaka</h3>
       <p>Den viktigaste förhandlingsregeln för säljare: <strong>varje gång du ger, ta något</strong>. Inte för att vara snål — utan för att lära kunden att varje eftergift har ett värde. Ger du rabatt gratis signalerar du att priset var påhittat från början. Då går nästa förhandling ännu sämre.</p>
       <p>Alternativ till prissänkning (de bästa förhandlarna tar till dessa först):</p>
@@ -4280,6 +4577,29 @@ const blocks = [
       </ol>
       <p>Första gången känns det töntigt. Gör det 30 dagar — du kommer märka skillnaden i hur samtalet faktiskt utvecklas.</p>
 
+      <h3>Ramverk 2b: Hästen och ryttaren — emotioner som energi, inte fiende</h3>
+      <p><strong>Princip:</strong> de flesta säljare tänker att rationaliteten ska <em>tämja</em> känslorna. Det är fel modell — och den lämnar dig svag både i goda och svåra stunder. Bättre modell: du har en häst inom dig (energi, ambition, ilska, glädje, vilja) och en ryttare (planering, beslut, lugnt omdöme). Hästen utan ryttare = kaos. Du springer in i fel affärer, säger ja till dåliga priser, säger nej till kunder du borde lyssnat på. Ryttare utan häst = ingen kraft alls. Allt är planering, ingenting blir gjort. Skickliga säljare har inte tämjt sin häst. De har lärt sig <strong>rida</strong>.</p>
+      <p><strong>Säljsituation:</strong> du sitter i ett möte med en motspelare som börjar pressa hårt. Ilskan reser sig.</p>
+      <p><strong>Misstag:</strong> två motsatta — antingen släppa hästen lös (svara skarpt, tappa professionalism) eller försöka tämja den (bli styv, försvarsläge, monotont). Båda förlorar.</p>
+      <p><strong>Skicklig reaktion:</strong> erkänna känslan internt (ryttaren ser hästen) → kanalisera energin (hästen ger dig fokus och intensitet, inte aggression) → fortsätta med klar struktur (ryttaren har tyglarna). Ilskan blir bränsle, inte explosion. Du svarar lugnare än motparten — men med mer närvaro, inte mindre.</p>
+      <p><strong>Övning:</strong> nästa gång du känner stark känsla i ett möte (irritation, otålighet, oro) — säg internt: "hästen är vaken just nu". Den enkla namngivningen aktiverar ryttaren. Skriv efter mötet: vilken känsla kom upp? Använde du den eller blev du driven av den?</p>
+
+      <h3>Ramverk 2c: Stigande tryck — du ser säljaren när det är svårt</h3>
+      <p><strong>Princip:</strong> du ser inte säljarens riktiga nivå när allt går bra. Du ser den när pressen stiger — när månaden lutar mot underkvotering, när chefen frågar om pipelinen, när en stor affär just sprack, när 4 kunder ghostar samtidigt. Då läcker svagheterna fram. Och de svagheterna är samma varje gång — såvida du inte tränat dem.</p>
+      <p><strong>De vanligaste läckagen under tryck:</strong></p>
+      <ul>
+        <li><strong>Du pratar fortare</strong> — desperatare ton, rabblande pitch.</li>
+        <li><strong>Du pressar kunden</strong> — extra erbjudanden, extra rabatter, extra tryck. Kunden känner det.</li>
+        <li><strong>Du blir defensiv</strong> — varje invändning känns som personangrepp istället för information.</li>
+        <li><strong>Du slarvar med processen</strong> — hoppar över discovery, skickar offert utan kvalificering, glömmer dokumentation.</li>
+        <li><strong>Du skyller utåt</strong> — leadsen är dåliga, marknaden är tuff, priset är fel, chefen är orimlig.</li>
+      </ul>
+      <p><strong>Säljsituation:</strong> det är fredag eftermiddag, månaden slutar i 5 dagar, du är 30% under kvot, och kunden i samtalet just nu känns ljum.</p>
+      <p><strong>Misstag:</strong> kör hårdare. Pressa avslut. Ge rabatt utan motkrav för att stänga.</p>
+      <p><strong>Skicklig reaktion:</strong> sänk tempot medvetet. Återgå till strukturen — discovery, kvalificering, rätt frågor. Dokumentera vad som händer. Tryck under press är din värsta version. Disciplin under press är din bästa.</p>
+      <p><strong>Coaching-användning:</strong> om du leder ett team — bedöm dina säljare på hur de presterar i de tre svåraste veckorna i kvartalet, inte de tre lättaste. Det är där deras riktiga nivå ligger. Det är också där träningen ger mest.</p>
+      <p><strong>Övning:</strong> nästa pressfylld vecka — skriv kort varje kväll. (1) Vad gick bra trots trycket? (2) Vad läckte? (3) Vad ska jag öva nästa gång? Du bygger en personlig läckage-katalog. Den är ovärderlig.</p>
+
       <h3>Ramverk 3b: Mentalt motstånd — träna för katastrofen</h3>
       <p>Visualisering är att se det perfekta. Mentalt motstånd är att träna för det <em>fula</em> — och det är där elitnivå byggs.</p>
       <p>Michael Phelps — den mest dekorerade olympiska idrottaren i historien — tränade nästan alla pass under förhållanden hans coach gjorde medvetet besvärliga. Glasögon som läckte vatten. Långsammare simdräkter. Ojämna förhållanden i bassängen. Coachen tvingade fram katastroferna i träningen så att Phelps aldrig skulle möta något okänt på tävling.</p>
@@ -4353,6 +4673,51 @@ const blocks = [
         <li>❌ FEL: Jämför dig. Känn att du är dålig.</li>
         <li>✅ RÄTT: Reframe: "Bevis att det är möjligt. Vad gör hen annorlunda som jag kan lära?" Avund är information — gå till gym, inte i hål.</li>
       </ul>
+
+      <h3>Förläng din reaktionstid — sov på det, skriv men skicka inte</h3>
+      <p><strong>Princip:</strong> de flesta dåliga säljbeslut fattas i högvågs-känsla. Skickade mejlet i ilska efter ett tufft samtal. Lovade en rabatt under press. Sa ja till ett villkor du borde sagt nej till. Den enskilda mest underanvända superkraft i sälj är att <strong>förlänga tiden mellan stimuli och respons</strong>.</p>
+      <p>Det är inte att vara passiv. Det är att vara strategisk. Skillnaden mellan en medioker och en topp-säljare är ofta inte vad de gör — utan hur snabbt eller långsamt de gör det.</p>
+      <p><strong>Tre konkreta rutiner:</strong></p>
+      <ul>
+        <li><strong>Sov på stora beslut.</strong> Erbjudande från kund som verkar bra men sätter dig i obekvämt läge? "Tack, jag återkommer imorgon förmiddag." Då fångar du upp det som var konstigt — utan att tappa affären.</li>
+        <li><strong>Skriv mejlet, skicka inte direkt.</strong> När du är frustrerad eller pressad — skriv ändå. Spara som utkast. Läs imorgon. 80% av gångerna kommer du redigera 50% av innehållet.</li>
+        <li><strong>15-min-regeln.</strong> Innan du svarar på en hård invändning eller ett krav — be om 15 min. <em>"Bra fråga, jag vill ge dig ett ärligt svar — får jag återkomma efter lunch?"</em> 15 minuter räcker för att din ryttare ska hinna ifatt din häst.</li>
+      </ul>
+      <p><strong>Säljsituation:</strong> kund mejlar arg fredag 16:30 om en bug i din leverans, hotar att gå till konkurrent.</p>
+      <p><strong>Misstag:</strong> svara direkt, defensivt, lova allt. Du är trött, hen är arg, det blir dåligt mejl.</p>
+      <p><strong>Skicklig reaktion:</strong> bekräfta att du sett, lovar svar måndag morgon. Sov på det. Måndag svarar du genomtänkt, med konkret plan. Kunden uppfattar dig nu som strukturerad — inte panikslagen.</p>
+      <p><strong>Övning:</strong> nästa vecka — applicera 15-min-regeln på 3 situationer du normalt skulle reagerat på direkt. Notera utfallet.</p>
+
+      <h3>Flexibla sinnet — håll din egen självbild löst</h3>
+      <p><strong>Princip:</strong> dina egna slutsatser om dig själv och om världen är ofta dåliga data. Säljare fastnar regelbundet i identiteter som begränsar dem:</p>
+      <ul>
+        <li><em>"Jag är dålig på kalla samtal."</em></li>
+        <li><em>"Våra leads är problemet, inte jag."</em></li>
+        <li><em>"Min stil är annorlunda — den fungerar inte i den här branschen."</em></li>
+        <li><em>"Kunder fattar inte värdet."</em></li>
+        <li><em>"Jag är inte säljare av naturen."</em></li>
+      </ul>
+      <p>De här utsagorna känns som sanningar. De är inte. De är <strong>tankar du haft tillräckligt ofta för att de börjat kännas som identitet</strong>. Det är skillnad.</p>
+      <p>Träningsprincipen: <strong>din känsla är data, inte dom.</strong> Du kan känna dig dålig på kalla samtal — den känslan är information om hur det känns just nu, inte ett bevis på din kapacitet. Lika lite som en kall dusch är "outhärdlig" bara för att den känns så de första 10 sekunderna.</p>
+      <p><strong>Säljsituation:</strong> du har haft 5 nej i rad på prospektering. Tanken kommer: "jag är dålig på det här".</p>
+      <p><strong>Misstag:</strong> ta tanken som sanning. Drar dig undan. Ringer mindre. Bevisar tanken.</p>
+      <p><strong>Skicklig reaktion:</strong> separera känsla från identitet. <em>"Jag känner mig dålig på det här just nu. Det är en känsla, inte en bedömning av min kapacitet. Vad behöver jag justera taktiskt?"</em> Kanske är det öppningen, kanske är det listan, kanske är det energin. Tre sakliga frågor istället för en identitets-domsaga.</p>
+      <p><strong>Övning:</strong> skriv 3 saker du säger om dig själv som säljare. Under varje, fråga: "är detta en sanning eller en känsla?" Och: "vad skulle bevisa att det inte är sant?" 80% av gångerna upptäcker du att du argumenterat för dina egna begränsningar utan att de existerar.</p>
+
+      <h3>Säljarens gamla reaktioner — rädslor som styr utan att du ser dem</h3>
+      <p><strong>Princip:</strong> alla säljare har automatiska reaktioner som kommer från tidigare upplevelser — inte från det aktuella samtalet. Om du inte känner igen dem styr de dig. Om du känner igen dem kan du välja annorlunda.</p>
+      <p>De fyra vanligaste hos säljare:</p>
+      <ul>
+        <li><strong>Rädsla för avvisning</strong> → undviker kallringning, bokar inte tillräckligt med möten, sätter sig själv i pipeline-kris.</li>
+        <li><strong>Bekräftelsebehov</strong> → pratar för mycket, försöker imponera, säljer mot sig själv genom att inte sluta.</li>
+        <li><strong>Kontrollbehov</strong> → lyssnar dåligt, leder samtal hårt, missar kundens verkliga signaler.</li>
+        <li><strong>Rädsla att verka okunnig</strong> → svarar tvärsäkert på saker du inte vet, eller tar inte feedback från chef/kollega som hade gjort dig bättre.</li>
+      </ul>
+      <p>Det finns ingen anledning att gå djupt i barndom eller terapi. Du behöver bara känna igen mönstret för att kunna välja annorlunda i stunden.</p>
+      <p><strong>Säljsituation:</strong> kund ställer detaljerad teknisk fråga du inte vet svaret på.</p>
+      <p><strong>Misstag (rädsla att verka okunnig):</strong> hitta på ett svar, gissa, övertyga med tonen. Kunden känner det. Trovärdigheten dör.</p>
+      <p><strong>Skicklig reaktion:</strong> erkänn. <em>"Bra fråga — det vet jag inte exakt. Jag vill ge dig rätt svar, jag återkommer i eftermiddag med konkret data."</em> Och leverera. Det är hur trovärdighet faktiskt byggs — genom att inte låtsas.</p>
+      <p><strong>Övning:</strong> nästa vecka — efter varje kundsamtal, fråga dig: "vilken automatisk reaktion var igång?" Skriv en rad. Efter 20 samtal ser du ditt eget mönster. Det är ovärderligt.</p>
 
       <h3>Mental styrka driver målsystemet — kopplingen till Block 3</h3>
       <p>Mental styrka fungerar inte i isolation. Den är vad som gör att målsystemet från <strong>Block 3 Mål &amp; Motivation</strong> faktiskt levererar i den verkliga vardagen.</p>
