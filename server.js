@@ -2961,6 +2961,91 @@ app.get('/admin/alert-test', requireLogin, requireAdmin, (req, res) => {
   `);
 });
 
+// ── Boken (PDF) — auto-genererad från salesContent.js ───────────────────────
+// Cache:as i memory + på disk. Regen:as bara när content-hash ändras.
+
+const bookGenerator = require('./services/bookGenerator');
+let bookCache = { hash: null, buffer: null, generatedAt: null };
+
+async function getOrGenerateBook() {
+  const currentHash = bookGenerator.computeContentHash(salesBlocks);
+  if (bookCache.hash === currentHash && bookCache.buffer) {
+    return { buffer: bookCache.buffer, hash: currentHash, cached: true, generatedAt: bookCache.generatedAt };
+  }
+  console.log(`📚 Genererar säljboken (hash ${currentHash})...`);
+  const t0 = Date.now();
+  const buffer = await bookGenerator.generateFullBookBuffer(salesBlocks, {
+    title:    'Joakim Jaksens Säljutbildning',
+    subtitle: 'Allt du behöver veta för att bli en bättre säljare',
+    author:   'Joakim Jaksen',
+  });
+  console.log(`📚 Boken genererad: ${Math.round(buffer.length / 1024)} KB på ${Date.now() - t0}ms`);
+  bookCache = { hash: currentHash, buffer, generatedAt: new Date().toISOString() };
+  return { buffer, hash: currentHash, cached: false, generatedAt: bookCache.generatedAt };
+}
+
+// User download — premium-feature. Free-users redirectas till /upgrade.
+app.get('/book/saljboken.pdf', requireLogin, async (req, res) => {
+  if (!isPremiumOrHigher(req.session.role)) {
+    return res.redirect('/upgrade?from=book');
+  }
+  try {
+    const { buffer, hash } = await getOrGenerateBook();
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', 'attachment; filename="joakim-jaksens-saljutbildning.pdf"');
+    res.setHeader('Cache-Control', 'private, max-age=3600');
+    res.setHeader('X-Content-Hash', hash);
+    res.send(buffer);
+    audit(req, 'book.download', { id: req.session.userId, username: req.session.username }, { hash });
+  } catch (err) {
+    console.error('Book download error:', err.message);
+    notifyAdmin('warning', 'Book PDF generation failed',
+      'Användare försökte ladda ner boken men generering kraschade.',
+      { error: err.message, userId: req.session.userId });
+    res.status(500).send('Boken kunde inte genereras just nu. Försök igen om en stund.');
+  }
+});
+
+// Admin: tvinga regen + visa info
+app.get('/admin/book', requireLogin, requireAdmin, async (req, res) => {
+  if (req.query.regen === '1') {
+    bookCache = { hash: null, buffer: null, generatedAt: null }; // bust cache
+  }
+  try {
+    const { buffer, hash, cached, generatedAt } = await getOrGenerateBook();
+    res.send(`
+      <!DOCTYPE html><html lang="sv"><head><meta charset="UTF-8"><title>Admin — Boken</title>
+      <style>body{font-family:system-ui;background:#0f172a;color:#e2e8f0;padding:2rem;margin:0;min-height:100vh;box-sizing:border-box;}
+      .w{max-width:640px;margin:2rem auto;padding:2rem;background:#1e293b;border-radius:14px;border:1px solid rgba(255,255,255,0.08);}
+      h1{margin:0 0 0.5rem;} a{color:#a5b4fc;text-decoration:none;}
+      .stat{display:flex;justify-content:space-between;padding:0.5rem 0;border-bottom:1px solid rgba(255,255,255,0.05);}
+      .stat strong{color:#f1f5f9;}
+      .btn{display:inline-block;padding:0.7rem 1.2rem;margin:0.4rem 0.4rem 0 0;background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;border-radius:8px;font-weight:600;}
+      .btn-ghost{background:rgba(255,255,255,0.06);}</style></head>
+      <body><div class="w">
+        <p style="margin:0;color:#94a3b8;font-size:0.78rem;letter-spacing:0.08em;text-transform:uppercase;">📚 Boken</p>
+        <h1>Säljboken — auto-genererad PDF</h1>
+        <p style="color:#94a3b8;margin:0.5rem 0 1.5rem;line-height:1.6;">Genereras automatiskt från salesContent.js. Cache:as i memory tills content-hashen ändras.</p>
+        <div class="stat"><span>Storlek</span><strong>${Math.round(buffer.length / 1024)} KB</strong></div>
+        <div class="stat"><span>Content-hash</span><strong style="font-family:monospace;">${hash}</strong></div>
+        <div class="stat"><span>Genererad</span><strong>${new Date(generatedAt).toLocaleString('sv-SE')}</strong></div>
+        <div class="stat"><span>Cache</span><strong>${cached ? '✓ memory-cache' : '⚡ just regen'}</strong></div>
+        <div class="stat"><span>Antal block</span><strong>${salesBlocks.length}</strong></div>
+        <div style="margin-top:1.5rem;">
+          <a href="/book/saljboken.pdf" class="btn">📥 Ladda ner PDF</a>
+          <a href="/admin/book?regen=1" class="btn btn-ghost">↻ Regenerera (force)</a>
+          <a href="/admin" class="btn btn-ghost">← Admin</a>
+        </div>
+        <p style="margin-top:1.5rem;color:#64748b;font-size:0.82rem;">
+          När du uppdaterar block-content (theory, outcomeTitle, concreteScripts) i salesContent.js → content-hashen ändras → nästa download regen:ar boken automatiskt. Cache:n töms vid server-restart.
+        </p>
+      </div></body></html>
+    `);
+  } catch (err) {
+    res.status(500).send(`<pre>Error: ${err.message}\n\n${err.stack}</pre>`);
+  }
+});
+
 // ── Block-audio (TTS / inspelat per block) ──────────────────────────────────
 // Joakim laddar upp en MP3/M4A per block. Filen lagras i Cloudflare R2;
 // metadata cachas i DB. Uppspelning på block-sidan via signed URL (1h TTL).

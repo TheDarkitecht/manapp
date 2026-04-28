@@ -201,6 +201,22 @@
       </div>
     <% } %>
 
+    <!-- Boken (PDF) — premium-feature, ~200 sidor auto-genererad från content -->
+    <% if (role === 'premium' || role === 'pro' || role === 'admin') { %>
+    <div class="success-card" style="margin-top:1.5rem;background:linear-gradient(145deg,rgba(168,85,247,0.06),rgba(124,58,237,0.02));border-color:rgba(168,85,247,0.3);">
+      <h2 style="color:#f1f5f9;margin:0 0 0.5rem;font-size:1.15rem;">📚 Boken</h2>
+      <p style="color:#cbd5e1;margin:0 0 1.25rem;font-size:0.9rem;line-height:1.55;">
+        Hela utbildningen som <strong>~200-sidors PDF</strong> — perfekt för läsning offline, på flyget, eller när du föredrar bok-format. Innehåller allt teori-material, outcomes, och konkreta formuleringar du kommer kunna säga.
+      </p>
+      <a href="/book/saljboken.pdf" class="btn-primary" style="display:inline-block;padding:0.75rem 1.25rem;background:linear-gradient(135deg,#a855f7,#7c3aed);color:#fff;text-decoration:none;border-radius:10px;font-weight:600;font-size:0.9rem;">
+        📥 Ladda ner PDF
+      </a>
+      <p style="color:#64748b;margin:0.85rem 0 0;font-size:0.78rem;">
+        Boken uppdateras automatiskt när Joakim publicerar nytt innehåll. Ladda ner igen för senaste versionen.
+      </p>
+    </div>
+    <% } %>
+
     <!-- Stripe customer portal — self-serve cancel, uppdatera kort, ladda ner kvitton -->
     <% if (role === 'premium' || role === 'pro') { %>
     <div class="success-card" style="margin-top:1.5rem;">
