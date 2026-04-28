@@ -1,12 +1,13 @@
 // server.js
-const express   = require('express');
-const session   = require('express-session');
-const bcrypt    = require('bcryptjs');
-const OpenAI    = require('openai');
+const express     = require('express');
+const session     = require('express-session');
+const bcrypt      = require('bcryptjs');
+const OpenAI      = require('openai');
 const { rateLimit, ipKeyGenerator } = require('express-rate-limit');
-const Stripe    = require('stripe');
-const { Resend } = require('resend');
-const helmet    = require('helmet');
+const Stripe      = require('stripe');
+const { Resend }  = require('resend');
+const helmet      = require('helmet');
+const compression = require('compression');
 const {
   initDatabase, cleanupExpiredTokens, rotateDbBackups, findUserByUsername, findUserByEmail, findUserById, generateUsernameFromEmail, displayName, fullName, createUser,
   getAllUsers, setUserRole, deleteUser, deleteUserAccount, getUserStats,
@@ -396,7 +397,31 @@ app.disable('x-powered-by'); // already removed by helmet but belt-and-suspender
 
 app.use(express.urlencoded({ extended: false }));
 app.use(express.json());
-app.use(express.static('public'));
+
+// Gzip-compression — minskar 235 KB CSS+JS till ~40 KB över wire (~80% reduktion).
+// On 3G mobile = ~2s snabbare första pageload. Filter:ar bort PDF/EPUB/audio
+// (redan kompimerade) för att inte slösa CPU.
+app.use(compression({
+  filter: (req, res) => {
+    const ct = res.getHeader('Content-Type') || '';
+    // Skippa redan-komprimerade format
+    if (/\b(pdf|epub|zip|gzip|jpeg|png|gif|webp|mp3|mp4|m4a|ogg)\b/i.test(String(ct))) return false;
+    return compression.filter(req, res);
+  },
+  threshold: 1024, // <1 KB = inte värt att gzip:a
+}));
+
+// Static files med 30-dagars cache-headers — CSS/JS uppdateras sällan,
+// browsers behöver inte refetcha varje page-load. För dev (NODE_ENV ej satt)
+// behåller vi short cache så vi ser ändringar direkt.
+const STATIC_MAX_AGE = (process.env.NODE_ENV === 'production' || process.env.RAILWAY_ENVIRONMENT)
+  ? 30 * 24 * 60 * 60  // 30 dagar i sek
+  : 0;
+app.use(express.static('public', {
+  maxAge: STATIC_MAX_AGE * 1000, // express vill ha ms
+  etag: true,                    // 304 Not Modified vid omatchad If-None-Match
+  lastModified: true,
+}));
 app.set('view engine', 'ejs');
 
 const isProd = process.env.NODE_ENV === 'production' || !!process.env.RAILWAY_ENVIRONMENT;
@@ -2962,16 +2987,41 @@ app.get('/admin/alert-test', requireLogin, requireAdmin, (req, res) => {
 });
 
 // ── Boken (PDF) — auto-genererad från salesContent.js ───────────────────────
-// Cache:as i memory + på disk. Regen:as bara när content-hash ändras.
+// Tre-lagers cache: memory → R2 → regen.
+// Server-restart torcher memory; R2 överlever och ger instant download.
+// Regen sker bara när content-hash ändras.
 
 const bookGenerator = require('./services/bookGenerator');
+const r2Storage = require('./services/audioStorage'); // återanvänder R2-helpers
+
+const BOOK_R2_KEY_PREFIX = 'books/saljbok-';
+
 let bookCache = { hash: null, buffer: null, generatedAt: null };
 
+/**
+ * Hämta boken — memory > R2 > regen. Vid regen lagras till BÅDE memory + R2
+ * så framtida server-restarts inte triggar ny generering.
+ */
 async function getOrGenerateBook() {
   const currentHash = bookGenerator.computeContentHash(salesBlocks);
+
+  // 1) Memory-cache hit
   if (bookCache.hash === currentHash && bookCache.buffer) {
-    return { buffer: bookCache.buffer, hash: currentHash, cached: true, generatedAt: bookCache.generatedAt };
+    return { buffer: bookCache.buffer, hash: currentHash, source: 'memory', generatedAt: bookCache.generatedAt };
   }
+
+  // 2) R2-cache hit (om enabled) — undviker regen efter server-restart
+  if (r2Storage.isR2Enabled()) {
+    const r2Key = `${BOOK_R2_KEY_PREFIX}${currentHash}.pdf`;
+    const r2Buffer = await r2Storage.fetchObjectBuffer(r2Key).catch(() => null);
+    if (r2Buffer && r2Buffer.length > 0) {
+      bookCache = { hash: currentHash, buffer: r2Buffer, generatedAt: new Date().toISOString() };
+      console.log(`📚 Boken hämtad från R2-cache (${Math.round(r2Buffer.length / 1024)} KB, hash ${currentHash})`);
+      return { buffer: r2Buffer, hash: currentHash, source: 'r2', generatedAt: bookCache.generatedAt };
+    }
+  }
+
+  // 3) Regen från content
   console.log(`📚 Genererar säljboken (hash ${currentHash})...`);
   const t0 = Date.now();
   const buffer = await bookGenerator.generateFullBookBuffer(salesBlocks, {
@@ -2981,7 +3031,19 @@ async function getOrGenerateBook() {
   });
   console.log(`📚 Boken genererad: ${Math.round(buffer.length / 1024)} KB på ${Date.now() - t0}ms`);
   bookCache = { hash: currentHash, buffer, generatedAt: new Date().toISOString() };
-  return { buffer, hash: currentHash, cached: false, generatedAt: bookCache.generatedAt };
+
+  // Lagra till R2 fire-and-forget (failure påverkar inte downloaden)
+  if (r2Storage.isR2Enabled()) {
+    const r2Key = `${BOOK_R2_KEY_PREFIX}${currentHash}.pdf`;
+    r2Storage.uploadGenericObject({ key: r2Key, buffer, contentType: 'application/pdf' })
+      .then(r => {
+        if (r.ok) console.log(`📚 Boken cachat till R2: ${r2Key}`);
+        else console.warn(`📚 R2-cache failed: ${r.reason}`);
+      })
+      .catch(err => console.warn(`📚 R2-cache error: ${err.message}`));
+  }
+
+  return { buffer, hash: currentHash, source: 'regen', generatedAt: bookCache.generatedAt };
 }
 
 // User download — premium-feature. Free-users redirectas till /upgrade.
@@ -2996,7 +3058,7 @@ app.get('/book/saljboken.pdf', requireLogin, async (req, res) => {
     res.setHeader('Cache-Control', 'private, max-age=3600');
     res.setHeader('X-Content-Hash', hash);
     res.send(buffer);
-    audit(req, 'book.download', { id: req.session.userId, username: req.session.username }, { hash });
+    audit(req, 'book.download', { id: req.session.userId, username: req.session.username }, { hash, format: 'pdf' });
   } catch (err) {
     console.error('Book download error:', err.message);
     notifyAdmin('warning', 'Book PDF generation failed',
@@ -3006,13 +3068,80 @@ app.get('/book/saljboken.pdf', requireLogin, async (req, res) => {
   }
 });
 
-// Admin: tvinga regen + visa info
-app.get('/admin/book', requireLogin, requireAdmin, async (req, res) => {
-  if (req.query.regen === '1') {
-    bookCache = { hash: null, buffer: null, generatedAt: null }; // bust cache
+// EPUB-download — för Kindle, Apple Books, Google Play Books, etc.
+// Samma access-rules: premium-only, R2-cache, regen vid content-ändring.
+const epubGenerator = require('./services/epubGenerator');
+const EPUB_R2_KEY_PREFIX = 'books/saljbok-';
+let epubCache = { hash: null, buffer: null, generatedAt: null };
+
+async function getOrGenerateEpub() {
+  const currentHash = epubGenerator.computeEpubContentHash(salesBlocks);
+  if (epubCache.hash === currentHash && epubCache.buffer) {
+    return { buffer: epubCache.buffer, hash: currentHash, source: 'memory' };
+  }
+  if (r2Storage.isR2Enabled()) {
+    const r2Key = `${EPUB_R2_KEY_PREFIX}${currentHash}.epub`;
+    const r2Buffer = await r2Storage.fetchObjectBuffer(r2Key).catch(() => null);
+    if (r2Buffer && r2Buffer.length > 0) {
+      epubCache = { hash: currentHash, buffer: r2Buffer, generatedAt: new Date().toISOString() };
+      console.log(`📖 EPUB hämtad från R2-cache (${Math.round(r2Buffer.length / 1024)} KB)`);
+      return { buffer: r2Buffer, hash: currentHash, source: 'r2' };
+    }
+  }
+  console.log(`📖 Genererar EPUB (hash ${currentHash})...`);
+  const t0 = Date.now();
+  const buffer = await epubGenerator.generateFullBookEpub(salesBlocks, {
+    title:    'Joakim Jaksens Säljutbildning',
+    subtitle: 'Allt du behöver veta för att bli en bättre säljare',
+    author:   'Joakim Jaksen',
+  });
+  console.log(`📖 EPUB genererad: ${Math.round(buffer.length / 1024)} KB på ${Date.now() - t0}ms`);
+  epubCache = { hash: currentHash, buffer, generatedAt: new Date().toISOString() };
+  if (r2Storage.isR2Enabled()) {
+    const r2Key = `${EPUB_R2_KEY_PREFIX}${currentHash}.epub`;
+    r2Storage.uploadGenericObject({ key: r2Key, buffer, contentType: 'application/epub+zip' })
+      .then(r => r.ok && console.log(`📖 EPUB cachat till R2: ${r2Key}`))
+      .catch(err => console.warn(`📖 R2-cache failed: ${err.message}`));
+  }
+  return { buffer, hash: currentHash, source: 'regen' };
+}
+
+app.get('/book/saljboken.epub', requireLogin, async (req, res) => {
+  if (!isPremiumOrHigher(req.session.role)) {
+    return res.redirect('/upgrade?from=book');
   }
   try {
-    const { buffer, hash, cached, generatedAt } = await getOrGenerateBook();
+    const { buffer, hash } = await getOrGenerateEpub();
+    res.setHeader('Content-Type', 'application/epub+zip');
+    res.setHeader('Content-Disposition', 'attachment; filename="joakim-jaksens-saljutbildning.epub"');
+    res.setHeader('Cache-Control', 'private, max-age=3600');
+    res.setHeader('X-Content-Hash', hash);
+    res.send(buffer);
+    audit(req, 'book.download', { id: req.session.userId, username: req.session.username }, { hash, format: 'epub' });
+  } catch (err) {
+    console.error('Book EPUB error:', err.message);
+    notifyAdmin('warning', 'Book EPUB generation failed',
+      'Användare försökte ladda ner EPUB men generering kraschade.',
+      { error: err.message, userId: req.session.userId });
+    res.status(500).send('EPUB:en kunde inte genereras just nu. Försök igen om en stund.');
+  }
+});
+
+// Admin: tvinga regen + visa info för båda formaten
+app.get('/admin/book', requireLogin, requireAdmin, async (req, res) => {
+  if (req.query.regen === '1') {
+    bookCache = { hash: null, buffer: null, generatedAt: null };
+    epubCache = { hash: null, buffer: null, generatedAt: null };
+  }
+  try {
+    const pdf  = await getOrGenerateBook();
+    const epub = await getOrGenerateEpub();
+    const { buffer, hash, source, generatedAt } = pdf;
+    const sourceLabel = {
+      memory: '✓ memory-cache (instant)',
+      r2:     '☁️  R2-cache (instant, persistent över restart)',
+      regen:  '⚡ just regen (1-2s)',
+    }[source] || source;
     res.send(`
       <!DOCTYPE html><html lang="sv"><head><meta charset="UTF-8"><title>Admin — Boken</title>
       <style>body{font-family:system-ui;background:#0f172a;color:#e2e8f0;padding:2rem;margin:0;min-height:100vh;box-sizing:border-box;}
@@ -3025,19 +3154,24 @@ app.get('/admin/book', requireLogin, requireAdmin, async (req, res) => {
       <body><div class="w">
         <p style="margin:0;color:#94a3b8;font-size:0.78rem;letter-spacing:0.08em;text-transform:uppercase;">📚 Boken</p>
         <h1>Säljboken — auto-genererad PDF</h1>
-        <p style="color:#94a3b8;margin:0.5rem 0 1.5rem;line-height:1.6;">Genereras automatiskt från salesContent.js. Cache:as i memory tills content-hashen ändras.</p>
-        <div class="stat"><span>Storlek</span><strong>${Math.round(buffer.length / 1024)} KB</strong></div>
-        <div class="stat"><span>Content-hash</span><strong style="font-family:monospace;">${hash}</strong></div>
+        <p style="color:#94a3b8;margin:0.5rem 0 1.5rem;line-height:1.6;">Genereras från salesContent.js. Tre-lagers cache: memory → R2 → regen. Hash baseras på content (theory + outcomes + scripts).</p>
+        <div class="stat"><span>📄 PDF — storlek</span><strong>${Math.round(buffer.length / 1024)} KB</strong></div>
+        <div class="stat"><span>📄 PDF — source</span><strong>${sourceLabel}</strong></div>
+        <div class="stat"><span>📖 EPUB — storlek</span><strong>${Math.round(epub.buffer.length / 1024)} KB</strong></div>
+        <div class="stat"><span>📖 EPUB — source</span><strong>${epub.source}</strong></div>
+        <div class="stat"><span>Content-hash (PDF)</span><strong style="font-family:monospace;">${hash}</strong></div>
+        <div class="stat"><span>Content-hash (EPUB)</span><strong style="font-family:monospace;">${epub.hash}</strong></div>
         <div class="stat"><span>Genererad</span><strong>${new Date(generatedAt).toLocaleString('sv-SE')}</strong></div>
-        <div class="stat"><span>Cache</span><strong>${cached ? '✓ memory-cache' : '⚡ just regen'}</strong></div>
+        <div class="stat"><span>R2-cache</span><strong>${r2Storage.isR2Enabled() ? '✓ enabled' : '✗ ej konfigurerat'}</strong></div>
         <div class="stat"><span>Antal block</span><strong>${salesBlocks.length}</strong></div>
         <div style="margin-top:1.5rem;">
-          <a href="/book/saljboken.pdf" class="btn">📥 Ladda ner PDF</a>
-          <a href="/admin/book?regen=1" class="btn btn-ghost">↻ Regenerera (force)</a>
+          <a href="/book/saljboken.pdf" class="btn">📄 Ladda ner PDF</a>
+          <a href="/book/saljboken.epub" class="btn">📖 Ladda ner EPUB</a>
+          <a href="/admin/book?regen=1" class="btn btn-ghost">↻ Regenerera båda</a>
           <a href="/admin" class="btn btn-ghost">← Admin</a>
         </div>
         <p style="margin-top:1.5rem;color:#64748b;font-size:0.82rem;">
-          När du uppdaterar block-content (theory, outcomeTitle, concreteScripts) i salesContent.js → content-hashen ändras → nästa download regen:ar boken automatiskt. Cache:n töms vid server-restart.
+          När du uppdaterar block-content (theory, outcomeTitle, concreteScripts) → content-hashen ändras → nästa download = regen + ny R2-cache. Server-restart tömmer memory men R2 persisteras.
         </p>
       </div></body></html>
     `);

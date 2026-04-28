@@ -159,6 +159,50 @@ async function deleteBlockAudioObject(r2Key) {
   }
 }
 
+/**
+ * Generic R2 upload — för andra services som behöver R2-lagring
+ * (boken, future generated assets, etc).
+ */
+async function uploadGenericObject({ key, buffer, contentType }) {
+  if (!isR2Enabled()) return { ok: false, reason: 'r2_not_configured' };
+  if (!key || !buffer) return { ok: false, reason: 'missing_params' };
+  try {
+    initR2();
+    await s3Client.send(new S3Commands.PutObjectCommand({
+      Bucket:      R2_BUCKET,
+      Key:         key,
+      Body:        buffer,
+      ContentType: contentType || 'application/octet-stream',
+    }));
+    return { ok: true, key, bytes: buffer.length };
+  } catch (err) {
+    console.error('[audioStorage] generic upload failed:', err.message);
+    return { ok: false, reason: err.message };
+  }
+}
+
+/**
+ * Generic R2 fetch — returnera Buffer eller null.
+ */
+async function fetchObjectBuffer(key) {
+  if (!isR2Enabled() || !key) return null;
+  try {
+    initR2();
+    const res = await s3Client.send(new S3Commands.GetObjectCommand({
+      Bucket: R2_BUCKET,
+      Key:    key,
+    }));
+    // res.Body är en Readable stream — buffra all
+    const chunks = [];
+    for await (const chunk of res.Body) chunks.push(chunk);
+    return Buffer.concat(chunks);
+  } catch (err) {
+    if (err.name === 'NoSuchKey' || err.Code === 'NoSuchKey') return null;
+    console.error('[audioStorage] fetch failed:', err.message);
+    return null;
+  }
+}
+
 module.exports = {
   isR2Enabled,
   uploadBlockAudio,
@@ -166,4 +210,6 @@ module.exports = {
   streamAudio,
   deleteBlockAudioObject,
   buildR2Key,
+  uploadGenericObject,
+  fetchObjectBuffer,
 };
