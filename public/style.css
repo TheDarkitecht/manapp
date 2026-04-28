@@ -4201,6 +4201,82 @@ body.dash-page {
   .bps-icon { font-size: 1.1rem; }
 }
 
+/* ── Audio-card — Joakims röst läser upp blocket ───────────────────────
+   Visas överst i lesson-flödet om audio är uppladdat (block_audio).
+   "Lyssna istället"-vinkel — för pendel, träning, promenad. */
+.audio-card {
+  padding: 1.25rem 1.5rem;
+  background: linear-gradient(145deg, rgba(245,158,11,0.08), rgba(217,119,6,0.04));
+  border: 1px solid rgba(245,158,11,0.3);
+  border-radius: 14px;
+}
+.audio-card-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.85rem;
+  flex-wrap: wrap;
+}
+.audio-card-eyebrow {
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #fbbf24;
+}
+.audio-card-tip {
+  color: #cbd5e1;
+  font-size: 0.85rem;
+  line-height: 1.4;
+}
+.audio-card audio {
+  display: block;
+  width: 100%;
+  margin: 0;
+  border-radius: 8px;
+  /* Standard <audio> controls — varje browser har sin design men det är
+     tillräckligt funktionellt. Custom controls kostar mycket UX-jobb. */
+}
+.audio-card-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-top: 0.85rem;
+  flex-wrap: wrap;
+}
+.audio-speed-label {
+  color: #94a3b8;
+  font-size: 0.82rem;
+  margin-right: 0.25rem;
+}
+.audio-speed-btn {
+  padding: 0.4rem 0.75rem;
+  background: rgba(255,255,255,0.06);
+  color: #cbd5e1;
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 8px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+  font-variant-numeric: tabular-nums;
+  min-height: 36px;
+  touch-action: manipulation;
+}
+.audio-speed-btn:hover { background: rgba(255,255,255,0.1); color: #f1f5f9; }
+.audio-speed-btn.active {
+  background: rgba(245,158,11,0.18);
+  color: #fbbf24;
+  border-color: rgba(245,158,11,0.45);
+}
+
+@media (max-width: 540px) {
+  .audio-card { padding: 1rem 1.1rem; }
+  .audio-card-header { flex-direction: column; gap: 0.4rem; }
+  .audio-card-tip { font-size: 0.8rem; }
+}
+
 /* ── Outcome-card — "Det här ska sitta efter blocket" ──────────────────
    Visas direkt efter progress-strip, innan video. Primar hela scrollen
    med outcome + 2 konkreta formuleringar användaren kommer kunna säga.

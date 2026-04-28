@@ -355,6 +355,23 @@ async function initDatabase() {
     )
   `);
 
+  // Block-audio: TTS- eller inspelad audio per block, lagrad i R2.
+  // Joakim laddar upp en MP3/M4A per block via /admin/audio. Filen lagras i
+  // R2 (audio/blocks/<id>.mp3), bara metadata cachas här. URL:s genereras
+  // signed med 1h TTL via streaming-route /audio/blocks/:id.mp3.
+  db.run(`
+    CREATE TABLE IF NOT EXISTS block_audio (
+      block_id      TEXT    PRIMARY KEY,
+      r2_key        TEXT    NOT NULL,
+      duration_sec  INTEGER,
+      bytes         INTEGER,
+      mime_type     TEXT    DEFAULT 'audio/mpeg',
+      uploaded_by   INTEGER,
+      uploaded_at   TEXT    NOT NULL DEFAULT (datetime('now')),
+      version       INTEGER NOT NULL DEFAULT 1
+    )
+  `);
+
   // Funnel-events: en rad per (user_id, event_name) — first-occurrence-only.
   // Skiljer sig från page_views (rå GET-traffic, dups) och audit-log (admin-actions).
   // Drivs av aktivering/konvertering: register → dashboard → block → quiz → upgrade.
@@ -1961,6 +1978,65 @@ function updateLastPageViewDuration(userId, durationMs) {
   } catch (err) {
     console.error('updateLastPageViewDuration failed:', err.message);
   }
+}
+
+// ── Block audio (TTS/inspelat per block) ─────────────────────────────────────
+
+/**
+ * Spara/uppdatera block-audio metadata. Idempotent — INSERT OR REPLACE för
+ * att vid re-upload ersätta existerande rad. Version bumpas så vi kan
+ * cache-busta browser-side.
+ */
+function upsertBlockAudio({ blockId, r2Key, durationSec, bytes, mimeType, uploadedBy }) {
+  if (!blockId || !r2Key) throw new Error('blockId + r2Key required');
+  // Om existerande: bump version
+  const existingS = db.prepare('SELECT version FROM block_audio WHERE block_id = ?');
+  existingS.bind([blockId]);
+  const existing = existingS.step() ? existingS.getAsObject() : null;
+  existingS.free();
+  const version = existing ? (existing.version + 1) : 1;
+
+  db.run(
+    `INSERT OR REPLACE INTO block_audio
+     (block_id, r2_key, duration_sec, bytes, mime_type, uploaded_by, uploaded_at, version)
+     VALUES (?, ?, ?, ?, ?, ?, datetime('now'), ?)`,
+    [
+      blockId,
+      r2Key,
+      Number.isFinite(durationSec) ? Math.round(durationSec) : null,
+      Number.isFinite(bytes) ? bytes : null,
+      mimeType || 'audio/mpeg',
+      uploadedBy || null,
+      version,
+    ]
+  );
+  saveDb();
+  return { ok: true, version };
+}
+
+/** Hämta metadata för ett block. null om ingen audio uppladdad. */
+function getBlockAudio(blockId) {
+  if (!blockId) return null;
+  const s = db.prepare('SELECT * FROM block_audio WHERE block_id = ?');
+  s.bind([blockId]);
+  const row = s.step() ? s.getAsObject() : null;
+  s.free();
+  return row;
+}
+
+/** Lista alla block med audio (för admin-vyn). */
+function listBlockAudios() {
+  return rowsQuery(
+    `SELECT block_id, r2_key, duration_sec, bytes, mime_type, uploaded_at, version
+     FROM block_audio
+     ORDER BY uploaded_at DESC`
+  );
+}
+
+/** Radera audio-metadata. R2-objektet raderas separat av admin-routen. */
+function deleteBlockAudio(blockId) {
+  db.run('DELETE FROM block_audio WHERE block_id = ?', [blockId]);
+  saveDb();
 }
 
 // ── Funnel events ─────────────────────────────────────────────────────────────
@@ -3608,6 +3684,8 @@ module.exports = {
   logPageView, updateLastPageViewDuration, cleanupOldPageViews, flushAnalytics,
   // Funnel events (aktivering/konvertering)
   logFunnelEvent, getFunnelStats, getRecentFunnelEvents, backfillRegisterEvents,
+  // Block audio (TTS/inspelat per block)
+  upsertBlockAudio, getBlockAudio, listBlockAudios, deleteBlockAudio,
   // Session store
   sessionGet, sessionSet, sessionDestroy, sessionCleanupExpired,
   // Stripe idempotency

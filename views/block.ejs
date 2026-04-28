@@ -309,6 +309,96 @@
 
     <div class="lesson-wrap">
 
+      <!-- ─── A. AUDIO-PLAYER — Joakims röst läser upp blocket (om uppladdat) ─── -->
+      <% if (typeof blockAudio !== 'undefined' && blockAudio) { %>
+      <section class="lesson-section lesson-audio" aria-labelledby="lesson-audio-h">
+        <div class="audio-card">
+          <div class="audio-card-header">
+            <span class="audio-card-eyebrow">🎙️ Lyssna istället</span>
+            <span class="audio-card-tip">Joakim läser upp hela blocket — perfekt på pendel/promenad.</span>
+          </div>
+          <audio
+            id="blockAudio"
+            controls
+            preload="metadata"
+            src="<%= blockAudio.url %>"
+            data-block-id="<%= block.id %>"
+            data-audio-version="<%= blockAudio.version %>"
+            style="width:100%;"
+          ></audio>
+          <div class="audio-card-controls">
+            <span class="audio-speed-label">Hastighet:</span>
+            <button type="button" class="audio-speed-btn" data-speed="1" aria-pressed="true">1×</button>
+            <button type="button" class="audio-speed-btn" data-speed="1.25">1,25×</button>
+            <button type="button" class="audio-speed-btn" data-speed="1.5">1,5×</button>
+            <button type="button" class="audio-speed-btn" data-speed="2">2×</button>
+          </div>
+        </div>
+        <script>
+          (function(){
+            const audio = document.getElementById('blockAudio');
+            if (!audio) return;
+            const blockId = audio.dataset.blockId;
+            const version = audio.dataset.audioVersion;
+            const POS_KEY = 'audio-pos:' + blockId + ':v' + version;
+            const SPEED_KEY = 'audio-speed';
+
+            // Återställ senast lyssnade position så user kan fortsätta
+            try {
+              const saved = parseFloat(localStorage.getItem(POS_KEY));
+              if (Number.isFinite(saved) && saved > 5) {
+                audio.addEventListener('loadedmetadata', () => {
+                  // Bara om saved är inom rimligt range (<= duration - 5s)
+                  if (audio.duration && saved < audio.duration - 5) {
+                    audio.currentTime = saved;
+                  }
+                }, { once: true });
+              }
+            } catch(_){}
+
+            // Återställ hastighet (delas mellan block — om man gillar 1.5x är det globalt)
+            try {
+              const savedSpeed = parseFloat(localStorage.getItem(SPEED_KEY));
+              if (Number.isFinite(savedSpeed) && savedSpeed >= 0.5 && savedSpeed <= 3) {
+                audio.playbackRate = savedSpeed;
+                applySpeedActive(savedSpeed);
+              }
+            } catch(_){}
+
+            // Spara position löpande — debouncat så vi inte spammar localStorage
+            let posSaveTimer = null;
+            audio.addEventListener('timeupdate', () => {
+              clearTimeout(posSaveTimer);
+              posSaveTimer = setTimeout(() => {
+                try { localStorage.setItem(POS_KEY, String(audio.currentTime)); } catch(_){}
+              }, 1500);
+            });
+            audio.addEventListener('ended', () => {
+              try { localStorage.removeItem(POS_KEY); } catch(_){}
+            });
+
+            // Hastighet-knappar
+            function applySpeedActive(speed) {
+              document.querySelectorAll('.audio-speed-btn').forEach(b => {
+                const s = parseFloat(b.dataset.speed);
+                const active = Math.abs(s - speed) < 0.01;
+                b.setAttribute('aria-pressed', String(active));
+                b.classList.toggle('active', active);
+              });
+            }
+            document.querySelectorAll('.audio-speed-btn').forEach(btn => {
+              btn.addEventListener('click', () => {
+                const speed = parseFloat(btn.dataset.speed);
+                audio.playbackRate = speed;
+                applySpeedActive(speed);
+                try { localStorage.setItem(SPEED_KEY, String(speed)); } catch(_){}
+              });
+            });
+          })();
+        </script>
+      </section>
+      <% } %>
+
       <!-- ─── 0. OUTCOME-CARD — vad du kommer kunna efter blocket ────── -->
       <% if (block.tldr || (block.concreteScripts && block.concreteScripts.length)) { %>
       <section class="lesson-section lesson-outcome" aria-labelledby="lesson-outcome-h">

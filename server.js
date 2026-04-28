@@ -31,6 +31,7 @@ const {
   getContinueTarget, getBlockTimeAnalytics,
   logPageView, updateLastPageViewDuration, cleanupOldPageViews, flushAnalytics,
   logFunnelEvent, getFunnelStats, getRecentFunnelEvents, backfillRegisterEvents,
+  upsertBlockAudio, getBlockAudio, listBlockAudios, deleteBlockAudio,
   sessionGet, sessionSet, sessionDestroy, sessionCleanupExpired,
   isStripeEventProcessed, markStripeEventProcessed, cleanupOldStripeEvents,
   getAdminNotesForUser, addAdminNote, deleteAdminNote,
@@ -1461,6 +1462,17 @@ app.get('/learn/:id', requireLogin, (req, res) => {
   // Server-beräknat nästa-steg (driver progression i bottom-CTA)
   const nextBestStep = computeNextBestStep(block, journey, salesBlocks);
 
+  // Block-audio: om Joakim laddat upp en MP3 visar vi player ovanför teori.
+  // Bara metadata behövs här (för UI-toggle); URL:en hämtas via /audio/blocks/:id.mp3
+  // som redirect:ar till signed R2-URL eller streamar.
+  const audioMeta = !isTeaser ? getBlockAudio(block.id) : null;
+  const blockAudio = audioMeta ? {
+    url:         `/audio/blocks/${block.id}.mp3?v=${audioMeta.version}`,
+    durationSec: audioMeta.duration_sec,
+    bytes:       audioMeta.bytes,
+    version:     audioMeta.version,
+  } : null;
+
   // Subtil coach-hint baserat på användarens historia i blocket
   let coachHint = null;
   if (journey) {
@@ -1492,6 +1504,7 @@ app.get('/learn/:id', requireLogin, (req, res) => {
     journey,
     coachHint,
     nextBestStep,
+    blockAudio,
     welcome:            req.query.welcome === '1',
     freeTierCompleted,
     justUnlockedFreeTier,
@@ -2946,6 +2959,148 @@ app.get('/admin/alert-test', requireLogin, requireAdmin, (req, res) => {
       <p><a href="/admin">← Till admin</a></p>
     </div></body></html>
   `);
+});
+
+// ── Block-audio (TTS / inspelat per block) ──────────────────────────────────
+// Joakim laddar upp en MP3/M4A per block. Filen lagras i Cloudflare R2;
+// metadata cachas i DB. Uppspelning på block-sidan via signed URL (1h TTL).
+
+const audioStorage = require('./services/audioStorage');
+
+app.get('/admin/audio', requireLogin, requireAdmin, (req, res) => {
+  const audios = listBlockAudios();
+  const audioMap = {};
+  audios.forEach(a => { audioMap[a.block_id] = a; });
+  // Bygg block-lista med audio-status per block
+  const blockList = salesBlocks.map((b, i) => ({
+    id:       b.id,
+    title:    b.title,
+    index:    i + 1,
+    icon:     b.icon,
+    audio:    audioMap[b.id] || null,
+  }));
+  res.render('admin-audio', {
+    username:  req.session.username,
+    blocks:    blockList,
+    r2Enabled: audioStorage.isR2Enabled(),
+    csrfToken: generateCsrfToken(req),
+    msg:       req.query.msg || null,
+    error:     req.query.error || null,
+  });
+});
+
+// Upload — multer parsar fil + form, sen verifyCsrf
+app.post('/admin/audio/upload', requireLogin, requireAdmin, upload.single('audio'), verifyCsrf, async (req, res) => {
+  try {
+    const blockId = String(req.body.blockId || '').trim();
+    if (!blockId) return res.redirect('/admin/audio?error=missing_blockId');
+    const block = salesBlocks.find(b => b.id === blockId);
+    if (!block) return res.redirect('/admin/audio?error=invalid_block');
+    if (!req.file) return res.redirect('/admin/audio?error=no_file');
+
+    if (!audioStorage.isR2Enabled()) {
+      return res.redirect('/admin/audio?error=r2_not_configured');
+    }
+
+    // Kolla MIME-type — accept MP3, M4A, OGG, WebM (de vanligaste)
+    const allowedMimes = ['audio/mpeg', 'audio/mp3', 'audio/mp4', 'audio/m4a', 'audio/x-m4a',
+                          'audio/ogg', 'audio/webm', 'audio/aac'];
+    if (!allowedMimes.includes(req.file.mimetype)) {
+      return res.redirect('/admin/audio?error=invalid_mime');
+    }
+
+    // Sanera filnamns-extension
+    const origName = req.file.originalname || '';
+    const ext = (origName.split('.').pop() || 'mp3').toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 4) || 'mp3';
+
+    // Hämta nuvarande version för cache-busting
+    const existing = getBlockAudio(blockId);
+    const newVersion = existing ? (existing.version + 1) : 1;
+
+    const uploadResult = await audioStorage.uploadBlockAudio({
+      blockId,
+      buffer:   req.file.buffer,
+      mimeType: req.file.mimetype,
+      version:  newVersion,
+      ext,
+    });
+
+    if (!uploadResult.ok) {
+      console.error('Audio upload failed:', uploadResult.reason);
+      notifyAdmin('warning', 'Block-audio upload failed',
+        `Joakim försökte ladda upp audio för block "${blockId}" men R2-upload failade.`,
+        { blockId, reason: uploadResult.reason });
+      return res.redirect('/admin/audio?error=upload_failed');
+    }
+
+    // Om existerande audio: radera gamla R2-objektet (cleanup, ej blockerande)
+    if (existing && existing.r2_key && existing.r2_key !== uploadResult.r2Key) {
+      audioStorage.deleteBlockAudioObject(existing.r2_key).catch(() => {});
+    }
+
+    upsertBlockAudio({
+      blockId,
+      r2Key:       uploadResult.r2Key,
+      durationSec: null, // klient-side metadata kunde extracts framtida
+      bytes:       uploadResult.bytes,
+      mimeType:    req.file.mimetype,
+      uploadedBy:  req.session.userId,
+    });
+
+    audit(req, 'block_audio.upload', { id: req.session.userId, username: req.session.username },
+      { blockId, bytes: uploadResult.bytes, mime: req.file.mimetype, version: newVersion });
+    console.log(`🎙️  Audio uppladdat för "${blockId}": ${Math.round(uploadResult.bytes / 1024)} KB (v${newVersion})`);
+    res.redirect('/admin/audio?msg=uploaded&block=' + encodeURIComponent(blockId));
+  } catch (err) {
+    console.error('Audio upload error:', err.message);
+    res.redirect('/admin/audio?error=' + encodeURIComponent(err.message.slice(0, 80)));
+  }
+});
+
+// Radera audio för ett block
+app.post('/admin/audio/:blockId/delete', requireLogin, requireAdmin, verifyCsrf, async (req, res) => {
+  const blockId = String(req.params.blockId || '').trim();
+  const existing = getBlockAudio(blockId);
+  if (existing) {
+    if (existing.r2_key) {
+      await audioStorage.deleteBlockAudioObject(existing.r2_key).catch(() => {});
+    }
+    deleteBlockAudio(blockId);
+    audit(req, 'block_audio.delete', { id: req.session.userId, username: req.session.username }, { blockId });
+  }
+  res.redirect('/admin/audio?msg=deleted&block=' + encodeURIComponent(blockId));
+});
+
+// Streaming-route: redirect:ar till signed R2-URL (1h TTL).
+// Tillgänglig för inloggade users + free-block för anonyma (men för enkelhet
+// kräver vi login överallt — premium-content protected).
+app.get('/audio/blocks/:blockId.mp3', requireLogin, async (req, res) => {
+  const blockId = String(req.params.blockId || '').trim();
+  const block = salesBlocks.find(b => b.id === blockId);
+  if (!block) return res.status(404).send('Not found');
+
+  // Access-check: free-blocks öppna för alla med login, premium-blocks
+  // kräver premium+. Audio-tillgång följer block-tillgång.
+  const isPremium  = !FREE_BLOCK_IDS.includes(block.id);
+  const hasAccess  = isPremiumOrHigher(req.session.role);
+  if (isPremium && !hasAccess) return res.status(403).send('Premium krävs');
+
+  const audio = getBlockAudio(blockId);
+  if (!audio || !audio.r2_key) return res.status(404).send('Ingen audio uppladdad för detta block');
+
+  // Försök signed URL först — mest effektivt (CDN, ingen server-IO)
+  const signedUrl = await audioStorage.getSignedAudioUrl(audio.r2_key, 3600);
+  if (signedUrl) {
+    return res.redirect(302, signedUrl);
+  }
+
+  // Fallback: stream direkt via servern
+  const streamRes = await audioStorage.streamAudio(audio.r2_key);
+  if (!streamRes) return res.status(500).send('Audio kunde inte hämtas');
+  res.setHeader('Content-Type', streamRes.contentType);
+  if (streamRes.contentLength) res.setHeader('Content-Length', String(streamRes.contentLength));
+  res.setHeader('Cache-Control', 'private, max-age=3600');
+  streamRes.stream.pipe(res);
 });
 
 // ── Funnel-rapport: aktivering + konvertering per kohort ────────────────────

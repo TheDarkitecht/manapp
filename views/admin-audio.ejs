@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin — Block-audio</title>
+  <meta name="robots" content="noindex" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎙️</text></svg>" />
+  <link rel="stylesheet" href="/style.css" />
+  <style>
+    .au-wrap { max-width: 1100px; margin: 0 auto; padding: 2rem 1.25rem 4rem; }
+    .au-nav { display:flex;gap:0.5rem;margin-bottom:1.5rem;font-size:0.9rem;flex-wrap:wrap; }
+    .au-nav a {
+      padding: 0.5rem 1rem; background: rgba(255,255,255,0.04); color: #cbd5e1;
+      text-decoration: none; border-radius: 8px; border: 1px solid rgba(255,255,255,0.08);
+    }
+    .au-nav a:hover { border-color: rgba(99,102,241,0.4); color: #f1f5f9; }
+
+    .au-header { margin-bottom: 1.25rem; }
+    .au-header h1 { color:#f1f5f9;margin:0 0 0.4rem;font-size:1.5rem; }
+    .au-header p { color:#94a3b8;margin:0;line-height:1.55;font-size:0.9rem; }
+
+    .au-flash {
+      padding: 0.75rem 1rem; border-radius: 10px; margin-bottom: 1rem; font-size: 0.9rem;
+    }
+    .au-flash.ok { background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.3);color:#34d399; }
+    .au-flash.err { background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);color:#fca5a5; }
+
+    .au-r2-warning {
+      padding: 1rem 1.25rem; background: rgba(251,191,36,0.1);
+      border:1px solid rgba(251,191,36,0.3);border-radius:10px;color:#fbbf24;
+      font-size:0.9rem;line-height:1.55;margin-bottom:1.5rem;
+    }
+
+    .au-grid {
+      display: grid; gap: 0.75rem;
+    }
+    .au-row {
+      display: grid;
+      grid-template-columns: 50px 1fr auto;
+      gap: 1rem; align-items: center;
+      padding: 1rem 1.25rem;
+      background: rgba(255,255,255,0.025);
+      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: 12px;
+    }
+    .au-row.has-audio { border-color: rgba(16,185,129,0.25); background: rgba(16,185,129,0.04); }
+    .au-icon { font-size: 1.6rem; text-align: center; }
+    .au-body strong { color: #f1f5f9; font-size: 0.95rem; display: block; margin-bottom: 0.2rem; }
+    .au-body .au-meta { color: #64748b; font-size: 0.78rem; line-height: 1.5; }
+    .au-body .au-meta-uploaded { color: #34d399; font-size: 0.78rem; }
+    .au-actions { display: flex; gap: 0.4rem; align-items: center; flex-wrap: wrap; justify-content: flex-end; }
+
+    .au-btn {
+      padding: 0.5rem 0.9rem; border-radius: 8px; font-size: 0.82rem; font-weight: 600;
+      cursor: pointer; text-decoration: none; border: 1px solid transparent;
+      display: inline-flex; align-items: center; gap: 0.3rem;
+    }
+    .au-btn-upload { background: linear-gradient(135deg,#6366f1,#8b5cf6); color:#fff; border:none; }
+    .au-btn-upload:hover { opacity:0.9; }
+    .au-btn-replace { background: rgba(251,191,36,0.12); color:#fbbf24; border-color: rgba(251,191,36,0.3); }
+    .au-btn-replace:hover { background: rgba(251,191,36,0.18); }
+    .au-btn-delete { background: rgba(239,68,68,0.1); color:#fca5a5; border-color: rgba(239,68,68,0.3); }
+    .au-btn-delete:hover { background: rgba(239,68,68,0.15); }
+
+    .au-upload-form {
+      display: none;
+      grid-column: 1 / -1;
+      padding: 1rem 0 0;
+      margin-top: 1rem;
+      border-top: 1px solid rgba(255,255,255,0.08);
+    }
+    .au-upload-form.open { display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; }
+    .au-upload-form input[type="file"] {
+      flex: 1; min-width: 180px;
+      padding: 0.5rem; background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: #cbd5e1;
+      font-size: 0.85rem;
+    }
+
+    .au-player audio {
+      width: 100%; max-width: 380px;
+    }
+
+    .au-tip {
+      margin-top: 2rem; padding: 1rem 1.25rem;
+      background: rgba(99,102,241,0.06); border: 1px solid rgba(99,102,241,0.2);
+      border-radius: 10px; color: #cbd5e1; font-size: 0.88rem; line-height: 1.6;
+    }
+    .au-tip strong { color: #a5b4fc; }
+    .au-tip code {
+      background: rgba(99,102,241,0.15); color: #a5b4fc;
+      padding: 0.1rem 0.4rem; border-radius: 4px; font-size: 0.82rem;
+    }
+
+    @media (max-width: 640px) {
+      .au-row { grid-template-columns: 40px 1fr; }
+      .au-actions { grid-column: 1 / -1; justify-content: flex-start; }
+    }
+  </style>
+</head>
+<body class="dash-page">
+
+<a href="#main" class="skip-to-main">Hoppa till innehåll</a>
+
+<main id="main" class="au-wrap">
+  <nav class="au-nav">
+    <a href="/admin">← Admin</a>
+    <a href="/admin/funnel">📈 Funnel</a>
+    <a href="/admin/audio" style="background:rgba(99,102,241,0.15);color:#a5b4fc;border-color:rgba(99,102,241,0.4);">🎙️ Block-audio</a>
+  </nav>
+
+  <header class="au-header">
+    <h1>🎙️ Block-audio</h1>
+    <p>Ladda upp en MP3/M4A per block. Filen lagras i Cloudflare R2; när användare öppnar blocket visas en audio-spelare ovanför teori-sektionen. Återanvänd ElevenLabs (din röst-clone), eget mic, eller var du nu producerar audion — vi tar emot färdig fil.</p>
+  </header>
+
+  <% if (msg === 'uploaded') { %>
+    <div class="au-flash ok">✓ Audio uppladdat. Användare ser spelaren direkt i blocket.</div>
+  <% } else if (msg === 'deleted') { %>
+    <div class="au-flash ok">✓ Audio borttaget från blocket.</div>
+  <% } %>
+  <% if (error) { %>
+    <% const errMap = {
+      missing_blockId: 'Inget block-ID angivet.',
+      invalid_block: 'Ogiltigt block-ID.',
+      no_file: 'Ingen fil vald.',
+      r2_not_configured: 'R2-credentials saknas. Sätt R2_* env vars på Railway.',
+      invalid_mime: 'Filen verkar inte vara ljud (acceptera: mp3, m4a, ogg, webm, aac).',
+      upload_failed: 'Uppladdning till R2 misslyckades — kolla Railway-loggar.',
+    }; %>
+    <div class="au-flash err">⚠️ <%= errMap[error] || error %></div>
+  <% } %>
+
+  <% if (!r2Enabled) { %>
+    <div class="au-r2-warning">
+      ⚠️ <strong>Cloudflare R2 är inte konfigurerat.</strong> Audio-uppladdning är inaktiverat tills du sätter <code>R2_ACCOUNT_ID</code>, <code>R2_ACCESS_KEY_ID</code>, <code>R2_SECRET_ACCESS_KEY</code> och <code>R2_BUCKET</code> i Railway-env.
+    </div>
+  <% } %>
+
+  <div class="au-grid">
+    <% blocks.forEach(function(b, idx) { %>
+      <% const hasAudio = !!b.audio; %>
+      <div class="au-row <%= hasAudio ? 'has-audio' : '' %>">
+        <div class="au-icon"><%= b.icon || '📚' %></div>
+        <div class="au-body">
+          <strong><%= b.index %>. <%= b.title %></strong>
+          <% if (hasAudio) { %>
+            <span class="au-meta-uploaded">
+              ✓ Uppladdat <%= new Date(b.audio.uploaded_at).toLocaleString('sv-SE', { dateStyle:'short', timeStyle:'short' }) %>
+              <% if (b.audio.bytes) { %> · <%= Math.round(b.audio.bytes / 1024) %> KB<% } %>
+              · v<%= b.audio.version %>
+            </span>
+          <% } else { %>
+            <span class="au-meta">Ingen audio uppladdad än</span>
+          <% } %>
+        </div>
+        <div class="au-actions">
+          <% if (hasAudio) { %>
+            <div class="au-player">
+              <audio controls preload="none" src="/audio/blocks/<%= b.id %>.mp3?v=<%= b.audio.version %>"></audio>
+            </div>
+            <button class="au-btn au-btn-replace" type="button" onclick="toggleUpload('<%= b.id %>')">↻ Ersätt</button>
+            <form method="POST" action="/admin/audio/<%= b.id %>/delete" style="margin:0;"
+                  onsubmit="return confirm('Radera audio för &quot;<%= b.title %>&quot;? Blocket återgår till text-only.');">
+              <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+              <button type="submit" class="au-btn au-btn-delete">🗑️ Radera</button>
+            </form>
+          <% } else { %>
+            <button class="au-btn au-btn-upload" type="button" onclick="toggleUpload('<%= b.id %>')">📤 Ladda upp</button>
+          <% } %>
+        </div>
+
+        <!-- Upload-form (toggle:as) -->
+        <form id="upload-<%= b.id %>" method="POST" action="/admin/audio/upload"
+              enctype="multipart/form-data" class="au-upload-form">
+          <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+          <input type="hidden" name="blockId" value="<%= b.id %>" />
+          <input type="file" name="audio" accept="audio/mpeg,audio/mp3,audio/mp4,audio/m4a,audio/x-m4a,audio/ogg,audio/webm,audio/aac" required />
+          <button type="submit" class="au-btn au-btn-upload">Ladda upp →</button>
+          <button type="button" class="au-btn" style="background:rgba(255,255,255,0.06);color:#94a3b8;" onclick="toggleUpload('<%= b.id %>')">Avbryt</button>
+        </form>
+      </div>
+    <% }); %>
+  </div>
+
+  <div class="au-tip">
+    <p style="margin:0 0 0.5rem;"><strong>💡 Produktions-flöde med ElevenLabs (rekommenderat):</strong></p>
+    <ol style="margin:0;padding-left:1.5rem;">
+      <li>Klona din röst på ElevenLabs (deras Voice Library / Instant Voice Clone)</li>
+      <li>Kopiera blockets teoritext från <code>/learn/&lt;block-id&gt;</code></li>
+      <li>Generera audio i ElevenLabs UI med din voice-ID</li>
+      <li>Ladda ner MP3 → ladda upp här</li>
+    </ol>
+    <p style="margin:0.75rem 0 0;">Filer kan vara upp till 100 MB (≈60 min audio). Format: MP3, M4A, OGG, WebM, AAC.</p>
+  </div>
+</main>
+
+<script>
+  function toggleUpload(blockId) {
+    const form = document.getElementById('upload-' + blockId);
+    if (!form) return;
+    const isOpen = form.classList.contains('open');
+    // Stäng alla andra först (en upload åt gången)
+    document.querySelectorAll('.au-upload-form.open').forEach(f => f.classList.remove('open'));
+    if (!isOpen) form.classList.add('open');
+  }
+</script>
+
+<script src="/heartbeat.js" defer></script>
+</body>
+</html>
