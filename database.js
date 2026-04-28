@@ -2346,6 +2346,27 @@ function markEmailFailed(id, errorMsg) {
   saveDb();
 }
 
+/** Lista alla mejl i kön (admin-diagnostics). */
+function listAllEmailQueue(limit = 100) {
+  return rowsQuery(
+    `SELECT id, to_email, subject, kind, status, attempts, last_error,
+            created_at, sent_at, next_attempt_at
+     FROM email_queue ORDER BY id DESC LIMIT ?`,
+    [Math.min(limit, 500)]
+  );
+}
+
+/** Force re-queue ett failed-mejl: status='pending', next_attempt_at=now, attempts=0. */
+function requeueEmail(id) {
+  db.run(
+    `UPDATE email_queue
+     SET status='pending', attempts=0, next_attempt_at=datetime('now'), last_error=NULL
+     WHERE id = ? AND status = 'failed'`,
+    [id]
+  );
+  saveDb();
+}
+
 /** Cleanup: ta bort sent + failed-mejl äldre än 30 dagar. */
 function cleanupOldEmailQueue() {
   try {
@@ -3671,6 +3692,7 @@ module.exports = {
   getAllUsersWithEmail, getUsersForBroadcast,
   saveBroadcast, getBroadcastsForUser, getBroadcastById,
   enqueueEmail, getPendingEmails, markEmailSent, markEmailFailed, cleanupOldEmailQueue,
+  listAllEmailQueue, requeueEmail,
   // Admin analytics
   getAdminAnalytics,
   getAdminDigestStats,

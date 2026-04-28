@@ -28,6 +28,7 @@ const {
   getAllUsersWithEmail, getUsersForBroadcast,
   saveBroadcast, getBroadcastsForUser, getBroadcastById,
   enqueueEmail, getPendingEmails, markEmailSent, markEmailFailed, cleanupOldEmailQueue,
+  listAllEmailQueue, requeueEmail,
   getAdminAnalytics, getAdminDigestStats, getUserAnalyticsProfile, getFunnelMetrics, getUserDataExport, getCohortRetention,
   getContinueTarget, getBlockTimeAnalytics,
   logPageView, updateLastPageViewDuration, cleanupOldPageViews, flushAnalytics,
@@ -3041,6 +3042,71 @@ app.get('/admin', requireLogin, requireAdmin, (req, res) => {
 // och flera admins som refreshar samtidigt får samma cached snapshot.
 const analyticsCache = { data: null, fetchedAt: 0 };
 const ANALYTICS_CACHE_TTL_MS = 60 * 1000;
+
+// ── Admin: email-queue-diagnostics (observability) ─────────────────────────
+app.get('/admin/email-queue', requireLogin, requireAdmin, (req, res) => {
+  const items = listAllEmailQueue(150);
+  const counts = items.reduce((acc, m) => {
+    acc[m.status] = (acc[m.status] || 0) + 1;
+    return acc;
+  }, {});
+  const escapeHtml = (s) => String(s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const statusBadge = (s) => {
+    const colors = { pending: '#fbbf24', sent: '#34d399', failed: '#f87171' };
+    return `<span style="padding:0.15rem 0.45rem;background:${colors[s]||'#94a3b8'}22;color:${colors[s]||'#94a3b8'};border-radius:4px;font-size:0.72rem;font-weight:700;">${s}</span>`;
+  };
+  const rows = items.map(m => `
+    <tr>
+      <td style="font-size:0.72rem;color:#64748b;">#${m.id}</td>
+      <td>${statusBadge(m.status)}</td>
+      <td><span style="font-size:0.72rem;color:#a5b4fc;">${escapeHtml(m.kind || '')}</span></td>
+      <td style="font-size:0.82rem;">${escapeHtml(m.to_email)}</td>
+      <td style="font-size:0.82rem;color:#cbd5e1;">${escapeHtml((m.subject || '').slice(0, 60))}</td>
+      <td style="font-size:0.72rem;color:#64748b;">${m.attempts || 0}</td>
+      <td style="font-size:0.7rem;color:#64748b;">${m.created_at}</td>
+      <td style="font-size:0.7rem;color:${m.last_error ? '#f87171' : '#64748b'};max-width:300px;word-break:break-word;">${escapeHtml((m.last_error || '').slice(0, 100))}</td>
+      <td>${m.status === 'failed' ? `<form method="POST" action="/admin/email-queue/requeue/${m.id}" style="margin:0;display:inline;"><input type="hidden" name="_csrf" value="${generateCsrfToken(req)}"/><button type="submit" style="padding:0.25rem 0.55rem;background:rgba(99,102,241,0.15);color:#a5b4fc;border:1px solid rgba(99,102,241,0.3);border-radius:5px;font-size:0.7rem;cursor:pointer;">↻ Försök igen</button></form>` : ''}</td>
+    </tr>
+  `).join('');
+
+  res.send(`
+    <!DOCTYPE html><html lang="sv"><head><meta charset="UTF-8"><title>Email-kö</title>
+    <style>body{margin:0;padding:1.5rem;font-family:system-ui;background:#0f172a;color:#e2e8f0;}
+    h1{margin:0 0 0.5rem;font-size:1.4rem;}
+    .nav a{color:#a5b4fc;text-decoration:none;margin-right:1rem;}
+    .stats{display:flex;gap:1rem;flex-wrap:wrap;margin:1rem 0 1.5rem;}
+    .stat{padding:0.85rem 1.25rem;background:#1e293b;border:1px solid rgba(255,255,255,0.07);border-radius:10px;}
+    .stat strong{display:block;font-size:1.4rem;color:#f1f5f9;}
+    .stat span{font-size:0.78rem;color:#94a3b8;}
+    table{width:100%;border-collapse:collapse;background:#1e293b;border-radius:10px;overflow:hidden;border:1px solid rgba(255,255,255,0.07);}
+    th{padding:0.6rem 0.8rem;text-align:left;background:rgba(255,255,255,0.04);color:#94a3b8;font-size:0.72rem;text-transform:uppercase;letter-spacing:0.05em;font-weight:600;}
+    td{padding:0.5rem 0.8rem;border-bottom:1px solid rgba(255,255,255,0.04);vertical-align:top;}
+    tr:last-child td{border-bottom:none;}
+    </style></head><body>
+    <div class="nav"><a href="/admin">← Admin</a></div>
+    <h1>📧 Email-kö</h1>
+    <p style="color:#94a3b8;font-size:0.88rem;margin:0;">Senaste ${items.length} mejl. Backoff vid fail: 1m → 5m → 30m → 2h → 8h → 24h → permanent failed efter 6 försök. "Försök igen" återställer attempts=0 + status=pending.</p>
+    <div class="stats">
+      <div class="stat"><strong>${counts.pending || 0}</strong><span>Pending</span></div>
+      <div class="stat"><strong>${counts.sent || 0}</strong><span>Sent</span></div>
+      <div class="stat"><strong style="color:${(counts.failed||0)>0?'#f87171':'#34d399'};">${counts.failed || 0}</strong><span>Failed (permanent)</span></div>
+    </div>
+    <table>
+      <thead><tr><th>ID</th><th>Status</th><th>Kind</th><th>Till</th><th>Subject</th><th>#</th><th>Skapad</th><th>Sista fel</th><th>Action</th></tr></thead>
+      <tbody>${rows || '<tr><td colspan="9" style="text-align:center;padding:2rem;color:#64748b;">Tom kö</td></tr>'}</tbody>
+    </table>
+    </body></html>
+  `);
+});
+
+app.post('/admin/email-queue/requeue/:id', requireLogin, requireAdmin, verifyCsrf, (req, res) => {
+  const id = Number(req.params.id);
+  if (Number.isFinite(id) && id > 0) {
+    requeueEmail(id);
+    audit(req, 'email.requeue', { id, username: req.session.username });
+  }
+  res.redirect('/admin/email-queue');
+});
 
 // ── Test-endpoint: skicka en alert till webhook för att verifiera config ──
 app.get('/admin/alert-test', requireLogin, requireAdmin, (req, res) => {
