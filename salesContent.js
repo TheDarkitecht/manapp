@@ -164,6 +164,23 @@ const blocks = [
       <p>Carol Dwecks forskning på growth mindset visar samma sak konsekvent: människor som får beröm för insats utvecklas mer än de som får beröm för talang. För att de inte är rädda att misslyckas — misslyckande är bara data om vad som behöver tränas mer.</p>
       <p>Tillämpa det här på dig själv genom hela kursen: när något går bra, fråga "<em>vad gjorde jag konkret som funkade?</em>" — inte "<em>jag är duktig på det här</em>". När något går dåligt, fråga "<em>vad behöver jag öva på?</em>" — inte "<em>jag suger på det här</em>". Den enkla skiftningen är skillnaden mellan en säljare som utvecklas i 10 år och en som platår:ar efter 2.</p>
 
+      <h3>Skriv ord för ord — manus-mentaliteten som skiljer proffs från amatör</h3>
+      <p>Den enskilt mest underutnyttjade säljtekniken i världen är samtidigt den enklaste: <strong>skriv ner orden innan du ska säga dem</strong>. Inte mall. Inte "ungefärligt". Ord för ord. Polera. Öva. Säg det högt 20 gånger. Och först då — gå in i samtalet.</p>
+      <p>Det är inte amatöriskt — det är professionellt. Tvärtom mot vad de flesta säljare tror.</p>
+      <ul>
+        <li><strong>Obama</strong> hade talpedagoger som finslipade varje pausen i hans tal. Hans "naturliga" leverans är resultatet av tusentals timmars finputsning.</li>
+        <li><strong>Leonardo DiCaprio</strong> har tränat på manusläsning sedan barnsben. Det vi tar för "skådespelartalang" är ord-för-ord-träning under decennier.</li>
+        <li><strong>Stand-up-komiker</strong> kör samma 60-minuters set i 200 städer — varje paus, varje betoning, varje skratt-trigger är förberedd och repeterad till perfektion. Det som låter spontant är resultatet av månaders polering.</li>
+        <li><strong>Företagsledare</strong> som är vassa i media har coachats på exakt vilka ord de ska och inte ska använda i 30 sekunder.</li>
+      </ul>
+      <p>Och säljare? Vi improviserar 12 möten i veckan utan ord-för-ord-förberedelse. Sedan undrar vi varför vi i pressade ögonblick inte hittar den klipska kommentaren — den som hade stängt affären.</p>
+      <p><strong>Sanningen 90% missar:</strong> det är i princip omöjligt att komma på rätt ord när du är mitt i en förhandling, mitt i en invändning, mitt i ett avslut. Hjärnan är upptagen med att läsa kunden, läsa rummet, hantera press. Den har ingen extra kapacitet att samtidigt formulera magiska repliker. Antingen har du rätt ord färdiga — eller så har du dem inte.</p>
+      <p><strong>Förberedelse är gratis (i stort sett).</strong> 30 minuter på fredag eftermiddag att skriva ut din 30-sekunders öppning, ditt invändningssvar på "för dyrt", din avslutsfras. Sedan öva. När måndagens möte kommer går de orden ut ur dig naturligt — för att du sagt dem 50 gånger redan, inte för första gången under press.</p>
+      <p>Hela kursen från och med här bygger på den principen. När du läser ett invändningssvar i Block 10 — skriv ner det. Anpassa det till din röst. Öva tills det sitter. När du läser en avslutsformulering i Block 11 — skriv ner den, säg den högt, öva med Jocke. När du designar din pitch i Block 9 — skriv hela manuskriptet, transkribera dig själv, finputsa, träna.</p>
+      <p>Det är skillnaden mellan en säljare som <em>känner till</em> 200 säljtekniker och en säljare som <em>äger</em> 20. Den som äger 20 vinner varje gång.</p>
+      <p><strong>Övning idag:</strong> ta din 30-sekunders presentationspitch (vem du är, vad du gör, för vem). Skriv den ord för ord. Spela in dig själv. Transkribera. Stryk varje "liksom", "asså", "typ". Säg den 5 gånger. Sedan 5 gånger till imorgon. Inom en vecka sitter den som muskelminne. Då har du flyttat dig från amatörklass till professionell. Det tog en vecka.</p>
+      <p><strong>Den djupare poängen:</strong> ett manus är inte till för att göra dig robotisk. Det är till för att <strong>skydda strukturen när trycket stiger</strong>. När kunden trycker på, när månaden lutar mot underkvotering, när chefen frågar om pipelinen — då blir säljare reaktiva. Och reaktiva säljare improviserar dåligt. Manuset är ditt skyddsnät: när hjärnan är upptagen med stress vet kroppen ändå vilka ord som ska komma. Du tappar inte spåret. Du levererar konsekvent — bra dag eller dålig dag. Det är skillnaden mellan en säljare med 30% variation i prestation och en med 5%.</p>
+
       <h3>Den etiska grunden — sälj är inte manipulation</h3>
       <p>Innan vi går djupare: ett par ord om etik. Sälj blandas ofta ihop med manipulation — både av kritiker och av dåliga säljare själva. Det är två helt olika saker.</p>
       <p><strong>Manipulation</strong> är att få någon att göra något som inte är i deras intresse, genom att dölja information eller trigga rädsla/girighet på ett sätt de inte kan värdera. Skickligt manipulerande säljare vinner en affär och förlorar kunden (samt sitt rykte, långsiktigt).</p>
@@ -1652,6 +1669,69 @@ const blocks = [
       </ol>
       <p><strong>Övning:</strong> ta din nuvarande kallpitch. Räkna förekomsterna av "problem", "kostar", "förlorar". Räkna förekomsterna av "möjlighet", "fönster", "vinst". Om förhållandet är fel — skriv om en variant där du framar exakt samma sak som möjlighet. Testa båda. Räkna svarsfrekvensen.</p>
 
+      <h3>Cold call-mallen — 6 steg + 2 varianter du skriver ut innan du ringer</h3>
+      <p><strong>Princip:</strong> du ska aldrig improvisera ett kallt samtal. Aldrig. Du har 15-30 sekunder att fånga uppmärksamhet — och du måste hantera 3-4 förutsägbara invändningar inom de första 60 sekunderna. Om du inte har orden förberedda på papper innan du lyfter luren — du försöker komma på dem under press, och du kommer alltid att förlora några samtal till säljare som förberett.</p>
+      <p>Mallen som ska sitta på ditt skrivbord innan varje Power Hour:</p>
+
+      <ol>
+        <li><strong>Introduktion — 15-30 sekunder.</strong> Måste besvara fyra frågor i kundens huvud:
+          <ul>
+            <li><em>Vem ringer?</em> Ditt namn + bolag, klart och tydligt.</li>
+            <li><em>Kan jag lita på dig?</em> Tonen avgör — lugn, professionell, inte "rädd-säljare".</li>
+            <li><em>Varför ringer du mig specifikt?</em> Konkret trigger, ICP, varför just hen.</li>
+            <li><em>What's in it for me?</em> Konkret nytta inom 30 sek — annars läggs luren på.</li>
+          </ul>
+          Skriv ut den ord för ord. Öva 20 gånger.
+        </li>
+        <li><strong>Kvalificeringsfrågor — öppna och stängda.</strong> 2-3 öppna frågor som öppnar samtalet, 1-2 stängda för att ankra fakta. Skriv exakt vilka du ska ställa, i vilken ordning.</li>
+        <li><strong>Paraphrase — sammanfatta deras behov.</strong> När du fått svaren, repetera tillbaka med deras egna ord (Block 10 om "use their language"). Skriv ut formuleringen: <em>"Det jag hörde dig säga är att ni brottas med X — och det viktigaste är att lösa Y. Stämmer det?"</em></li>
+        <li><strong>Features kopplat till deras specifika behov.</strong> INTE generisk feature-lista. Bara features som matchar det de just sa. <em>"Eftersom ni sa X, är det specifikt funktion Z som är relevant för er — det betyder att..."</em></li>
+        <li><strong>Trial close — temperaturmätning.</strong> <em>"Hur låter det här hittills?"</em> eller <em>"Ser du hur det skulle fungera hos er?"</em> Inte stängningsfråga än — bara temperatur.</li>
+        <li><strong>Close — alternativavslut.</strong> Aldrig "vill ni boka möte?" (ja/nej). Alltid alternativ: <em>"Skulle tisdag förmiddag eller torsdag eftermiddag fungera bättre för er?"</em></li>
+      </ol>
+
+      <p><strong>Variant-träd:</strong> i steg 2-4, planera för att kunden kan svara på två sätt — och skriv färdiga svar för båda. Exempel:</p>
+      <ul>
+        <li>Steg 2 (kvalificering): kund säger "vi har redan en leverantör" → <strong>Variant 1:</strong> "Det hade jag antagit — får jag fråga, sedan när? och hur fungerar det idag?" → leder till steg 3 ändå.</li>
+        <li>Steg 2: kund säger "vi har inte tid just nu" → <strong>Variant 2:</strong> "Förstår — får jag fråga 30 sek-varianten? Är ni i kategori A eller B när det gäller [specifik utmaning]?" → triggar nyfikenhet, vinner extra 60 sek.</li>
+      </ul>
+
+      <p><strong>Misstag (vanliga säljare):</strong> "jag har en mall i huvudet". Nej. Du har spridda fragment som tappar form under press. När kunden invänder vet du inte vilken variant du var i. När de frågar något oväntat hoppar du i steget. Du försöker improvisera. Du tappar samtalet.</p>
+
+      <p><strong>Skicklig reaktion:</strong> mallen ligger på papper bredvid dig. Varje kall vecka uppdaterar du den baserat på vad som funkade och inte. Du har ord för varje predictable invändning förberedda. När det oväntade kommer hanterar du det — för du har 95% av samtalet redan tänkt igenom.</p>
+
+      <p><strong>Övning denna vecka:</strong> skriv din egen 6-stegs cold call-mall, ord för ord. Plus 2 varianter per kritiskt steg. Total mängd: ~1 sida. Spela in dig själv köra igenom den 5 gånger. Justera. Boka 30 minuter Power Hour på fredag morgon — kör mallen på 10 prospekts. Notera: vilken variant användes mest? Vilket steg hängde upp dig? Det är dina utvecklings-data.</p>
+
+      <h3>Primärt och sekundärt mål — varje samtal ska vinna något</h3>
+      <p><strong>Princip:</strong> innan du lyfter luren — bestäm två mål för samtalet. Inte ett. Två. För i 70% av kalla samtal kommer du inte nå det primära målet — men du kan alltid nå det sekundära. Säljare som bara har ett mål åker hem med tomma händer 7 av 10 gånger. Säljare som har två åker hem med något 9 av 10 gånger.</p>
+
+      <p><strong>Primärt mål</strong> — det idealiska utfallet:</p>
+      <ul>
+        <li>Boka discovery-möte direkt (datum + tid)</li>
+        <li>Få beslut i samtalet (vid varma samtal/kort cykel)</li>
+        <li>Få kontraktet signerat (B2C eller enklare B2B)</li>
+        <li>Få kvalificeringsdata komplett (för enterprise)</li>
+      </ul>
+
+      <p><strong>Sekundärt mål</strong> — alltid vinnbart:</p>
+      <ul>
+        <li>Få namn på rätt beslutsfattare ("Vem är det som tar beslut om det här hos er?")</li>
+        <li>Få tillåtelse att återkomma vid specifik tidpunkt ("Får jag höra av mig i april?")</li>
+        <li>Få mejl-adress för relevant material ("Får jag skicka case-studien från [liknande kund]?")</li>
+        <li>Få namn på en relevant kollega ("Vem hos er jobbar med X-frågan?")</li>
+        <li>Få tillåtelse att connecta på LinkedIn</li>
+        <li>Få information om timing — när blir det aktuellt?</li>
+        <li>Få avtalets förnyelsedatum hos befintlig leverantör</li>
+      </ul>
+
+      <p><strong>Säljsituation:</strong> du ringer en CFO som inte har tid att boka möte just nu.</p>
+
+      <p><strong>Misstag:</strong> tacka, lägg på, hoppas hen ringer tillbaka. Du har precis fått 0 av samtalet.</p>
+
+      <p><strong>Skicklig reaktion:</strong> aktivera sekundärt mål. <em>"Förstår — låt mig fråga en sak innan vi avslutar: när tror du att det skulle vara mer aktuellt att titta på det här? Kvartal 2? Eller är det ett annat fönster ni jobbar mot?"</em> Du får timing-data, kan boka in en specifik återkomstpunkt, och har inte slösat samtalet. Plus kunden känner att du inte tjatar — du jobbar professionellt.</p>
+
+      <p><strong>Övning:</strong> innan din nästa Power Hour — skriv ner dina två mål per samtalstyp. Primärt + sekundärt. När du går in i samtalet vet du redan vad du letar efter. När primära misslyckas hoppar du smidigt till sekundära istället för att famlade efter ord.</p>
+
       <h3>Grindvakten — din allierade, inte ditt hinder</h3>
       <p>I B2B når du beslutsfattaren ofta via receptionist eller assistent. De flesta säljare försöker lura eller undvika dem. Fel approach.</p>
       <p><strong>Rätt approach — behandla dem som den inre kretsen:</strong></p>
@@ -2390,6 +2470,83 @@ const blocks = [
 
       <h4>Övning denna vecka</h4>
       <p>Nästa 5 invändningar du möter: före du svarar, identifiera (A/I/G). Skriv på post-it. Anpassa svaret. Notera resultatet. Efter 5 invändningar har du börjat bygga reflexen — och invändningar känns plötsligt mindre som motstånd och mer som information.</p>
+
+      <h3>Bygg din invändnings-fil — workbook-övningen som skiljer proffs från amatör</h3>
+      <p><strong>Princip:</strong> de invändningar du kommer möta nästa månad är samma som du mötte förra månaden. Och året innan. Om du säljer i samma bransch kommer 90% av alla invändningar du någonsin möter falla i 10-15 kategorier. Det betyder att den enda intelligenta strategin är att <em>ha färdiga, polerade svar förberedda för var och en</em>.</p>
+      <p>Det är vad alla seriösa säljorganisationer gör. Det är vad ingen genomsnittssäljare gör. Och det är därför genomsnittssäljaren tappar 80% av invändningarna — inte för att invändningarna är svåra, utan för att svaret är improviserat under press.</p>
+      <p>De fyra formerna invändningar tar:</p>
+      <ol>
+        <li><strong>Fråga</strong> — "Varför kostar det så mycket?"</li>
+        <li><strong>Påstående</strong> — "Det kostar för mycket."</li>
+        <li><strong>Vag</strong> — "Jag är inte intresserad" / "Jag måste tänka."</li>
+        <li><strong>Tystnad / tvekan</strong> — "Hmm... ja..." (ingen riktig respons).</li>
+      </ol>
+      <p>Vart och ett kräver olika respons. Och vart och ett ska du ha skrivet svar för innan du sitter i mötet.</p>
+
+      <h4>4-stegsregeln för varje svar</h4>
+      <p>Varje svar i din invändnings-fil ska följa samma struktur:</p>
+      <ol>
+        <li><strong>Visa förståelse</strong> — du har hört, du tar invändningen på allvar.</li>
+        <li><strong>Bekräfta eller uppskatta deras perspektiv</strong> — argumentera aldrig direkt. Ge dem rätt i något.</li>
+        <li><strong>Bevisa eller erbjud alternativ</strong> — bevis (siffra, case, referens) eller en alternativ formulering av problemet.</li>
+        <li><strong>Få bekräftelse och stäng</strong> — se till att invändningen är borta innan du går vidare. Annars kommer den tillbaka.</li>
+      </ol>
+      <p>Tre typer av svar du kan blanda:</p>
+      <ul>
+        <li><strong>"Håll med och förklara"</strong> — <em>"Jag förstår er oro kring kostnad. Och om ni samtidigt fick både den specifika täckning ni behöver och bättre service — skulle inte det vara värdefullt?"</em></li>
+        <li><strong>"Håll med och erbjud alternativ"</strong> — <em>"Det är en rimlig invändning. Det vi kan göra istället är att börja med en mindre paketering — så ni kan testa innan ni satsar fullt ut."</em></li>
+        <li><strong>"Tredje-parts vittnesmål"</strong> — <em>"Många av våra kunder kände precis så när vi först pratades vid. Det de upptäckte efter 3 månader var att..."</em></li>
+        <li><strong>"Håll med och omformulera till fråga"</strong> — <em>"Så det du egentligen frågar är 'varför ska jag byta från X?' En av de tre största anledningarna är..."</em></li>
+      </ul>
+
+      <h4>Workbook-övningen — bygg filen denna vecka</h4>
+      <p>Det här är inte en intellektuell övning. Det är fysiskt arbete med dokument. Avsätt 90 minuter ostörd tid. Gör så här:</p>
+
+      <ol>
+        <li><strong>Lista dina 10 vanligaste invändningar.</strong> Inte vad du tror — vad du faktiskt hör. Gå igenom CRM-noter senaste 60 dagarna. Skriv den exakta formuleringen kunderna använder. Vanligast är något i stil med: "Det är för dyrt", "Skicka info", "Jag har redan en leverantör", "Inte rätt tid", "Måste prata med chefen", "Ring tillbaka", "Vi är nöjda", "Jag har inget behov", "Vi har egen lösning", "Det funkar inte i vår bransch".</li>
+        <li><strong>För varje invändning, skriv 2-3 svar.</strong> En per format (fråga / påstående / vag). Använd 4-stegsstrukturen. Fyll på med en konkret bevis-punkt (siffra, kund-case, garanti).</li>
+        <li><strong>Öva svaren högt.</strong> Säg dem 5 gånger var. Justera där det skaver. Du ska kunna säga svaren utan att titta på papperet.</li>
+        <li><strong>Lägg filen tillgänglig.</strong> En sida i CRM, en post-it på skärmen, ett dokument på telefonen. Före varje samtal — 30 sekunders koll. Vilka 2-3 invändningar är mest sannolika idag? Repetera svaren mentalt.</li>
+        <li><strong>Uppdatera filen varje vecka.</strong> Ny invändning du inte hade förberedd? Lägg till. Svar som inte funkade? Skriv om. Filen är ett levande dokument — den blir bättre varje månad.</li>
+      </ol>
+
+      <h4>Vague objections — flowchart för "jag måste tänka"</h4>
+      <p>"Jag måste tänka på det" är den vanligaste vaga invändningen. Den är ofta inte en invändning — den är en fasad för en konkret invändning kunden inte vill säga rakt ut. Hantera så här:</p>
+      <ol>
+        <li><strong>Är invändningen tydlig?</strong> Nej, "jag måste tänka" är inte tydlig.</li>
+        <li><strong>Paraphrase och probe.</strong> <em>"Säger du att det är någon ni måste konsultera först? Eller är det något specifikt med upplägget som inte känns rätt?"</em></li>
+        <li><strong>Vänta tills den verkliga invändningen kommer ut.</strong> Det är då du har något att jobba med.</li>
+        <li><strong>Möt den verkliga invändningen med bevis eller alternativ.</strong></li>
+        <li><strong>Få kundens reaktion.</strong> Är den positiv? → stäng. Är den negativ? → mer information eller annat alternativ.</li>
+      </ol>
+      <p>Den enklaste men mest effektiva probe-frasen för vaga invändningar: <em>"Hjälp mig förstå — vad är det specifikt du vill tänka över?"</em></p>
+
+      <p>Den här invändnings-filen är förmodligen den enskilt mest impactful övningen i hela kursen. 90 minuter denna vecka. Skördar i 10 år framåt. Inget annat verktyg har samma ROI.</p>
+
+      <h3>"Är det den verkliga invändningen?" — den enda regeln som styr alla andra</h3>
+      <p><strong>Princip:</strong> svara aldrig på en invändning förrän du vet vilken invändning det faktiskt är. 70% av alla "för dyrt" är inte priset — det är förtroende, behov eller timing. 80% av "jag måste tänka" är inte tänkning — det är en specifik oro kunden inte vill säga rakt ut. Du kan ha världens bästa svar på prisinvändningen — om kunden invände av en helt annan anledning vinner du diskussionen och förlorar affären.</p>
+      <p>Reglen är enkel: <strong>diagnostisera innan du svarar.</strong></p>
+      <p><strong>Säljsituation:</strong> kunden säger "jag är inte intresserad".</p>
+      <p><strong>Misstag:</strong> svara på den ytliga invändningen. <em>"Jag förstår att det inte verkar intressant — men låt mig visa..."</em> → kunden stänger sig än hårdare.</p>
+      <p><strong>Skicklig reaktion:</strong> testa varianter:</p>
+      <blockquote>
+        <p><em>"Jag förstår — bara så jag inte missförstår: är det ointressant för att behovet inte finns just nu, för att ni redan har en lösning som funkar, eller för att tajmingen är fel?"</em></p>
+      </blockquote>
+      <p>Tre möjliga svar — tre helt olika strategier:</p>
+      <ul>
+        <li><strong>"Behovet finns inte"</strong> → tillbaka till behovsanalysen (Block 8). Du har inte etablerat värdet än.</li>
+        <li><strong>"Vi har redan en lösning"</strong> → Block 6:s självbilds-diagnostik. Försvarar kunden sin autonomi (vill inte pressas) eller sin intelligens (försvarar tidigare beslut)?</li>
+        <li><strong>"Tajmingen är fel"</strong> → kvalificering om timing. Vad behöver ändras? När är rätt tid? Vilket fönster vill kunden missa?</li>
+      </ul>
+      <p>Tre helt olika invändningar gömda i samma "jag är inte intresserad". Tre helt olika svar. Diagnos är hela arbetet.</p>
+      <p><strong>Universella diagnos-frågor:</strong></p>
+      <ul>
+        <li><em>"Är det priset, lösningen eller timingen som inte stämmer?"</em></li>
+        <li><em>"Är det här eller är det aldrig?"</em> (skiljer "nej för alltid" från "nej just nu")</li>
+        <li><em>"Bara så jag förstår dig rätt — kan du vara lite mer specifik?"</em></li>
+        <li><em>"Vad skulle behöva vara sant för att det här skulle fungera?"</em></li>
+      </ul>
+      <p>Kombinera med Block 6:s självbilds-tre (Autonomi/Intelligens/Godhet) och du har en fullständig diagnos-rutin. Diagnos först — svar sen.</p>
 
       <h3>Använd kundens egna ord — inte dina översättningar</h3>
       <p><strong>Princip:</strong> kundens egna ord känns mer sanna för kunden än dina formuleringar. Det är en av de mest underanvända teknikerna i hela invändningshanteringen — och samtidigt den enklaste. Du behöver inte vara smart, kreativ eller övertygande. Du behöver bara <em>lyssna noga</em> och spegla tillbaka exakt det de sa.</p>
