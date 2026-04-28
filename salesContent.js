@@ -96,7 +96,7 @@ const blocks = [
 
       <h3>Vad du kommer lära dig här</h3>
       <p>Det här är inte en kurs i "10 säljfraser som stänger affärer." Det är en komplett utbildning i att bli en skicklig, mänsklig och långsiktigt framgångsrik säljare — från första intrycket till mental styrka. 23 block som täcker allt från prospektering till AI-verktyg till vilka böcker du bör läsa efter det här.</p>
-      <p>Du kommer lära dig av någon som gjort jobbet — inte läst om det. Joakim Jaksen har 22+ år i branschen, 120 miljoner SEK i säljresultat, och över 500 tränade säljare. Det är materialet han önskar att han haft när han började.</p>
+      <p>Du kommer lära dig av någon som gjort jobbet — inte läst om det. Joakim Jaksen har 22+ år i branschen, 200+ MSEK i säljresultat, och över 1000 tränade säljare. Det är materialet han önskar att han haft när han började.</p>
 
       <h3>Jaksen-metoden — kursens röda tråd</h3>
       <p>Bland alla tekniker, ramverk och citat i den här kursen — från Cialdini till Voss till Greene — finns en bärande tråd. Min grundtes är enkel:</p>
