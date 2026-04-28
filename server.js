@@ -4555,24 +4555,74 @@ app.post('/pro/cancel-trial', requireLogin, blockWhenImpersonating, verifyCsrf, 
 
 // ── Health check ─────────────────────────────────────────────────────────────
 
+// ── Healthcheck — används av Railway för deploy/restart-readiness ──────────
+// Två lager:
+//   /health           — shallow (200 OK om processen lever, used by Railway)
+//   /health?deep=1    — deep ping (DB + email-queue + R2-config), endast admin
+// Railway har 30s healthcheck-deadline. Shallow är instant. Deep gör DB-query.
 app.get('/health', (req, res) => {
-  // Return minimal info for Railway health checks.
-  // Service config details only shown to authenticated admins.
   const isAdmin = req.session?.role === 'admin';
+  const wantDeep = req.query.deep === '1' && isAdmin;
+
   const base = {
     status: 'ok',
     ts:     new Date().toISOString(),
     uptime: Math.round(process.uptime()),
   };
+
+  // Shallow-mode: bara att processen är vid liv. Returneras INSTANT.
+  if (!wantDeep && !isAdmin) {
+    return res.json(base);
+  }
+
+  // Admin gets service-config (utan deep)
   if (isAdmin) {
     const stats = getUserStats();
-    base.db       = { users: stats.total, premium: stats.premium };
+    base.db = { users: stats.total, premium: stats.premium };
     base.services = {
-      email:  !!process.env.RESEND_API_KEY,
-      chat:   !!process.env.GROQ_API_KEY,
-      stripe: !!process.env.STRIPE_SECRET_KEY,
+      email:    !!process.env.RESEND_API_KEY,
+      chat:     !!process.env.GROQ_API_KEY,
+      stripe:   !!process.env.STRIPE_SECRET_KEY,
+      stripeWebhook: !!process.env.STRIPE_WEBHOOK_SECRET,
+      r2Backup: !!(process.env.R2_ACCOUNT_ID && process.env.R2_BUCKET),
+      alerting: !!process.env.ADMIN_ALERT_WEBHOOK_URL,
+      cron:     !!process.env.CRON_SECRET,
+      turnstile: !!process.env.TURNSTILE_SECRET_KEY,
     };
   }
+
+  // Deep ping — verifierar att kritiska beroenden FAKTISKT funkar, inte bara att de är konfigurerade
+  if (wantDeep) {
+    base.checks = {};
+
+    // 1. DB write+read sanity-check
+    try {
+      const u = findUserById(req.session.userId);
+      base.checks.db = u ? { ok: true, latencyMs: 0 } : { ok: false, reason: 'session user not found' };
+    } catch (err) {
+      base.checks.db = { ok: false, error: err.message };
+      base.status = 'degraded';
+    }
+
+    // 2. Email-queue depth — hög backlog = systemiskt problem
+    try {
+      const pending = getPendingEmails(1);
+      base.checks.emailQueue = { ok: true, pendingCount: pending.length };
+    } catch (err) {
+      base.checks.emailQueue = { ok: false, error: err.message };
+    }
+
+    // 3. R2 config
+    base.checks.r2 = { configured: !!(process.env.R2_ACCOUNT_ID && process.env.R2_BUCKET) };
+
+    // 4. Memory usage
+    const mem = process.memoryUsage();
+    base.checks.memory = {
+      heapUsedMB: Math.round(mem.heapUsed / 1024 / 1024),
+      rssMB:      Math.round(mem.rss / 1024 / 1024),
+    };
+  }
+
   res.json(base);
 });
 
@@ -4829,17 +4879,77 @@ async function startServer() {
   // en i taget via Groq (Whisper + LLM). Admin-only i Fas 1.
   require('./services/callQueue').start();
 
-  // Graceful shutdown: flusha analytics-buffer innan processen dör.
-  // Railway skickar SIGTERM vid redeploy — utan detta förloras analytics i flight.
+  // ── Graceful shutdown ──────────────────────────────────────────────────────
+  // Railway skickar SIGTERM vid redeploy. Utan riktig graceful shutdown:
+  //   - Stripe-webhook mid-process → user betalar, ingen role-change → support-ärende
+  //   - PDF/EPUB-generering → user får 502
+  //   - Email-queue worker mid-send → mejlet räknas failed, retry-spam
+  //
+  // Korrekt sekvens:
+  //   1. Stoppa acceptera nya HTTP-connections (server.close)
+  //   2. Vänta på in-flight requests (eller timeout 25s — Railway dödar vid 30s)
+  //   3. Flusha analytics-buffer till DB
+  //   4. Exit
+  //
+  // SIGTERM kommer två gånger? andra gör force-exit (om något hänger 10s+).
+  let server = null;
+  let shuttingDown = false;
+  const GRACEFUL_TIMEOUT_MS = 25000;
+
   const gracefulShutdown = (signal) => {
-    console.log(`\n${signal} mottaget — flushar analytics...`);
-    try { flushAnalytics(); } catch (err) { console.error('Shutdown flush error:', err.message); }
-    process.exit(0);
+    if (shuttingDown) {
+      console.warn(`${signal} igen — force-exit pga upprepad signal`);
+      try { flushAnalytics(); } catch (_) {}
+      process.exit(1);
+    }
+    shuttingDown = true;
+    console.log(`\n${signal} mottaget — graceful shutdown påbörjad (${GRACEFUL_TIMEOUT_MS}ms timeout)...`);
+
+    // Force-exit om vi inte hinner inom Railway:s 30s-deadline
+    const forceTimer = setTimeout(() => {
+      console.error('⏱️  Graceful shutdown timeout — force-exit');
+      try { flushAnalytics(); } catch (_) {}
+      process.exit(1);
+    }, GRACEFUL_TIMEOUT_MS);
+    forceTimer.unref(); // tillåt clean exit innan timer
+
+    // Stoppa acceptera nya connections — befintliga får slutföra
+    if (server) {
+      server.close((err) => {
+        if (err) console.error('Server close error:', err.message);
+        try { flushAnalytics(); } catch (e) { console.error('Final flush error:', e.message); }
+        console.log('✅ Graceful shutdown klar');
+        clearTimeout(forceTimer);
+        process.exit(0);
+      });
+    } else {
+      try { flushAnalytics(); } catch (_) {}
+      process.exit(0);
+    }
   };
   process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
   process.on('SIGINT',  () => gracefulShutdown('SIGINT'));
 
-  app.listen(PORT, () => console.log(`✅ Server running at http://localhost:${PORT}`));
+  // Catch unhandled errors istället för silent exit
+  process.on('uncaughtException', (err) => {
+    console.error('⚠️  uncaughtException:', err.message, err.stack);
+    notifyAdmin('critical', 'uncaughtException — server kraschar',
+      'Process tar emot oväntat fel utan handler. Detta dödar Node-processen om vi inte fångar.',
+      { error: err.message, stack: String(err.stack || '').slice(0, 800) });
+    // Försök flusha innan exit, men exit:a — state är okänt
+    try { flushAnalytics(); } catch (_) {}
+    process.exit(1);
+  });
+  process.on('unhandledRejection', (reason, promise) => {
+    console.error('⚠️  unhandledRejection:', reason);
+    const msg = reason instanceof Error ? reason.message : String(reason);
+    notifyAdmin('warning', 'Unhandled promise rejection',
+      'En async-operation misslyckades utan .catch(). Inte kritisk men indikerar bugg.',
+      { error: msg, stack: reason instanceof Error ? String(reason.stack || '').slice(0, 800) : null });
+    // Inte exit — kan vara recoverable (men logga)
+  });
+
+  server = app.listen(PORT, () => console.log(`✅ Server running at http://localhost:${PORT}`));
 }
 
 startServer();
