@@ -330,20 +330,38 @@ function renderAboutPage(doc, { author, date }) {
 }
 
 /**
- * Lägg sidnumrering på alla sidor utom den första (cover).
+ * Lägg sidnumrering + (om licensee given) personlig watermark i footer.
+ * Watermark är inte DRM — psykologisk avskräckning mot pirat-delning.
+ * Användare ser sitt eget namn, ärliga users bryr sig inte, oärliga blir
+ * tvekande att vidaredela en fil med sina personliga uppgifter på.
  */
-function addPageNumbers(doc) {
+function addPageNumbers(doc, licensee) {
   const range = doc.bufferedPageRange();
-  // bufferedPageRange returnerar { start, count }
   for (let i = range.start + 1; i < range.start + range.count; i++) {
     doc.switchToPage(i);
-    // Skriv vid bottenmarginalen
+    const pageNum = String(i - range.start);
+
+    // Sidnummer: centrerat
     doc.font(FONTS.bodyRegular).fontSize(9).fillColor(COLORS.muted);
-    doc.text(String(i - range.start), 60, doc.page.height - 40, {
+    doc.text(pageNum, 60, doc.page.height - 40, {
       width: doc.page.width - 120,
       align: 'center',
       lineBreak: false,
     });
+
+    // Watermark: lägre rad, mindre, ännu mer muted
+    if (licensee && licensee.name) {
+      const parts = [`Licensierad till ${licensee.name}`];
+      if (licensee.email) parts.push(licensee.email);
+      if (licensee.date) parts.push(`Nedladdad ${licensee.date}`);
+      const wmText = parts.join(' · ') + ' · För personlig användning';
+      doc.font(FONTS.bodyRegular).fontSize(7).fillColor('#aaaaaa');
+      doc.text(wmText, 60, doc.page.height - 25, {
+        width: doc.page.width - 120,
+        align: 'center',
+        lineBreak: false,
+      });
+    }
   }
 }
 
@@ -363,6 +381,8 @@ async function generateFullBookBuffer(blocks, opts = {}) {
     author:   opts.author   || 'Joakim Jaksen',
     date:     opts.date     || new Date().toLocaleDateString('sv-SE', { day:'numeric', month:'long', year:'numeric' }),
   };
+  // Watermark-licensee (valfritt) — om passerat, visas på varje sidfot
+  const licensee = opts.licensee || null;
 
   return new Promise((resolve, reject) => {
     try {
@@ -388,7 +408,7 @@ async function generateFullBookBuffer(blocks, opts = {}) {
       renderToc(doc, blocks);
       blocks.forEach((b, i) => renderBlockChapter(doc, b, i));
       renderAboutPage(doc, meta);
-      addPageNumbers(doc);
+      addPageNumbers(doc, licensee);
 
       doc.end();
     } catch (err) {

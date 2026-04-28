@@ -3046,19 +3046,49 @@ async function getOrGenerateBook() {
   return { buffer, hash: currentHash, source: 'regen', generatedAt: bookCache.generatedAt };
 }
 
+/**
+ * Bygg licensee-objekt från user-record. Används som watermark på download.
+ * Returnerar { name, email, date } — inget av detta är hemligt, bara identifierande.
+ */
+function buildLicensee(user) {
+  if (!user) return null;
+  const fullName = [user.first_name, user.last_name].filter(Boolean).join(' ').trim();
+  const name = fullName || user.username || 'Användare';
+  return {
+    name,
+    email: user.email || '',
+    date:  new Date().toLocaleDateString('sv-SE', { year: 'numeric', month: 'short', day: 'numeric' }),
+  };
+}
+
 // User download — premium-feature. Free-users redirectas till /upgrade.
+// OBS: ingen cache per-user (varje download får personlig watermark) — regen
+// per request. ~1.6s extra latens, OK för låg-volym premium-feature.
 app.get('/book/saljboken.pdf', requireLogin, async (req, res) => {
   if (!isPremiumOrHigher(req.session.role)) {
     return res.redirect('/upgrade?from=book');
   }
   try {
-    const { buffer, hash } = await getOrGenerateBook();
+    const user = findUserById(req.session.userId);
+    const licensee = buildLicensee(user);
+    const hash = bookGenerator.computeContentHash(salesBlocks);
+
+    console.log(`📚 Genererar personlig PDF för ${licensee.name} (${licensee.email})...`);
+    const t0 = Date.now();
+    const buffer = await bookGenerator.generateFullBookBuffer(salesBlocks, {
+      title:    'Joakim Jaksens Säljutbildning',
+      subtitle: 'Allt du behöver veta för att bli en bättre säljare',
+      author:   'Joakim Jaksen',
+      licensee,
+    });
+    console.log(`📚 PDF genererad på ${Date.now() - t0}ms (${Math.round(buffer.length / 1024)} KB)`);
+
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', 'attachment; filename="joakim-jaksens-saljutbildning.pdf"');
-    res.setHeader('Cache-Control', 'private, max-age=3600');
+    res.setHeader('Cache-Control', 'private, no-cache, no-store, must-revalidate'); // varje user unik
     res.setHeader('X-Content-Hash', hash);
     res.send(buffer);
-    audit(req, 'book.download', { id: req.session.userId, username: req.session.username }, { hash, format: 'pdf' });
+    audit(req, 'book.download', { id: req.session.userId, username: req.session.username }, { hash, format: 'pdf', licensee: licensee.name });
   } catch (err) {
     console.error('Book download error:', err.message);
     notifyAdmin('warning', 'Book PDF generation failed',
@@ -3111,13 +3141,26 @@ app.get('/book/saljboken.epub', requireLogin, async (req, res) => {
     return res.redirect('/upgrade?from=book');
   }
   try {
-    const { buffer, hash } = await getOrGenerateEpub();
+    const user = findUserById(req.session.userId);
+    const licensee = buildLicensee(user);
+    const hash = epubGenerator.computeEpubContentHash(salesBlocks);
+
+    console.log(`📖 Genererar personlig EPUB för ${licensee.name}...`);
+    const t0 = Date.now();
+    const buffer = await epubGenerator.generateFullBookEpub(salesBlocks, {
+      title:    'Joakim Jaksens Säljutbildning',
+      subtitle: 'Allt du behöver veta för att bli en bättre säljare',
+      author:   'Joakim Jaksen',
+      licensee,
+    });
+    console.log(`📖 EPUB genererad på ${Date.now() - t0}ms (${Math.round(buffer.length / 1024)} KB)`);
+
     res.setHeader('Content-Type', 'application/epub+zip');
     res.setHeader('Content-Disposition', 'attachment; filename="joakim-jaksens-saljutbildning.epub"');
-    res.setHeader('Cache-Control', 'private, max-age=3600');
+    res.setHeader('Cache-Control', 'private, no-cache, no-store, must-revalidate');
     res.setHeader('X-Content-Hash', hash);
     res.send(buffer);
-    audit(req, 'book.download', { id: req.session.userId, username: req.session.username }, { hash, format: 'epub' });
+    audit(req, 'book.download', { id: req.session.userId, username: req.session.username }, { hash, format: 'epub', licensee: licensee.name });
   } catch (err) {
     console.error('Book EPUB error:', err.message);
     notifyAdmin('warning', 'Book EPUB generation failed',

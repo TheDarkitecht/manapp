@@ -147,6 +147,15 @@ em { font-style: italic; }
   font-size: 0.9em;
   color: #777;
 }
+.cover .watermark {
+  margin-top: 4em;
+  font-size: 0.78em;
+  color: #999;
+  font-family: sans-serif;
+  line-height: 1.4;
+  border-top: 1px solid #ddd;
+  padding-top: 1em;
+}
 `;
 
 // ───────── XHTML-generators ─────────
@@ -186,7 +195,13 @@ function chapterXhtml(block, blockIndex) {
 </html>`;
 }
 
-function coverXhtml({ title, subtitle, author, date }) {
+function coverXhtml({ title, subtitle, author, date, licensee }) {
+  const wmHtml = licensee && licensee.name
+    ? `<p class="watermark">
+         Licensierad till <strong>${xmlEscape(licensee.name)}</strong>${licensee.email ? ` (${xmlEscape(licensee.email)})` : ''}<br/>
+         ${licensee.date ? 'Nedladdad ' + xmlEscape(licensee.date) + ' · ' : ''}För personlig användning
+       </p>`
+    : '';
   return `<?xml version="1.0" encoding="utf-8"?>
 <!DOCTYPE html>
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="sv" lang="sv">
@@ -201,6 +216,7 @@ function coverXhtml({ title, subtitle, author, date }) {
     <p class="subtitle">${xmlEscape(subtitle || '')}</p>
     <p class="author">${xmlEscape(author)}</p>
     <p class="date">${xmlEscape(date)}</p>
+    ${wmHtml}
   </div>
 </body>
 </html>`;
@@ -315,6 +331,7 @@ async function generateFullBookEpub(blocks, opts = {}) {
     subtitle: opts.subtitle || 'Allt du behöver veta för att bli en bättre säljare',
     author:   opts.author   || 'Joakim Jaksen',
     date:     opts.date     || new Date().toISOString().slice(0, 10),
+    licensee: opts.licensee || null,
   };
   // UUID baserat på content-hash så samma content → samma book-ID
   const contentSig = crypto.createHash('sha256')
