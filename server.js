@@ -1360,6 +1360,93 @@ app.post('/notes/:id/delete', requireLogin, noteDeleteLimiter, verifyCsrf, (req,
 
 // ── Learn ─────────────────────────────────────────────────────────────────────
 
+// ── Block-search — fulltext över theory + outcomes + scripts ───────────────
+// Existing client-filter på /learn söker bara block-titel/subtitle.
+// Detta är djupsök i hela innehållet — hitta var ett specifikt begrepp diskuteras.
+app.get('/learn/sok', requireLogin, (req, res) => {
+  const q = (req.query.q || '').trim().toLowerCase();
+  let results = [];
+
+  if (q && q.length >= 2) {
+    const role = req.session.role;
+    const isPremium = isPremiumOrHigher(role);
+
+    for (const block of salesBlocks) {
+      const isLocked = !isPremium && !FREE_BLOCK_IDS.includes(block.id);
+      let score = 0;
+      const matches = [];
+
+      // Title-match (highest weight)
+      if (block.title && block.title.toLowerCase().includes(q)) {
+        score += 5;
+        matches.push({ where: 'title', text: block.title });
+      }
+      if (block.subtitle && block.subtitle.toLowerCase().includes(q)) {
+        score += 3;
+        matches.push({ where: 'subtitle', text: block.subtitle });
+      }
+      if (block.outcomeTitle && block.outcomeTitle.toLowerCase().includes(q)) {
+        score += 4;
+        matches.push({ where: 'outcome', text: block.outcomeTitle });
+      }
+
+      // Theory-fulltext: räkna träffar och extrahera snippet runt första
+      if (block.theory) {
+        const plainTheory = block.theory.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
+        const lower = plainTheory.toLowerCase();
+        let idx = lower.indexOf(q);
+        let occurrences = 0;
+        while (idx !== -1) {
+          occurrences++;
+          idx = lower.indexOf(q, idx + q.length);
+        }
+        if (occurrences > 0) {
+          score += occurrences;
+          // Snippet runt första träffen — 120 tecken före + 180 efter
+          const firstIdx = lower.indexOf(q);
+          const start = Math.max(0, firstIdx - 120);
+          const end = Math.min(plainTheory.length, firstIdx + q.length + 180);
+          let snippet = plainTheory.slice(start, end).trim();
+          if (start > 0) snippet = '…' + snippet;
+          if (end < plainTheory.length) snippet = snippet + '…';
+          matches.push({ where: 'theory', text: snippet, occurrences });
+        }
+      }
+
+      // Concrete scripts
+      if (block.concreteScripts && block.concreteScripts.length) {
+        for (const s of block.concreteScripts) {
+          if (s.toLowerCase().includes(q)) {
+            score += 2;
+            matches.push({ where: 'script', text: s });
+          }
+        }
+      }
+
+      if (score > 0) {
+        results.push({
+          block: { id: block.id, title: block.title, subtitle: block.subtitle, icon: block.icon, gradient: block.gradient },
+          score,
+          matches,
+          isLocked,
+        });
+      }
+    }
+
+    // Sortera efter score desc, max 20 resultat
+    results.sort((a, b) => b.score - a.score);
+    results = results.slice(0, 20);
+  }
+
+  res.render('learn-sok', {
+    username: req.session.username,
+    role:     req.session.role,
+    query:    req.query.q || '',
+    results,
+    totalBlocks: salesBlocks.length,
+  });
+});
+
 app.get('/learn', requireLogin, (req, res) => {
   const progress = getBlockProgress(req.session.userId);
 

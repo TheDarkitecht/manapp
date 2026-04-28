@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>🔍 Sök i utbildningen — Joakim Jaksen</title>
+  <meta name="robots" content="noindex" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🔍</text></svg>" />
+  <link rel="stylesheet" href="/style.css" />
+  <style>
+    .sok-wrap { max-width: 900px; margin: 0 auto; padding: 1.5rem 1.25rem 6rem; }
+    .sok-header { margin-bottom: 1.5rem; }
+    .sok-header h1 { color: #f1f5f9; font-size: 1.5rem; margin: 0 0 0.5rem; }
+    .sok-header p { color: #94a3b8; font-size: 0.9rem; margin: 0; line-height: 1.5; }
+
+    .sok-form {
+      display: flex; gap: 0.5rem; margin-bottom: 1.5rem;
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 12px;
+      padding: 0.4rem;
+    }
+    .sok-form input {
+      flex: 1; padding: 0.85rem 1rem;
+      background: transparent; border: none; outline: none;
+      color: #f1f5f9; font-size: 0.95rem;
+    }
+    .sok-form button {
+      padding: 0.7rem 1.25rem;
+      background: linear-gradient(135deg, #6366f1, #8b5cf6);
+      color: #fff; border: none; border-radius: 9px;
+      font-weight: 700; font-size: 0.9rem; cursor: pointer;
+      min-height: 44px;
+    }
+
+    .sok-meta {
+      color: #64748b; font-size: 0.85rem; margin-bottom: 1.5rem;
+    }
+    .sok-meta strong { color: #cbd5e1; }
+
+    .sok-result {
+      display: block; padding: 1.25rem 1.5rem; margin-bottom: 0.85rem;
+      background: linear-gradient(145deg, #1e293b, #0f172a);
+      border: 1px solid rgba(255,255,255,0.07);
+      border-left: 4px solid #6366f1;
+      border-radius: 12px;
+      text-decoration: none; color: inherit;
+      transition: border-color 0.15s, transform 0.1s;
+    }
+    .sok-result:hover {
+      border-color: rgba(99,102,241,0.4);
+      border-left-color: #8b5cf6;
+      transform: translateX(2px);
+    }
+    .sok-result.locked {
+      border-left-color: #f59e0b;
+      opacity: 0.85;
+    }
+    .sok-result.locked:hover { border-left-color: #fbbf24; }
+
+    .sok-result-head {
+      display: flex; align-items: center; gap: 0.75rem;
+      margin-bottom: 0.5rem;
+    }
+    .sok-result-icon { font-size: 1.5rem; }
+    .sok-result-title {
+      flex: 1;
+      color: #f1f5f9; font-size: 1.05rem; font-weight: 700;
+      margin: 0;
+    }
+    .sok-result-locked-tag {
+      padding: 0.2rem 0.6rem; background: rgba(251,191,36,0.15);
+      color: #fbbf24; border-radius: 999px;
+      font-size: 0.7rem; font-weight: 700;
+    }
+    .sok-result-subtitle {
+      color: #94a3b8; font-size: 0.85rem;
+      margin: 0 0 0.85rem; padding-left: 2.25rem;
+    }
+    .sok-result-matches {
+      padding-left: 2.25rem;
+    }
+    .sok-match {
+      margin: 0.5rem 0;
+      padding: 0.5rem 0.75rem;
+      background: rgba(255,255,255,0.03);
+      border-left: 2px solid rgba(255,255,255,0.1);
+      border-radius: 0 6px 6px 0;
+      color: #cbd5e1; font-size: 0.85rem; line-height: 1.5;
+    }
+    .sok-match-where {
+      display: inline-block;
+      font-size: 0.7rem; font-weight: 700;
+      color: #a5b4fc; text-transform: uppercase;
+      letter-spacing: 0.08em; margin-right: 0.5rem;
+    }
+    .sok-match mark {
+      background: rgba(251,191,36,0.25); color: #fef3c7;
+      padding: 0 2px; border-radius: 2px; font-weight: 600;
+    }
+
+    .sok-empty {
+      text-align: center; padding: 3rem 1rem;
+      color: #64748b; font-size: 0.95rem; line-height: 1.55;
+    }
+    .sok-empty strong { color: #cbd5e1; }
+
+    .sok-hint {
+      padding: 1rem 1.25rem;
+      background: rgba(99,102,241,0.08);
+      border: 1px solid rgba(99,102,241,0.2);
+      border-radius: 10px;
+      color: #cbd5e1; font-size: 0.85rem; line-height: 1.5;
+      margin-bottom: 1.5rem;
+    }
+
+    @media (max-width: 540px) {
+      .sok-result-subtitle, .sok-result-matches { padding-left: 0; }
+    }
+  </style>
+</head>
+<body class="learn-page">
+
+  <a href="#main-content" class="skip-to-main">Hoppa till innehåll</a>
+
+  <nav class="learn-nav">
+    <a href="/learn" class="learn-nav-back">← Alla block</a>
+    <span class="learn-nav-title">🔍 Sök</span>
+    <span class="learn-nav-user"><%= username %></span>
+  </nav>
+
+  <main id="main-content" class="sok-wrap">
+
+    <header class="sok-header">
+      <h1>Sök i hela utbildningen</h1>
+      <p>Hitta där ett specifikt begrepp diskuteras — sökningen går genom alla <%= totalBlocks %> blocks teori, outcomes och konkreta formuleringar.</p>
+    </header>
+
+    <form method="GET" action="/learn/sok" class="sok-form" role="search">
+      <input
+        type="search" name="q" value="<%= query %>"
+        placeholder="T.ex. 'invändning', 'pris', 'tempo', 'avslut'…"
+        autofocus
+        autocomplete="off"
+        aria-label="Sökfråga"
+      />
+      <button type="submit">Sök</button>
+    </form>
+
+    <% if (!query) { %>
+      <div class="sok-hint">
+        💡 <strong>Tips:</strong> sök på enskilda ord eller fraser. Resultaten rangordnas efter relevans — träff i titel och outcomes ger högre score än träff i löptexten. Premium-blocks visas även för gratis-konto, men kräver uppgradering för att läsas.
+      </div>
+    <% } else if (!results.length) { %>
+      <div class="sok-empty">
+        <p>🤷 Inga träffar för <strong>"<%= query %>"</strong></p>
+        <p style="font-size:0.85rem;">Testa kortare ord, böjningar, eller synonymer.</p>
+      </div>
+    <% } else { %>
+      <p class="sok-meta">
+        <strong><%= results.length %></strong> <%= results.length === 1 ? 'träff' : 'träffar' %> för
+        <strong>"<%= query %>"</strong>
+      </p>
+
+      <%
+        // Highlight-helper: omger query med <mark> i text
+        function highlight(text, q) {
+          if (!text || !q) return text;
+          const escapeHtml = (s) => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+          const escaped = escapeHtml(text);
+          const qLower = q.toLowerCase();
+          const lower = escaped.toLowerCase();
+          let result = '';
+          let i = 0;
+          while (i < escaped.length) {
+            const idx = lower.indexOf(qLower, i);
+            if (idx === -1) { result += escaped.slice(i); break; }
+            result += escaped.slice(i, idx) + '<mark>' + escaped.slice(idx, idx + q.length) + '</mark>';
+            i = idx + q.length;
+          }
+          return result;
+        }
+        const labels = { title: 'Titel', subtitle: 'Underrubrik', outcome: 'Outcome', theory: 'Teori', script: 'Formulering' };
+      %>
+
+      <% results.forEach(function(r) { %>
+        <a href="<%= r.isLocked ? '/upgrade?from=search' : ('/learn/' + r.block.id) %>"
+           class="sok-result <%= r.isLocked ? 'locked' : '' %>">
+          <div class="sok-result-head">
+            <span class="sok-result-icon"><%= r.isLocked ? '🔒' : r.block.icon %></span>
+            <h2 class="sok-result-title"><%- highlight(r.block.title, query) %></h2>
+            <% if (r.isLocked) { %><span class="sok-result-locked-tag">PREMIUM</span><% } %>
+          </div>
+          <% if (r.block.subtitle) { %>
+            <p class="sok-result-subtitle"><%- highlight(r.block.subtitle, query) %></p>
+          <% } %>
+          <div class="sok-result-matches">
+            <% r.matches.slice(0, 3).forEach(function(m) { %>
+              <div class="sok-match">
+                <span class="sok-match-where"><%= labels[m.where] || m.where %><% if (m.occurrences) { %> · <%= m.occurrences %> träffar<% } %></span>
+                <%- highlight(m.text, query) %>
+              </div>
+            <% }); %>
+            <% if (r.matches.length > 3) { %>
+              <div class="sok-match" style="opacity:0.6;font-style:italic;">
+                + <%= r.matches.length - 3 %> till
+              </div>
+            <% } %>
+          </div>
+        </a>
+      <% }); %>
+    <% } %>
+
+  </main>
+
+  <!-- Mobile bottom navigation -->
+  <nav class="app-bottom-nav">
+    <a href="/dashboard" class="app-bottom-nav-item">
+      <span class="abn-icon">🏠</span>
+      <span class="abn-label">Hem</span>
+    </a>
+    <a href="/learn" class="app-bottom-nav-item active">
+      <span class="abn-icon">📚</span>
+      <span class="abn-label">Utbildning</span>
+    </a>
+    <a href="/ordbok" class="app-bottom-nav-item">
+      <span class="abn-icon">📖</span>
+      <span class="abn-label">Ordbok</span>
+    </a>
+    <% if (role === 'free') { %>
+      <a href="/upgrade" class="app-bottom-nav-item abn-upgrade">
+        <span class="abn-icon">⭐</span>
+        <span class="abn-label">Premium</span>
+      </a>
+    <% } else { %>
+      <a href="/logout" class="app-bottom-nav-item">
+        <span class="abn-icon">🚪</span>
+        <span class="abn-label">Logga ut</span>
+      </a>
+    <% } %>
+  </nav>
+
+  <script src="/heartbeat.js" defer></script>
+</body>
+</html>
