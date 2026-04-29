@@ -4964,12 +4964,15 @@ async function startServer() {
 
   const gracefulShutdown = (signal) => {
     if (shuttingDown) {
-      console.warn(`${signal} igen — force-exit pga upprepad signal`);
+      // Använd process.stderr.write för synkron output — console.warn kan
+      // buffras + appen är på väg ner ändå
+      process.stderr.write(`\n${signal} igen — force-exit pga upprepad signal\n`);
       try { flushAnalytics(); } catch (_) {}
       process.exit(1);
     }
     shuttingDown = true;
-    console.log(`\n${signal} mottaget — graceful shutdown påbörjad (${GRACEFUL_TIMEOUT_MS}ms timeout)...`);
+    // process.stderr.write är synkron till TTY/pipe på Linux — säkrare än console
+    process.stderr.write(`\n🛑 ${signal} mottaget — graceful shutdown (timeout ${GRACEFUL_TIMEOUT_MS}ms)...\n`);
 
     // Force-exit om vi inte hinner inom Railway:s 30s-deadline
     const forceTimer = setTimeout(() => {
@@ -4982,15 +4985,16 @@ async function startServer() {
     // Stoppa acceptera nya connections — befintliga får slutföra
     if (server) {
       server.close((err) => {
-        if (err) console.error('Server close error:', err.message);
-        try { flushAnalytics(); } catch (e) { console.error('Final flush error:', e.message); }
-        console.log('✅ Graceful shutdown klar');
+        if (err) process.stderr.write('Server close error: ' + err.message + '\n');
+        try { flushAnalytics(); } catch (e) { process.stderr.write('Final flush error: ' + e.message + '\n'); }
+        process.stderr.write('✅ Graceful shutdown klar\n');
         clearTimeout(forceTimer);
-        process.exit(0);
+        // setImmediate ger event-loop chans att flusha I/O innan exit
+        setImmediate(() => process.exit(0));
       });
     } else {
       try { flushAnalytics(); } catch (_) {}
-      process.exit(0);
+      setImmediate(() => process.exit(0));
     }
   };
   process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
