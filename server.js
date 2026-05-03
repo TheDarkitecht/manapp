@@ -145,7 +145,20 @@ const app    = express();
 const PORT   = process.env.PORT || 3000;
 const stripe = Stripe(process.env['STRIPE_SECRET_KEY'] || '');
 const resend = process.env['RESEND_API_KEY'] ? new Resend(process.env['RESEND_API_KEY']) : null;
-// Set RESEND_FROM to a verified Resend sender, e.g. "Joakim Jaksen <noreply@joakimjaksen.se>"
+// RESEND_FROM = avsändar-display + adress för utgående transactional mejl.
+//
+// VIKTIGT (efter april 2026 email-routing-omflyttning):
+// Resend skickar från subdomäner under joakimjaksen.se, INTE roten.
+// Rätt värde i prod: "Joakim Jaksen <noreply@mail.joakimjaksen.se>"
+//
+// Skälet är att roten (joakimjaksen.se) nu äger Cloudflare Email Routing
+// för inkommande aliaser (info@, kontakt@, support@, joakim@, ekonomi@) →
+// alla → joakim@brilliantvalues.se. Att hålla utgående på subdomain
+// undviker SPF-include-konflikter och håller deliverability-domänerna
+// renligen separerade (mail = sender, bounces = SES bounces på Growth-OS-sidan).
+//
+// Display-namnet "Joakim Jaksen" syns i mottagarens inbox; full
+// adress (noreply@mail.joakimjaksen.se) syns bara vid expand av "from"-fält.
 const RESEND_FROM = process.env['RESEND_FROM'] || 'Joakim Jaksen <onboarding@resend.dev>';
 
 /**
