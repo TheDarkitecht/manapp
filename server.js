@@ -713,36 +713,88 @@ function emailShell(content) {
 </body></html>`;
 }
 
-function buildWelcomeEmail(username, baseUrl) {
+/**
+ * Tier-aware välkomstmejl. Free/Premium/Pro får olika kontext + CTA + steg.
+ *
+ * Vid /register skapas konto alltid som 'free' så registrerings-flödet
+ * får free-version. Admin-resend (POST /admin/users/:id/email) använder
+ * användarens NUVARANDE role → premium/pro-konto får rätt content.
+ *
+ * @param {string} username   — display-name eller first_name
+ * @param {string} baseUrl    — t.ex. "https://app.joakimjaksen.se"
+ * @param {string} [role]     — 'free' | 'premium' | 'pro' | 'admin'. Default 'free'.
+ */
+function buildWelcomeEmail(username, baseUrl, role = 'free') {
+  const isPro     = role === 'pro' || role === 'admin';
+  const isPremium = role === 'premium' || isPro;
+  const totalBlocks = salesBlocks.length;
+
+  // Header-tagline + access-text
+  const accessLine = isPro
+    ? `Du har <strong style="color:#fbbf24;">Pro-tier</strong>: alla ${totalBlocks} block, AI-coachen Jocke <em>plus</em> AI-samtalsanalys där du laddar upp dina riktiga kundsamtal och får skarp feedback.`
+    : isPremium
+    ? `Du har <strong style="color:#a5b4fc;">Premium-tier</strong>: alla ${totalBlocks} block, AI-coachen Jocke, säljordboken — hela utbildningen är upplåst.`
+    : `Du har tillgång till <strong style="color:#e2e8f0;">introduktionsblocken</strong> helt gratis. Teorin, videon och provet — allt är redan redo för dig.`;
+
+  // 3-stegs onboarding-checklist
+  const stepsHtml = isPro
+    ? `
+        <p style="margin:0;color:#94a3b8;font-size:14px;">1️⃣ &nbsp;Logga in på <a href="${baseUrl}" style="color:#818cf8;">app.joakimjaksen.se</a></p>
+        <p style="margin:0;color:#94a3b8;font-size:14px;">2️⃣ &nbsp;Ladda upp ditt första kundsamtal för AI-analys</p>
+        <p style="margin:0;color:#94a3b8;font-size:14px;">3️⃣ &nbsp;Eller börja med Block 1 om du vill bygga grunden</p>`
+    : isPremium
+    ? `
+        <p style="margin:0;color:#94a3b8;font-size:14px;">1️⃣ &nbsp;Logga in på <a href="${baseUrl}" style="color:#818cf8;">app.joakimjaksen.se</a></p>
+        <p style="margin:0;color:#94a3b8;font-size:14px;">2️⃣ &nbsp;Börja med Block 1 — eller hoppa till det område du vill bemästra</p>
+        <p style="margin:0;color:#94a3b8;font-size:14px;">3️⃣ &nbsp;Träna med Jocke (AI-rollspel) i varje block</p>`
+    : `
+        <p style="margin:0;color:#94a3b8;font-size:14px;">1️⃣ &nbsp;Logga in på <a href="${baseUrl}" style="color:#818cf8;">app.joakimjaksen.se</a></p>
+        <p style="margin:0;color:#94a3b8;font-size:14px;">2️⃣ &nbsp;Läs teorin i Block 1</p>
+        <p style="margin:0;color:#94a3b8;font-size:14px;">3️⃣ &nbsp;Gör provet och se hur du presterar</p>`;
+
+  // Primär CTA — destination + text matchar tier
+  const ctaUrl = isPro
+    ? `${baseUrl}/pro`
+    : isPremium
+    ? `${baseUrl}/learn`
+    : `${baseUrl}/learn/inledning`;
+
+  const ctaText = isPro
+    ? '🎙️ Öppna Pro-Samtalsanalys →'
+    : isPremium
+    ? 'Öppna utbildningen →'
+    : 'Gå till Block 1 →';
+
+  // Footer-uppgrade-prompt visas BARA för free-users (premium/pro behöver inte säljas till)
+  const upgradeFooter = !isPremium
+    ? `<p style="color:#475569;font-size:13px;line-height:1.6;margin:0 0 8px;">
+         När du är redo för mer — uppgradera till Premium och lås upp alla ${totalBlocks} block, AI-coachen Jocke och videogenomgångarna.
+       </p>`
+    : '';
+
   return emailShell(`
     <h1 style="margin:0 0 6px;font-size:26px;font-weight:900;color:#f1f5f9;">Välkommen, ${username}! 🎯</h1>
     <p style="margin:0 0 24px;color:#64748b;font-size:14px;">Ditt konto är nu aktivt.</p>
 
     <p style="color:#94a3b8;line-height:1.7;margin:0 0 16px;">
-      Du har tillgång till <strong style="color:#e2e8f0;">Block 1 — Inledning &amp; Första Intrycket</strong> helt gratis.
-      Teorin, videon och provet — allt är redan redo för dig.
+      ${accessLine}
     </p>
 
     <div style="background:rgba(99,102,241,0.08);border:1px solid rgba(99,102,241,0.2);border-radius:12px;padding:20px;margin:0 0 24px;">
       <p style="margin:0 0 12px;font-size:13px;font-weight:700;color:#a5b4fc;text-transform:uppercase;letter-spacing:0.05em;">Kom igång på 3 steg</p>
-      <div style="display:flex;flex-direction:column;gap:8px;">
-        <p style="margin:0;color:#94a3b8;font-size:14px;">1️⃣ &nbsp;Logga in på <a href="${baseUrl}" style="color:#818cf8;">app.joakimjaksen.se</a></p>
-        <p style="margin:0;color:#94a3b8;font-size:14px;">2️⃣ &nbsp;Läs teorin i Block 1</p>
-        <p style="margin:0;color:#94a3b8;font-size:14px;">3️⃣ &nbsp;Gör provet och se hur du presterar</p>
+      <div style="display:flex;flex-direction:column;gap:8px;">${stepsHtml}
       </div>
     </div>
 
     <table cellpadding="0" cellspacing="0" style="margin:0 0 24px;">
       <tr><td style="border-radius:10px;background:linear-gradient(135deg,#6366f1,#8b5cf6);">
-        <a href="${baseUrl}/learn/forsta-intrycket" style="display:inline-block;padding:14px 28px;color:#fff;text-decoration:none;font-weight:700;font-size:15px;">
-          Gå till Block 1 →
+        <a href="${ctaUrl}" style="display:inline-block;padding:14px 28px;color:#fff;text-decoration:none;font-weight:700;font-size:15px;">
+          ${ctaText}
         </a>
       </td></tr>
     </table>
 
-    <p style="color:#475569;font-size:13px;line-height:1.6;margin:0 0 8px;">
-      När du är redo för mer — uppgradera till Premium och lås upp alla ${salesBlocks.length} block, AI-coachen Jocke och videogenomgångarna.
-    </p>
+    ${upgradeFooter}
 
     <p style="margin:24px 0 0;color:#475569;font-size:13px;">Med sälj,<br><strong style="color:#64748b;">Joakim Jaksen</strong></p>
   `);
@@ -3774,10 +3826,11 @@ app.post('/admin/users/:id/email', requireLogin, requireAdmin, verifyCsrf, async
   try {
     // Använd first_name om det finns, annars username (display-name-logik)
     const name = user.first_name || user.username;
+    // Tier-aware välkomstmejl — Pro/Premium får RÄTT content, INTE free-tier-text
     const result = await sendEmailReliable({
       to:      user.email,
       subject: `Välkommen, ${name}! Ditt konto är aktivt 🎯`,
-      html:    buildWelcomeEmail(name, baseUrl),
+      html:    buildWelcomeEmail(name, baseUrl, user.role || 'free'),
       kind:    'welcome_admin_resend',
     });
     audit(req, 'email.welcome_sent', { id: user.id, username: user.username, queued: !!result.queued });
