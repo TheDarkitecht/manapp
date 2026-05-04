@@ -26,7 +26,7 @@
     <div class="up-hero">
       <div class="up-hero-tag">⭐ Premium</div>
       <h1>Lås upp hela säljutbildningen</h1>
-      <p>Alla 20 block, AI-coachen Jocke och verktyg som faktiskt gör dig till en bättre säljare.</p>
+      <p>Alla <%= totalBlocks %> block, AI-coachen Jocke och verktyg som faktiskt gör dig till en bättre säljare.</p>
     </div>
 
     <!-- ── Main pricing section ───────────────────────────────────────────────── -->
@@ -40,7 +40,7 @@
           <div class="up-feature-item">
             <div class="up-feat-icon">📚</div>
             <div>
-              <strong>Alla 20 block</strong>
+              <strong>Alla <%= totalBlocks %> block</strong>
               <p>Prospektering, invändningshantering, avslutstekniker, förhandling, LinkedIn, videosamtal, e-post, mental styrka, AI som säljverktyg, rekommenderad läsning och mer. Teori, video och prov per block.</p>
             </div>
           </div>
@@ -103,10 +103,10 @@
             <span class="up-price-amount">199 kr</span>
             <span class="up-price-period">/mån</span>
           </div>
-          <p class="up-price-sub">Alla 20 block + AI-träning</p>
+          <p class="up-price-sub">Alla <%= totalBlocks %> block + AI-träning</p>
 
           <ul class="up-checkout-list">
-            <li>✅ Alla 20 block</li>
+            <li>✅ Alla <%= totalBlocks %> block</li>
             <li>✅ AI-rollspel med Jocke (40+ scenarier)</li>
             <li>✅ Veckans uppdrag + reflektion</li>
             <li>✅ Nivå-system + skill-radar</li>
@@ -181,7 +181,7 @@
             <span role="cell">Block 1 & 2</span><span role="cell" class="yes">✓</span><span role="cell" class="yes">✓</span>
           </div>
           <div class="up-compare-row" role="row">
-            <span role="cell">Block 3–20</span><span role="cell" class="no">✗</span><span role="cell" class="yes">✓</span>
+            <span role="cell">Övriga block (premium-låsta)</span><span role="cell" class="no">✗</span><span role="cell" class="yes">✓</span>
           </div>
           <div class="up-compare-row" role="row">
             <span role="cell">AI-assistent Jocke</span><span role="cell" class="no">✗</span><span role="cell" class="yes">✓</span>
@@ -237,7 +237,7 @@
             Hur snabbt får jag tillgång efter betalning? <span class="faq-arrow" aria-hidden="true">▾</span>
           </button>
           <div class="faq-a" id="faq-a-4">
-            <p>Direkt. Så fort betalningen bekräftas av Stripe uppgraderas ditt konto automatiskt och du har tillgång till alla 20 block och Jocke.</p>
+            <p>Direkt. Så fort betalningen bekräftas av Stripe uppgraderas ditt konto automatiskt och du har tillgång till alla <%= totalBlocks %> block och Jocke.</p>
           </div>
         </div>
 

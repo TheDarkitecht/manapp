@@ -4,19 +4,19 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Joakim Jaksen — Säljutbildning som faktiskt fungerar</title>
-  <meta name="description" content="20 block med teori, video och prov. Byggt av en säljare med 22+ år och 200+ MSEK i resultat — för säljare som vill prestera på riktigt." />
+  <meta name="description" content="<%= blocks.length %> block med teori, video, AI-coach och prov. Byggt av en entreprenör med 22+ år i sälj — bolag som sålt för 200+ MSEK och 1000+ tränade säljare." />
 
   <!-- Open Graph / Facebook -->
   <meta property="og:type"        content="website" />
   <meta property="og:url"         content="https://www.joakimjaksen.se/" />
   <meta property="og:title"       content="Joakim Jaksen — Säljutbildning som faktiskt fungerar" />
-  <meta property="og:description" content="20 block med teori, video och prov. Byggt av en säljare med 22+ år och 200+ MSEK i resultat." />
+  <meta property="og:description" content="<%= blocks.length %> block med teori, video, AI-coach och prov. 22+ år i sälj. Bolag som sålt för 200+ MSEK. 1000+ tränade säljare." />
   <meta property="og:image"       content="https://www.joakimjaksen.se/og-image.png" />
 
   <!-- Twitter / X -->
   <meta name="twitter:card"        content="summary_large_image" />
   <meta name="twitter:title"       content="Joakim Jaksen — Säljutbildning som faktiskt fungerar" />
-  <meta name="twitter:description" content="20 block med teori, video och prov. Byggt av en säljare med 22+ år och 200+ MSEK i resultat." />
+  <meta name="twitter:description" content="<%= blocks.length %> block med teori, video, AI-coach och prov. 22+ år i sälj. Bolag som sålt för 200+ MSEK. 1000+ tränade säljare." />
   <meta name="twitter:image"       content="https://www.joakimjaksen.se/og-image.png" />
 
   <!-- Canonical -->
@@ -30,7 +30,7 @@
     "name": "Joakim Jaksen",
     "url": "https://www.joakimjaksen.se",
     "jobTitle": "Säljcoach & Säljutbildare",
-    "description": "22+ år i säljbranschen. 200+ MSEK i säljresultat. 1000+ tränade säljare.",
+    "description": "22+ år i säljbranschen. Entreprenör — bolag som sålt för 200+ MSEK. 1000+ tränade säljare.",
     "worksFor": {
       "@type": "Organization",
       "name": "Brilliant Values Global AB"
@@ -45,7 +45,7 @@
     "@context": "https://schema.org",
     "@type": "Course",
     "name": "Joakim Jaksens Säljutbildning",
-    "description": "20 block med teori, video och prov som täcker hela säljprocessen — från första intrycket till mental styrka, AI-verktyg och rekommenderad läsning.",
+    "description": "<%= blocks.length %> block med teori, video, AI-coach och prov som täcker hela säljprocessen — från första intrycket till mental styrka, AI-verktyg och rekommenderad läsning.",
     "provider": {
       "@type": "Person",
       "name": "Joakim Jaksen",
@@ -64,7 +64,7 @@
       },
       {
         "@type": "Offer",
-        "name": "Premium — Alla 20 block",
+        "name": "Premium — Alla <%= blocks.length %> block",
         "price": "199",
         "priceCurrency": "SEK",
         "billingDuration": "P1M",
@@ -93,7 +93,7 @@
         "name": "Vad kostar Joakim Jaksens säljutbildning?",
         "acceptedAnswer": {
           "@type": "Answer",
-          "text": "Gratis (block 1 & 2), Premium 199 kr/månad för alla 20 block, Pro 599 kr/månad med AI-samtalsanalys, eller skräddarsytt för företag och team."
+          "text": "Gratis (block 1 & 2), Premium 199 kr/månad för alla <%= blocks.length %> block, Pro 599 kr/månad med AI-samtalsanalys, eller skräddarsytt för företag och team."
         }
       },
       {
@@ -185,7 +185,7 @@
         Bli säljaren<br>du alltid<br><span class="lp-hero-accent">kunnat vara.</span>
       </h1>
       <p class="lp-hero-sub">
-        Säljteknik, mindset och struktur — samlat i 20 block med teori, video och prov.<br>
+        Säljteknik, mindset och struktur — samlat i <%= blocks.length %> block med teori, video och prov.<br>
         Byggt av en säljare som faktiskt gjort jobbet.
       </p>
       <div class="lp-hero-ctas">
@@ -254,7 +254,7 @@
   <section id="akademin" class="lp-academy">
     <div class="lp-section-inner">
       <div class="lp-section-tag lp-tag-center">SÄLJUTBILDNINGEN</div>
-      <h2 class="lp-section-h2 lp-h2-center">20 block som täcker<br>hela säljprocessen</h2>
+      <h2 class="lp-section-h2 lp-h2-center"><%= blocks.length %> block som täcker<br>hela säljprocessen</h2>
       <p class="lp-section-sub">Från första intrycket till mental styrka. Teori, videogenomgång och prov i varje block.</p>
 
       <div class="lp-blocks-preview">
@@ -343,7 +343,7 @@
             <li>✅ Block 2 — Första intrycket</li>
             <li>✅ Teoriförhandsvisning alla block</li>
             <li>✅ Säljordboken (100+ termer)</li>
-            <li class="lp-feat-locked">🔒 Block 3–20 låsta</li>
+            <li class="lp-feat-locked">🔒 Övriga block låsta</li>
             <li class="lp-feat-locked">🔒 AI-rollspel med Jocke</li>
             <li class="lp-feat-locked">🔒 Loggbok & nivå-system</li>
           </ul>
@@ -358,7 +358,7 @@
             <p>Avsluta när som helst</p>
           </div>
           <ul class="lp-price-features">
-            <li>✅ Alla 20 block upplåsta</li>
+            <li>✅ Alla <%= blocks.length %> block upplåsta</li>
             <li>✅ Teori, video & prov per block</li>
             <li>✅ AI-rollspel med Jocke (40+ scenarier)</li>
             <li>✅ Veckans uppdrag + reflektion</li>
@@ -480,7 +480,7 @@
             Vad ingår i Premium? <span class="lp-faq-arrow" aria-hidden="true">▾</span>
           </button>
           <div class="lp-faq-a" id="lp-faq-a-2">
-            <p>Premium ger dig: alla 20 block upplåsta, teori + video + prov per block, AI-assistenten Jocke, Säljordboken med 60+ termer, progressspårning och alla framtida block utan extra kostnad. Allt för 199 kr/mån.</p>
+            <p>Premium ger dig: alla <%= blocks.length %> block upplåsta, teori + video + prov per block, AI-assistenten Jocke, Säljordboken med 60+ termer, progressspårning och alla framtida block utan extra kostnad. Allt för 199 kr/mån.</p>
           </div>
         </div>
 

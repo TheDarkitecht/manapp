@@ -31,7 +31,7 @@
       <div class="bc-divider"></div>
 
       <div class="bc-meta">
-        Nivå <%= level.id %> av 5 · <%= stats.xp %> XP · <%= stats.totalBlocksMastered %>/20 block bemästrade
+        Nivå <%= level.id %> av 5 · <%= stats.xp %> XP · <%= stats.totalBlocksMastered %>/<%= totalBlocks %> block bemästrade
       </div>
 
       <p class="bc-signalizes"><%= level.signalizes %></p>
@@ -66,7 +66,7 @@
 
     <div class="bevis-hint">
       <strong>💡 Tips:</strong> Ladda ner som bild, lägg upp på LinkedIn med texten:
-      <em>"Uppnådde precis <%= level.name %>-nivån i Joakim Jaksens säljutbildning. <%= stats.totalBlocksMastered %>/20 block bemästrade, <%= stats.xp %> XP."</em>
+      <em>"Uppnådde precis <%= level.name %>-nivån i Joakim Jaksens säljutbildning. <%= stats.totalBlocksMastered %>/<%= totalBlocks %> block bemästrade, <%= stats.xp %> XP."</em>
     </div>
 
     <section class="bevis-info">

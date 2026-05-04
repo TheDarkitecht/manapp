@@ -11,7 +11,7 @@
   <meta property="og:type"        content="website" />
   <meta property="og:url"         content="https://www.joakimjaksen.se/priser" />
   <meta property="og:title"       content="Priser — Säljutbildning från 0 kr/mån" />
-  <meta property="og:description" content="Gratis för att börja. 199 kr för alla 20 block. 599 kr med AI-samtalsanalys. Skräddarsytt för team." />
+  <meta property="og:description" content="Gratis för att börja. 199 kr för alla <%= totalBlocks %> block. 599 kr med AI-samtalsanalys. Skräddarsytt för team." />
   <meta property="og:image"       content="https://www.joakimjaksen.se/og-image.png" />
   <meta property="og:locale"      content="sv_SE" />
 
@@ -32,7 +32,7 @@
     "@context": "https://schema.org",
     "@type": "Product",
     "name": "Joakim Jaksens Säljutbildning",
-    "description": "Online säljutbildning med 20 block, AI-samtalsanalys och workshops för team.",
+    "description": "Online säljutbildning med <%= totalBlocks %> block, AI-samtalsanalys och workshops för team.",
     "brand": {
       "@type": "Brand",
       "name": "Joakim Jaksen"
@@ -56,7 +56,7 @@
           "name": "Premium",
           "price": "199",
           "priceCurrency": "SEK",
-          "description": "Alla 20 block, full kurs, inget bindningstid",
+          "description": "Alla <%= totalBlocks %> block, full kurs, inget bindningstid",
           "priceValidUntil": "2027-12-31"
         },
         {
@@ -191,10 +191,10 @@
       <div class="pr-card featured">
         <span class="ribbon">POPULÄRAST</span>
         <h2>✓ Premium</h2>
-        <p class="desc">Full kurs med alla 20 block, AI-coachning och gamification.</p>
+        <p class="desc">Full kurs med alla <%= totalBlocks %> block, AI-coachning och gamification.</p>
         <div class="price">199 kr<small>/mån</small></div>
         <ul>
-          <li>Alla 20 block upplåsta</li>
+          <li>Alla <%= totalBlocks %> block upplåsta</li>
           <li>AI-assistent Jocke — alltid tillgänglig</li>
           <li>Full Loggbok + XP, nivåer, streak</li>
           <li>Rollspel, uppdrag, reflektioner per block</li>

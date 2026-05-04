@@ -704,7 +704,7 @@ function buildWelcomeEmail(username, baseUrl) {
     </table>
 
     <p style="color:#475569;font-size:13px;line-height:1.6;margin:0 0 8px;">
-      När du är redo för mer — uppgradera till Premium och lås upp alla 20 block, AI-coachen Jocke och videogenomgångarna.
+      När du är redo för mer — uppgradera till Premium och lås upp alla ${salesBlocks.length} block, AI-coachen Jocke och videogenomgångarna.
     </p>
 
     <p style="margin:24px 0 0;color:#475569;font-size:13px;">Med sälj,<br><strong style="color:#64748b;">Joakim Jaksen</strong></p>
@@ -1555,7 +1555,7 @@ function computeNextBestStep(block, journey, blocks) {
   }
   return {
     icon: '🏆',
-    label: 'Du har klarat alla 20 block',
+    label: `Du har klarat alla ${salesBlocks.length} block`,
     href:  '/learn',
     desc:  'Hela utbildningen genomförd. Tillbaka till översikten.',
   };
@@ -2375,6 +2375,7 @@ app.get('/mina-framsteg/bevis/:level', requireLogin, (req, res) => {
     certName,                         // för själva certifikatet (full name)
     level,
     stats,
+    totalBlocks: salesBlocks.length,
     date: new Date().toLocaleDateString('sv-SE', { year: 'numeric', month: 'long', day: 'numeric' }),
   });
 });
@@ -2441,7 +2442,7 @@ app.get('/mina-framsteg/bevis/:level.svg', requireLogin, (req, res) => {
   <line x1="100" y1="330" x2="400" y2="330" stroke="url(#accent)" stroke-width="2" stroke-linecap="round" opacity="0.8"/>
 
   <!-- Level number + XP -->
-  <text x="100" y="380" fill="#cbd5e1" font-family="Arial, sans-serif" font-size="22">Nivå ${level.id} av 5  ·  ${stats.xp} XP  ·  ${stats.totalBlocksMastered}/20 block bemästrade</text>
+  <text x="100" y="380" fill="#cbd5e1" font-family="Arial, sans-serif" font-size="22">Nivå ${level.id} av 5  ·  ${stats.xp} XP  ·  ${stats.totalBlocksMastered}/${salesBlocks.length} block bemästrade</text>
 
   <!-- Signalizes -->
   <text x="100" y="440" fill="#e2e8f0" font-family="Arial, sans-serif" font-size="20" font-style="italic">
@@ -4094,9 +4095,11 @@ app.get('/upgrade', requireLogin, (req, res) => {
   // Funnel: första /upgrade-besök — visar att användaren övervägt köp
   logFunnelEvent(req.session.userId, 'first_upgrade_visit');
   res.render('upgrade', {
-    username:  req.session.username,
-    role:      req.session.role,
-    csrfToken: generateCsrfToken(req),
+    username:    req.session.username,
+    role:        req.session.role,
+    totalBlocks: salesBlocks.length,    // dynamiskt, undviker stale "20 block"-strings
+    premiumBlocks: salesBlocks.length - FREE_BLOCK_IDS.length,
+    csrfToken:   generateCsrfToken(req),
   });
 });
 
@@ -4124,10 +4127,12 @@ app.post('/upgrade/checkout', requireLogin, blockWhenImpersonating, verifyCsrf, 
 
   if (!priceId) {
     return res.render('upgrade', {
-      username:  req.session.username,
-      role:      req.session.role,
-      csrfToken: generateCsrfToken(req),
-      error:     `${targetTier === 'pro' ? 'Pro' : 'Premium'}-prissättning är inte konfigurerad. Kontakta support.`,
+      username:    req.session.username,
+      role:        req.session.role,
+      totalBlocks: salesBlocks.length,
+      premiumBlocks: salesBlocks.length - FREE_BLOCK_IDS.length,
+      csrfToken:   generateCsrfToken(req),
+      error:       `${targetTier === 'pro' ? 'Pro' : 'Premium'}-prissättning är inte konfigurerad. Kontakta support.`,
     });
   }
 
@@ -4140,10 +4145,12 @@ app.post('/upgrade/checkout', requireLogin, blockWhenImpersonating, verifyCsrf, 
   if (!user) {
     console.error('Checkout: user lookup failed for session.userId', req.session.userId);
     return res.render('upgrade', {
-      username:  req.session.username,
-      role:      req.session.role,
-      csrfToken: generateCsrfToken(req),
-      error:     'Ditt konto hittades inte. Logga ut och in igen, eller kontakta support.',
+      username:    req.session.username,
+      role:        req.session.role,
+      totalBlocks: salesBlocks.length,
+      premiumBlocks: salesBlocks.length - FREE_BLOCK_IDS.length,
+      csrfToken:   generateCsrfToken(req),
+      error:       'Ditt konto hittades inte. Logga ut och in igen, eller kontakta support.',
     });
   }
 
@@ -4185,10 +4192,12 @@ app.post('/upgrade/checkout', requireLogin, blockWhenImpersonating, verifyCsrf, 
       { tier: targetTier, userId: req.session.userId, email: user?.email, error: err.message }
     );
     res.render('upgrade', {
-      username:  req.session.username,
-      role:      req.session.role,
-      csrfToken: generateCsrfToken(req),
-      error:     'Betalningen kunde inte startas. Försök igen.',
+      username:    req.session.username,
+      role:        req.session.role,
+      totalBlocks: salesBlocks.length,
+      premiumBlocks: salesBlocks.length - FREE_BLOCK_IDS.length,
+      csrfToken:   generateCsrfToken(req),
+      error:       'Betalningen kunde inte startas. Försök igen.',
     });
   }
 });
@@ -4384,8 +4393,10 @@ app.get('/foretag', (req, res) => {
 // ── Public /priser — SEO-indexerad pris-sida med rich-results ─────────────────
 app.get(['/priser', '/pricing'], (req, res) => {
   res.render('priser', {
-    username: req.session?.username || null,
-    role:     req.session?.role || null,
+    username:    req.session?.username || null,
+    role:        req.session?.role || null,
+    totalBlocks: salesBlocks.length,
+    premiumBlocks: salesBlocks.length - FREE_BLOCK_IDS.length,
   });
 });
 

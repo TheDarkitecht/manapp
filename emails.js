@@ -324,7 +324,7 @@ function buildBlockCompletion({ username, block, nextBlock, totalDone, totalBloc
   const milestone = isFreeTierEnd
     ? `<div style="margin:24px 0;padding:16px 20px;background:rgba(251,191,36,0.15);border:1px solid rgba(251,191,36,0.4);border-radius:12px;color:#fef3c7;">
          <strong style="color:#fbbf24;">🎉 Du har klarat hela gratis-tiern!</strong><br>
-         <span style="font-size:14px;">Block 3 och framåt är där det skruvas upp — invändningshantering, mental styrka, AI-verktyg. 199 kr/mån, ingen bindningstid.</span>
+         <span style="font-size:14px;">Resten av utbildningen är där det skruvas upp — invändningshantering, mental styrka, avslutsteknik, AI-verktyg och mer. 199 kr/mån, ingen bindningstid.</span>
        </div>`
     : '';
 
@@ -336,7 +336,7 @@ function buildBlockCompletion({ username, block, nextBlock, totalDone, totalBloc
        </div>`
     : `<div style="margin:24px 0;padding:20px;background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.3);border-radius:12px;text-align:center;">
          <div style="font-size:32px;margin-bottom:8px;">🏆</div>
-         <div style="color:#34d399;font-size:17px;font-weight:700;">Du har klarat alla 20 block!</div>
+         <div style="color:#34d399;font-size:17px;font-weight:700;">Du har klarat alla ${totalBlocks} block!</div>
          <div style="color:#cbd5e1;font-size:14px;margin-top:4px;">Gå tillbaka till dashboarden och se ditt certifikat.</div>
        </div>`;
 
