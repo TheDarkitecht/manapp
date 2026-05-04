@@ -402,10 +402,47 @@ app.post('/webhook', express.raw({ type: 'application/json' }), async (req, res)
 app.set('trust proxy', 1); // Railway runs behind a reverse proxy
 
 // ── Security headers ──────────────────────────────────────────────────────────
+// CSP-strategi: loose policy som täcker XSS-vektorer utan att bryta vår
+// existerande inline-script-hantering i EJS. Strict CSP m. nonces hade krävt
+// att varje <script>-block i 50+ vyer fick nonce-attribut → stort refaktor
+// med risk för UI-regression. Den här policy:n är en pragmatisk medelväg:
+//
+//   - script-src 'unsafe-inline' tillåter våra inline-scripts (AI-chat,
+//     onClick-handlers, etc.) men blockar EXTERNA script-injektioner
+//   - whitelist:ar Turnstile + Stripe + YouTube för embeds vi använder
+//   - tight connect-src: bara egen origin + Stripe (för checkout-redirect)
+//   - frame-ancestors 'self' förhindrar clickjacking
+//   - object-src 'none' blockar Flash/Java-objekt-injektioner
+//
+// Förbättring (P2): byt till strict CSP m. nonces vid större EJS-refaktor.
+const isProdEnv = process.env.NODE_ENV === 'production' || !!process.env.RAILWAY_ENVIRONMENT;
 app.use(helmet({
-  contentSecurityPolicy: false, // disabled — inline scripts throughout EJS (TODO: add nonces)
-  crossOriginEmbedderPolicy: false, // needed for YouTube iframes
+  contentSecurityPolicy: {
+    useDefaults: false,
+    directives: {
+      defaultSrc:   ["'self'"],
+      // 'unsafe-inline' + 'unsafe-eval' krävs för EJS inline-scripts + ev. dynamic import.
+      // Cloudflare Turnstile kräver challenges.cloudflare.com; Stripe checkout har egen origin.
+      scriptSrc:    ["'self'", "'unsafe-inline'", "'unsafe-eval'", 'https://challenges.cloudflare.com', 'https://js.stripe.com'],
+      styleSrc:     ["'self'", "'unsafe-inline'"],
+      imgSrc:       ["'self'", 'data:', 'https:'], // tillåt https-bilder (YouTube-thumbnails, etc.)
+      fontSrc:      ["'self'", 'data:'],
+      connectSrc:   ["'self'", 'https://api.stripe.com', 'https://challenges.cloudflare.com'],
+      // YouTube för videogenomgångar, Turnstile för CAPTCHA, Stripe för checkout-redirect
+      frameSrc:     ['https://www.youtube.com', 'https://www.youtube-nocookie.com', 'https://challenges.cloudflare.com', 'https://js.stripe.com', 'https://hooks.stripe.com'],
+      mediaSrc:     ["'self'", 'https:', 'blob:'], // för pro-tier audio-uppladdning preview
+      objectSrc:    ["'none'"], // blocka <object>, <embed>, <applet>
+      baseUri:      ["'self'"],
+      formAction:   ["'self'", 'https://checkout.stripe.com'],
+      frameAncestors: ["'self'"], // anti-clickjacking — endast själva sidan kan iframea oss
+      ...(isProdEnv ? { upgradeInsecureRequests: [] } : {}), // bara prod — dev kör http
+    },
+  },
+  crossOriginEmbedderPolicy: false, // YouTube iframes kräver disabled
+  crossOriginResourcePolicy: { policy: 'same-site' },
   referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
+  // HSTS: bara prod — utvecklings-localhost ska inte tvingas https
+  ...(isProdEnv ? { hsts: { maxAge: 31536000, includeSubDomains: true, preload: false } } : { hsts: false }),
 }));
 app.disable('x-powered-by'); // already removed by helmet but belt-and-suspenders
 
