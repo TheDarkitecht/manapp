@@ -177,10 +177,10 @@
         <p class="desc">Testa utan risk. Block 1 & 2 är öppna för alla.</p>
         <div class="price">0 kr<small>/mån</small></div>
         <ul>
-          <li>Block 1 (Inledning) + Block 2 (Första intrycket)</li>
+          <li>Block 1 (Inledning) + Block 2 (Fundamenten)</li>
           <li>Teori, video, prov & reflektion</li>
           <li>Grundversion av Loggboken</li>
-          <li class="no">18 premium-block</li>
+          <li class="no"><%= blockCount - freeBlockCount %> premium-block</li>
           <li class="no">AI-assistent Jocke</li>
           <li class="no">AI-samtalsanalys</li>
         </ul>
@@ -201,7 +201,7 @@
           <li>Säljordbok, certifikat, gamification</li>
           <li class="no">AI-samtalsanalys</li>
         </ul>
-        <a href="/register" class="cta pr-cta-primary">Starta Premium →</a>
+        <a href="/register?plan=premium" class="cta pr-cta-primary">Starta Premium →</a>
       </div>
 
       <!-- Pro -->
@@ -218,7 +218,7 @@
           <li>Transkribering + coachning per samtal</li>
           <li>Konkreta formuleringar att säga istället</li>
         </ul>
-        <a href="/register" class="cta pr-cta-primary">Prova Pro gratis →</a>
+        <a href="/register?plan=pro" class="cta pr-cta-primary">Prova Pro gratis →</a>
       </div>
 
       <!-- Företag -->

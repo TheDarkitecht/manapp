@@ -190,8 +190,13 @@ async function sendEmailReliable({ to, subject, html, from, kind }) {
   }
 }
 
-// Block 1 (Inledning) and Block 2 (Första intrycket) are free; 3–20 require premium (teaser shown for locked blocks)
-const FREE_BLOCK_IDS = ['inledning', 'forsta-intrycket'];
+// Block 1 (Inledning) and Block 2 (Fundamenten) are free; 3–23 require premium (teaser shown for locked blocks)
+const FREE_BLOCK_IDS = ['inledning', 'fundamenten'];
+
+// Globala view-variabler — tillgängliga i ALLA EJS-vyer utan per-render-skick.
+// Dödar hårdkodade block-antal (t.ex. "20 säljblock") som blir stale när innehåll ändras.
+app.locals.blockCount     = salesBlocks.length;
+app.locals.freeBlockCount = FREE_BLOCK_IDS.length;
 
 const openai = new OpenAI({
   apiKey:  process.env.GROQ_API_KEY,
@@ -1213,6 +1218,9 @@ app.post('/register', registerLimiter, async (req, res) => {
   // efter de just satt det. Bumpar "öppnade block"-funnel från ~50% till ~80%+.
   const newUser = findUserById(result.userId);
   if (newUser) {
+    // Köp-intent fångas FÖRE regenerate() — den nollställer sessionsdata
+    const pendingPlan = (req.session.pendingPlan === 'premium' || req.session.pendingPlan === 'pro')
+      ? req.session.pendingPlan : null;
     req.session.regenerate((err) => {
       if (err) {
         return res.render('login', { error: null, registerError: null, turnstileSiteKey: TURNSTILE_SITE_KEY,
@@ -1223,8 +1231,8 @@ app.post('/register', registerLimiter, async (req, res) => {
       req.session.role      = newUser.role;
       req.session.pwVersion = newUser.pw_version || 0;
       updateLastLogin(newUser.id);
-      // Redirect till första gratis-blocket direkt — omedelbart värde
-      res.redirect('/learn/inledning?welcome=1');
+      // Köp-intent → uppgraderingssidan (se vad du får + betala). Annars första gratis-blocket.
+      res.redirect(pendingPlan ? `/upgrade?plan=${pendingPlan}` : '/learn/inledning?welcome=1');
     });
     return;
   }
@@ -1236,7 +1244,13 @@ app.post('/register', registerLimiter, async (req, res) => {
 
 // GET /register — shortcut that opens login page with register tab active
 app.get('/register', (req, res) => {
-  if (req.session?.userId) return res.redirect('/dashboard');
+  const plan = (req.query.plan === 'premium' || req.query.plan === 'pro') ? req.query.plan : null;
+  if (req.session?.userId) {
+    // Redan inloggad: med köp-intent → uppgraderingssidan, annars dashboard
+    return res.redirect(plan ? `/upgrade?plan=${plan}` : '/dashboard');
+  }
+  // Spara köp-intent i sessionen så den överlever registreringen (och ev. valideringsfel)
+  if (plan) req.session.pendingPlan = plan; else delete req.session.pendingPlan;
   res.render('login', {
     error: null,
     registerError: '__open_register__', // triggers tab switch in JS without showing error text
@@ -2938,6 +2952,7 @@ app.get('/account', requireLogin, async (req, res) => {
     trialCancelled:   req.query.trialCancelled === '1',
     trialCancelError: req.query.trialCancelError || null,
     portalError:      req.query.portalError || null,
+    hasCustomer:      !!user?.stripe_customer_id,
     invoices,
     csrfToken:        generateCsrfToken(req),
   });

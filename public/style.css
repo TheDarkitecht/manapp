@@ -2195,6 +2195,15 @@ textarea:focus {
   background: #0f172a;
 }
 
+/* Account/inställningssida: stackar många kort i EN centrerad kolumn.
+   .success-wrap är flex-centrerad för ETT success-card — fel för account's
+   sex kort (de blev en hopträngd, trappstegs-staplad rad). */
+.account-wrap {
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 2rem 1rem 4rem;
+}
+
 .success-card {
   background: #1e293b;
   border: 2px solid #22c55e60;
