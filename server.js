@@ -459,6 +459,10 @@ app.use((req, res, next) => {
   next();
 });
 
+// /favicon.ico — vi använder inline SVG-favicon i <head>, ingen .ico-fil finns.
+// Browsers fetchar /favicon.ico ändå. 204 No Content = tyst svar utan 404-spam.
+app.get('/favicon.ico', (req, res) => res.status(204).end());
+
 // ── Security headers ──────────────────────────────────────────────────────────
 // CSP-strategi: loose policy som täcker XSS-vektorer utan att bryta vår
 // existerande inline-script-hantering i EJS. Strict CSP m. nonces hade krävt

@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Uppgradera till Premium — Joakim Jaksen</title>
-  <meta name="description" content="Lås upp alla 20 säljblock, AI-assistenten Jocke och premiumvideor för 199 kr/mån. Avsluta när som helst." />
+  <meta name="description" content="Lås upp alla <%= totalBlocks %> säljblock, AI-assistenten Jocke och premiumvideor för <%= earlyBird && earlyBird.active ? earlyBird.earlyPrice : 199 %> kr/mån. Avsluta när som helst." />
   <meta name="robots" content="noindex" />
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎯</text></svg>" />
   <link rel="stylesheet" href="/style.css?v=<%= assetVersion %>" />
@@ -286,7 +286,7 @@
     <!-- ── Final CTA ──────────────────────────────────────────────────────────── -->
     <div class="up-final-cta">
       <h2>Redo att ta nästa steg?</h2>
-      <p>199 kr/mån. Avsluta när som helst. Tillgång direkt.</p>
+      <p><%= earlyBird && earlyBird.active ? earlyBird.earlyPrice : 199 %> kr/mån. Avsluta när som helst. Tillgång direkt.</p>
       <form method="POST" action="/upgrade/checkout" onsubmit="checkoutLoading(this)">
         <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
         <button type="submit" class="up-checkout-btn">Uppgradera till Premium nu →</button>

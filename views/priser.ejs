@@ -4,14 +4,14 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Priser — Säljutbildning med AI-samtalsanalys — Joakim Jaksen</title>
-  <meta name="description" content="Gratis, Premium 199 kr/mån, Pro 599 kr/mån med AI-samtalsanalys, eller skräddarsytt för företag. 22+ års säljerfarenhet, 200+ MSEK i resultat. Inget bindningstid." />
+  <meta name="description" content="Gratis, Premium <%= earlyBird && earlyBird.active ? earlyBird.earlyPrice : 199 %> kr/mån, Pro <%= earlyBird && earlyBird.active ? earlyBird.earlyProPrice : 599 %> kr/mån med AI-samtalsanalys, eller skräddarsytt för företag. 22+ års säljerfarenhet, 200+ MSEK i resultat. Inget bindningstid." />
   <meta name="keywords" content="säljutbildning pris, säljkurs kostnad, AI-samtalsanalys, säljcoaching pris, online säljutbildning sverige" />
 
   <!-- Open Graph -->
   <meta property="og:type"        content="website" />
   <meta property="og:url"         content="https://joakimjaksen.se/priser" />
   <meta property="og:title"       content="Priser — Säljutbildning från 0 kr/mån" />
-  <meta property="og:description" content="Gratis för att börja. 199 kr för alla <%= totalBlocks %> block. 599 kr med AI-samtalsanalys. Skräddarsytt för team." />
+  <meta property="og:description" content="Gratis för att börja. <%= earlyBird && earlyBird.active ? earlyBird.earlyPrice : 199 %> kr för alla <%= totalBlocks %> block. <%= earlyBird && earlyBird.active ? earlyBird.earlyProPrice : 599 %> kr med AI-samtalsanalys. Skräddarsytt för team." />
   <meta property="og:image"       content="https://joakimjaksen.se/og-image.png" />
   <meta property="og:locale"      content="sv_SE" />
 

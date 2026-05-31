@@ -25,5 +25,8 @@ Disallow: /installningar
 Disallow: /mina-framsteg
 Disallow: /loggbok
 Disallow: /sok
+Disallow: /nyheter
+Disallow: /nyhet
+Disallow: /forgot-password
 
 Sitemap: https://joakimjaksen.se/sitemap.xml
