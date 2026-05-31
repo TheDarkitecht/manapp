@@ -121,14 +121,42 @@
 
       function escapeHtml(s){ return s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
+      // Light markdown så **bold**, listor, m.m. från Jockes svar renderas — inte
+      // som råa asterisker. Säkert: escapar HTML först, sen ersätter mönster.
+      function renderMarkdown(raw) {
+        let s = escapeHtml(raw);
+        // Punktlistor
+        s = s.replace(/(^|\n)((?:[ ]*[-*•][ ]+[^\n]+(?:\n|$))+)/g, function(_, pfx, blk){
+          const items = blk.trim().split(/\n/).map(function(l){
+            return '<li>' + l.replace(/^[ ]*[-*•][ ]+/, '') + '</li>';
+          }).join('');
+          return pfx + '<ul>' + items + '</ul>';
+        });
+        // Numrerade listor
+        s = s.replace(/(^|\n)((?:[ ]*\d+\.[ ]+[^\n]+(?:\n|$))+)/g, function(_, pfx, blk){
+          const items = blk.trim().split(/\n/).map(function(l){
+            return '<li>' + l.replace(/^[ ]*\d+\.[ ]+/, '') + '</li>';
+          }).join('');
+          return pfx + '<ol>' + items + '</ol>';
+        });
+        s = s.replace(/\*\*([^\*\n]+?)\*\*/g, '<strong>$1</strong>');
+        s = s.replace(/(^|[^\*])\*([^\*\n]+?)\*(?!\*)/g, '$1<em>$2</em>');
+        s = s.replace(/`([^`\n]+?)`/g, '<code>$1</code>');
+        s = s.replace(/\n/g, '<br>');
+        s = s.replace(/<\/(ul|ol)><br>/g, '</$1>');
+        s = s.replace(/<br>(<(?:ul|ol)>)/g, '$1');
+        return s;
+      }
+
       function render(role, text) {
         const div = document.createElement('div');
         div.className = 'aj-msg aj-msg-' + (role === 'user' ? 'you' : 'jocke');
         const strong = document.createElement('strong');
         strong.textContent = role === 'user' ? 'Du:' : 'Jocke:';
-        const p = document.createElement('p');
-        p.innerHTML = escapeHtml(text).replace(/\n/g, '<br>');
-        div.appendChild(strong); div.appendChild(p);
+        const body = document.createElement('div');
+        body.className = 'aj-msg-body';
+        body.innerHTML = renderMarkdown(text);
+        div.appendChild(strong); div.appendChild(body);
         chat.appendChild(div);
         chat.scrollTop = chat.scrollHeight;
       }

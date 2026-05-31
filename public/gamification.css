@@ -1717,6 +1717,13 @@
 }
 
 .aj-msg p { margin: 0; color: #f1f5f9; line-height: 1.55; font-size: 0.92rem; }
+.aj-msg-body { margin: 0; color: #f1f5f9; line-height: 1.55; font-size: 0.92rem; }
+.aj-msg-body strong { font-weight: 700; color: #fff; }
+.aj-msg-body em { font-style: italic; }
+.aj-msg-body code { background: rgba(255,255,255,0.08); padding: 0.1em 0.35em; border-radius: 4px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.88em; color: #fcd34d; }
+.aj-msg-body ul, .aj-msg-body ol { margin: 0.4rem 0 0.2rem; padding-left: 1.2rem; }
+.aj-msg-body li { margin: 0.2rem 0; line-height: 1.5; }
+.aj-msg-body li::marker { color: rgba(255,255,255,0.5); }
 
 .aj-msg-jocke {
   background: rgba(99, 102, 241, 0.1);

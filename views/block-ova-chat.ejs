@@ -123,15 +123,60 @@
 
       function escapeHtml(s){ return s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
-      function render(role, content, isFeedback) {
+      // Light markdown-renderer för Jockes svar — gör **bold**, *kursiv*, `kod`,
+      // - punktlistor, 1. numrerade listor, och radbrytningar synliga som HTML.
+      // Säkert: escape:ar HTML FÖRST, sen ersätter markdown-mönster med taggar.
+      function renderMarkdown(s) {
+        s = escapeHtml(s);
+        // Punktlistor (konsekutiva rader med "- " eller "* ")
+        s = s.replace(/(^|\n)((?:[ ]*[-*][ ]+[^\n]+(?:\n|$))+)/g, function(_, prefix, block) {
+          const items = block.trim().split(/\n/).map(function(line){
+            return '<li>' + line.replace(/^[ ]*[-*][ ]+/, '') + '</li>';
+          }).join('');
+          return prefix + '<ul>' + items + '</ul>';
+        });
+        // Numrerade listor
+        s = s.replace(/(^|\n)((?:[ ]*\d+\.[ ]+[^\n]+(?:\n|$))+)/g, function(_, prefix, block) {
+          const items = block.trim().split(/\n/).map(function(line){
+            return '<li>' + line.replace(/^[ ]*\d+\.[ ]+/, '') + '</li>';
+          }).join('');
+          return prefix + '<ol>' + items + '</ol>';
+        });
+        // Bold **text**
+        s = s.replace(/\*\*([^\*\n]+?)\*\*/g, '<strong>$1</strong>');
+        // Kursiv *text* (efter bold så vi inte tar dubbel-asterisk)
+        s = s.replace(/(^|[^\*])\*([^\*\n]+?)\*(?!\*)/g, '$1<em>$2</em>');
+        // Inline-kod `text`
+        s = s.replace(/`([^`\n]+?)`/g, '<code>$1</code>');
+        // Återstående radbrytningar (utanför listor)
+        s = s.replace(/\n/g, '<br>');
+        // Putsa: ingen <br> direkt efter en list-stängning
+        s = s.replace(/<\/(ul|ol)><br>/g, '</$1>');
+        s = s.replace(/<br>(<(?:ul|ol)>)/g, '$1');
+        return s;
+      }
+
+      function render(role, content, opts) {
+        opts = opts || {};
         const div = document.createElement('div');
-        div.className = 'rp-msg ' + (role === 'user' ? 'rp-msg-you' : (isFeedback ? 'rp-msg-feedback' : 'rp-msg-customer'));
+        let cls = 'rp-msg ', label = '';
+        if (role === 'user') {
+          cls += 'rp-msg-you'; label = 'Du:';
+        } else if (opts.isError) {
+          cls += 'rp-msg-error'; label = '⚠️ Fel:';
+        } else if (opts.isFeedback) {
+          cls += 'rp-msg-feedback'; label = '🎯 Jockes feedback:';
+        } else {
+          cls += 'rp-msg-customer'; label = 'Kund:';
+        }
+        div.className = cls;
         const strong = document.createElement('strong');
-        strong.textContent = role === 'user' ? 'Du:' : (isFeedback ? '🎯 Jockes feedback:' : 'Kund:');
-        const p = document.createElement('p');
-        p.innerHTML = escapeHtml(content).replace(/\n/g, '<br>');
+        strong.textContent = label;
+        const body = document.createElement('div');
+        body.className = 'rp-msg-body';
+        body.innerHTML = renderMarkdown(content);
         div.appendChild(strong);
-        div.appendChild(p);
+        div.appendChild(body);
         chat.appendChild(div);
         chat.scrollTop = chat.scrollHeight;
       }
@@ -211,16 +256,16 @@
           removeTyping();
           if (!res.ok) {
             const err = await res.json().catch(() => ({}));
-            render('assistant', '⚠️ ' + (err.error || 'Fel uppstod. Försök igen.'), true);
+            render('assistant', err.error || 'Något gick fel. Försök igen.', { isError: true });
             return;
           }
           const data = await res.json();
           const reply = data.reply || 'Inget svar.';
           messages.push({ role: 'assistant', content: reply });
-          render('assistant', reply, isFeedback);
+          render('assistant', reply, { isFeedback });
         } catch (e) {
           removeTyping();
-          render('assistant', '⚠️ Kunde inte nå servern.', true);
+          render('assistant', 'Kunde inte nå servern — kolla din uppkoppling och försök igen.', { isError: true });
         }
       }
 

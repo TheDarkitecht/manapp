@@ -605,6 +605,14 @@
 }
 
 .rp-msg p { margin: 0; color: #f1f5f9; line-height: 1.5; }
+.rp-msg-body { margin: 0; color: #f1f5f9; line-height: 1.55; font-size: 0.95rem; }
+.rp-msg-body strong { font-weight: 700; color: #fff; }
+.rp-msg-body em { font-style: italic; }
+.rp-msg-body code { background: rgba(255,255,255,0.08); padding: 0.1em 0.35em; border-radius: 4px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.88em; color: #fcd34d; }
+.rp-msg-body ul, .rp-msg-body ol { margin: 0.4rem 0 0.2rem; padding-left: 1.2rem; }
+.rp-msg-body li { margin: 0.2rem 0; line-height: 1.5; }
+.rp-msg-body li::marker { color: rgba(255,255,255,0.5); }
+.rp-msg-body br + br { display: none; } /* Inga dubbla tomma rader */
 
 .rp-msg-system {
   background: rgba(245,158,11,0.1);
@@ -641,6 +649,14 @@
 }
 
 .rp-msg-feedback strong { color: #34d399; }
+
+.rp-msg-error {
+  background: rgba(239,68,68,0.1);
+  border: 1px solid rgba(239,68,68,0.32);
+  color: #fca5a5;
+  max-width: 100%;
+}
+.rp-msg-error strong { color: #f87171; }
 
 .rp-typing p { display: flex; gap: 4px; align-items: center; }
 .rp-typing p span {
