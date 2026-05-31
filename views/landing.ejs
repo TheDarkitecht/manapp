@@ -8,19 +8,19 @@
 
   <!-- Open Graph / Facebook -->
   <meta property="og:type"        content="website" />
-  <meta property="og:url"         content="https://www.joakimjaksen.se/" />
+  <meta property="og:url"         content="https://joakimjaksen.se/" />
   <meta property="og:title"       content="Joakim Jaksen — Säljutbildning som faktiskt fungerar" />
   <meta property="og:description" content="<%= blocks.length %> block med teori, video, AI-coach och prov. 22+ år i sälj. Bolag som sålt för 200+ MSEK. 1000+ tränade säljare." />
-  <meta property="og:image"       content="https://www.joakimjaksen.se/og-image.png" />
+  <meta property="og:image"       content="https://joakimjaksen.se/og-image.png" />
 
   <!-- Twitter / X -->
   <meta name="twitter:card"        content="summary_large_image" />
   <meta name="twitter:title"       content="Joakim Jaksen — Säljutbildning som faktiskt fungerar" />
   <meta name="twitter:description" content="<%= blocks.length %> block med teori, video, AI-coach och prov. 22+ år i sälj. Bolag som sålt för 200+ MSEK. 1000+ tränade säljare." />
-  <meta name="twitter:image"       content="https://www.joakimjaksen.se/og-image.png" />
+  <meta name="twitter:image"       content="https://joakimjaksen.se/og-image.png" />
 
   <!-- Canonical -->
-  <link rel="canonical" href="https://www.joakimjaksen.se/" />
+  <link rel="canonical" href="https://joakimjaksen.se/" />
 
   <!-- Structured data — Person -->
   <script type="application/ld+json">
@@ -28,7 +28,7 @@
     "@context": "https://schema.org",
     "@type": "Person",
     "name": "Joakim Jaksen",
-    "url": "https://www.joakimjaksen.se",
+    "url": "https://joakimjaksen.se",
     "jobTitle": "Säljcoach & Säljutbildare",
     "description": "22+ år i säljbranschen. Entreprenör — bolag som sålt för 200+ MSEK. 1000+ tränade säljare.",
     "worksFor": {
@@ -49,7 +49,7 @@
     "provider": {
       "@type": "Person",
       "name": "Joakim Jaksen",
-      "url": "https://www.joakimjaksen.se"
+      "url": "https://joakimjaksen.se"
     },
     "url": "https://app.joakimjaksen.se",
     "educationalLevel": "Intermediate",
@@ -147,6 +147,17 @@
     <button onclick="document.getElementById('deletedToast').style.display='none'" aria-label="Stäng">✕</button>
   </div>
 
+  <!-- ══ EARLY-BIRD BANNER (visas bara när EARLY_BIRD_END_DATE är aktiv) ══ -->
+  <% if (earlyBird && earlyBird.active) { %>
+    <a href="#pris" class="lp-early-bird-banner" aria-label="Gå till early-bird-erbjudandet">
+      <span class="lp-eb-emoji">🔥</span>
+      <span class="lp-eb-text">
+        <strong>Early bird:</strong> Premium <%= earlyBird.earlyPrice %> kr <span class="lp-eb-strike">(<%= earlyBird.originalPrice %> kr)</span> · Pro <%= earlyBird.earlyProPrice %> kr <span class="lp-eb-strike">(<%= earlyBird.originalProPrice %> kr)</span> · livstidslåst · slut <strong><%= earlyBird.endDateHuman %></strong> · <strong><%= earlyBird.daysLeft %> dagar kvar</strong>
+      </span>
+      <span class="lp-eb-arrow" aria-hidden="true">→</span>
+    </a>
+  <% } %>
+
   <!-- ══ NAV ══════════════════════════════════════════════════════════════ -->
   <nav class="lp-nav" id="lpNav">
     <div class="lp-nav-inner">
@@ -172,17 +183,6 @@
   </nav>
 
   <main id="main-content">
-
-  <!-- ══ EARLY-BIRD BANNER (visas bara när EARLY_BIRD_END_DATE är aktiv) ══ -->
-  <% if (earlyBird && earlyBird.active) { %>
-    <a href="#pris" class="lp-early-bird-banner" aria-label="Gå till early-bird-erbjudandet">
-      <span class="lp-eb-emoji">🔥</span>
-      <span class="lp-eb-text">
-        <strong>Early bird:</strong> Premium <%= earlyBird.earlyPrice %> kr <span class="lp-eb-strike">(<%= earlyBird.originalPrice %> kr)</span> · Pro <%= earlyBird.earlyProPrice %> kr <span class="lp-eb-strike">(<%= earlyBird.originalProPrice %> kr)</span> · livstidslåst · slut <strong><%= earlyBird.endDateHuman %></strong> · <strong><%= earlyBird.daysLeft %> dagar kvar</strong>
-      </span>
-      <span class="lp-eb-arrow" aria-hidden="true">→</span>
-    </a>
-  <% } %>
 
   <!-- ══ HERO ══════════════════════════════════════════════════════════════ -->
   <section class="lp-hero">

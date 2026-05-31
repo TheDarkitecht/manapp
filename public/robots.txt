@@ -26,4 +26,4 @@ Disallow: /mina-framsteg
 Disallow: /loggbok
 Disallow: /sok
 
-Sitemap: https://www.joakimjaksen.se/sitemap.xml
+Sitemap: https://joakimjaksen.se/sitemap.xml

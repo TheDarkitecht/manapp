@@ -448,6 +448,17 @@ app.post('/webhook', express.raw({ type: 'application/json' }), async (req, res)
 
 app.set('trust proxy', 1); // Railway runs behind a reverse proxy
 
+// ── Canonical-domän: www.joakimjaksen.se → 301 → joakimjaksen.se ────────────
+// Alla SEO-assets (sitemap, robots, canonical-taggar) pekar på apex. Express
+// redirectar www-trafik så Google ser entydig signal om kanonisk version.
+// 301 = permanent = browsers + Google cachar och slutar besöka www-versionen.
+app.use((req, res, next) => {
+  if (req.hostname === 'www.joakimjaksen.se') {
+    return res.redirect(301, 'https://joakimjaksen.se' + req.originalUrl);
+  }
+  next();
+});
+
 // ── Security headers ──────────────────────────────────────────────────────────
 // CSP-strategi: loose policy som täcker XSS-vektorer utan att bryta vår
 // existerande inline-script-hantering i EJS. Strict CSP m. nonces hade krävt

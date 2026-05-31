@@ -2449,14 +2449,22 @@ body.landing-page {
 .lp-mobile-menu a { color: #94a3b8; text-decoration: none; font-size: 1rem; font-weight: 500; padding: 0.4rem 0; border-bottom: 1px solid rgba(255,255,255,0.06); }
 .lp-mobile-cta { color: #a5b4fc !important; font-weight: 700 !important; }
 
-/* Early-bird banner — prominent strip under nav, klickbar till #pris */
+/* Early-bird banner — fixed strip OVANFÖR nav, klickbar till #pris.
+   När bannern visas pushas .lp-nav nedåt så de inte överlappar. */
 .lp-early-bird-banner {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 101;
   display: flex; align-items: center; justify-content: center; gap: 0.9rem;
-  padding: 0.95rem 1.5rem; text-decoration: none;
-  background: linear-gradient(135deg, rgba(245,158,11,0.28), rgba(220,38,38,0.28));
+  padding: 0.85rem 1.5rem; text-decoration: none;
+  background: linear-gradient(135deg, rgba(180,83,9,0.95), rgba(153,27,27,0.95));
+  backdrop-filter: blur(8px);
   border-bottom: 1px solid rgba(245,158,11,0.5);
-  color: #fde68a; font-size: 1.02rem; font-weight: 600; line-height: 1.45;
+  color: #fde68a; font-size: 1rem; font-weight: 600; line-height: 1.4;
   transition: filter 0.2s;
+}
+/* Skjut ner nav när bannern syns — modern :has-selector */
+body:has(.lp-early-bird-banner) .lp-nav { top: 54px; }
+@media (max-width: 720px) {
+  body:has(.lp-early-bird-banner) .lp-nav { top: 76px; }
 }
 .lp-early-bird-banner:hover { filter: brightness(1.18); }
 .lp-early-bird-banner strong { color: #fff; font-weight: 800; }
