@@ -66,14 +66,18 @@
             <button type="submit" class="pro-cta-btn">Kom igång med Pro →</button>
           </form>
           <p class="pro-paywall-fine">
-            599 kr/mån · avsluta när som helst<br>
+            <% if (earlyBird && earlyBird.active) { %>
+              <strong style="color:#fbbf24;">🔥 Early bird: <%= earlyBird.earlyProPrice %> kr/mån livstidslåst</strong> <span style="text-decoration:line-through;color:#64748b;">(<%= earlyBird.originalProPrice %> kr)</span> · slut <%= earlyBird.endDateHuman %><br>
+            <% } else { %>
+              599 kr/mån · avsluta när som helst<br>
+            <% } %>
             15 samtal/månad · max 60 min per samtal
           </p>
         </div>
 
         <div class="pro-paywall-compare">
           <div><strong>Premium <%= earlyBird && earlyBird.active ? earlyBird.earlyPrice : 199 %> kr</strong> — teorin</div>
-          <div style="color:#a5b4fc;"><strong>Pro 599 kr</strong> — dina verkliga samtal analyserade</div>
+          <div style="color:#a5b4fc;"><strong>Pro <%= earlyBird && earlyBird.active ? earlyBird.earlyProPrice : 599 %> kr</strong> — dina verkliga samtal analyserade</div>
         </div>
       </div>
 

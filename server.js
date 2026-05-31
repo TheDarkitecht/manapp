@@ -208,15 +208,24 @@ app.locals.assetVersion   = Date.now().toString(36);
 // PRIS-LOGIK: stripe-priserna bytes via STRIPE_PRICE_ID-env. När early-bird är
 // aktiv pekar STRIPE_PRICE_ID på 99-kr-prisen; efter 30 juni byter du tillbaka
 // till 199-kr-prisen i Railway. UI:t här används bara för visning + countdown.
-const ORIGINAL_PREMIUM_PRICE  = 199;
-const EARLY_BIRD_PREMIUM_PRICE = 99;
+const ORIGINAL_PREMIUM_PRICE   = 199;
+const EARLY_BIRD_PREMIUM_PRICE =  99;
+const ORIGINAL_PRO_PRICE       = 599;
+const EARLY_BIRD_PRO_PRICE     = 299;
 function computeEarlyBird() {
+  const inactive = {
+    active: false,
+    originalPrice:    ORIGINAL_PREMIUM_PRICE,
+    earlyPrice:       EARLY_BIRD_PREMIUM_PRICE,
+    originalProPrice: ORIGINAL_PRO_PRICE,
+    earlyProPrice:    EARLY_BIRD_PRO_PRICE,
+  };
   const raw = process.env.EARLY_BIRD_END_DATE;
-  if (!raw) return { active: false, originalPrice: ORIGINAL_PREMIUM_PRICE, earlyPrice: EARLY_BIRD_PREMIUM_PRICE };
+  if (!raw) return inactive;
   const end = new Date(raw + 'T23:59:59+02:00'); // Sluttid 23:59 svensk tid
-  if (isNaN(end.getTime())) return { active: false, originalPrice: ORIGINAL_PREMIUM_PRICE, earlyPrice: EARLY_BIRD_PREMIUM_PRICE };
+  if (isNaN(end.getTime())) return inactive;
   const now = new Date();
-  if (now > end) return { active: false, originalPrice: ORIGINAL_PREMIUM_PRICE, earlyPrice: EARLY_BIRD_PREMIUM_PRICE };
+  if (now > end) return inactive;
   const msLeft  = end - now;
   const daysLeft = Math.ceil(msLeft / (24*60*60*1000));
   return {
@@ -224,8 +233,10 @@ function computeEarlyBird() {
     endDateISO: raw,
     endDateHuman: end.toLocaleDateString('sv-SE', { day: 'numeric', month: 'long' }),
     daysLeft,
-    originalPrice: ORIGINAL_PREMIUM_PRICE,
-    earlyPrice:    EARLY_BIRD_PREMIUM_PRICE,
+    originalPrice:    ORIGINAL_PREMIUM_PRICE,
+    earlyPrice:       EARLY_BIRD_PREMIUM_PRICE,
+    originalProPrice: ORIGINAL_PRO_PRICE,
+    earlyProPrice:    EARLY_BIRD_PRO_PRICE,
   };
 }
 

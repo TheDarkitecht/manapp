@@ -149,13 +149,30 @@
 
         <!-- Pro-tier-kort — guld-accent, för seriösa säljare -->
         <div class="up-checkout-card" style="background:linear-gradient(145deg, rgba(251,191,36,0.08), rgba(245,158,11,0.03));border-color:rgba(251,191,36,0.35);margin-top:1rem;position:relative;">
-          <div class="up-checkout-badge" style="background:linear-gradient(135deg,#fbbf24,#f59e0b);color:#0f172a;">⚡ För seriösa</div>
+          <% if (earlyBird && earlyBird.active) { %>
+            <div class="up-checkout-badge" style="background:linear-gradient(135deg,#f59e0b,#dc2626);">🔥 Early bird</div>
+          <% } else { %>
+            <div class="up-checkout-badge" style="background:linear-gradient(135deg,#fbbf24,#f59e0b);color:#0f172a;">⚡ För seriösa</div>
+          <% } %>
           <div style="font-size:0.8rem;letter-spacing:0.1em;text-transform:uppercase;color:#fbbf24;font-weight:700;margin-bottom:0.4rem;">Pro</div>
           <div class="up-checkout-price">
-            <span class="up-price-amount">599 kr</span>
+            <% if (earlyBird && earlyBird.active) { %>
+              <span class="up-price-amount" style="display:inline-flex;align-items:baseline;gap:0.5rem;">
+                <span style="text-decoration:line-through;color:#64748b;font-size:1.4rem;font-weight:600;"><%= earlyBird.originalProPrice %> kr</span>
+                <span><%= earlyBird.earlyProPrice %> kr</span>
+              </span>
+            <% } else { %>
+              <span class="up-price-amount">599 kr</span>
+            <% } %>
             <span class="up-price-period">/mån</span>
           </div>
           <p class="up-price-sub" style="color:#fde68a;">Allt i Premium — PLUS feedback på dina verkliga samtal</p>
+          <% if (earlyBird && earlyBird.active) { %>
+          <div style="margin:0.5rem 0 1rem;padding:0.7rem 0.9rem;background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.32);border-radius:8px;">
+            <div style="color:#fbbf24;font-weight:800;font-size:0.85rem;margin-bottom:0.2rem;">🔒 Livstidslåst pris</div>
+            <div style="color:#fde68a;font-size:0.78rem;line-height:1.5;">Sign:a nu och stanna på <%= earlyBird.earlyProPrice %> kr/mån för alltid. Slut <strong><%= earlyBird.endDateHuman %></strong> · <%= earlyBird.daysLeft %> dagar kvar.</div>
+          </div>
+          <% } %>
 
           <ul class="up-checkout-list">
             <li>🎙️ <strong>Call-upload + AI-feedback</strong> (15/mån, 60 min/samtal)</li>
