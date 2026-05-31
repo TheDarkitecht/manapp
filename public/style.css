@@ -2509,6 +2509,7 @@ body.landing-page {
 /* About */
 .lp-about { padding: 6rem 0; border-top: 1px solid rgba(255,255,255,0.06); }
 .lp-about-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 5rem; align-items: center; }
+.lp-about-grid > * { min-width: 0; }   /* Tillåter video (intrinsic 1920px) att krympa till kolumnens 1fr istället för att tvinga grid:en utskåning */
 .lp-about-text p { color: #94a3b8; line-height: 1.75; margin-bottom: 1.1rem; font-size: 1.02rem; }
 .lp-about-text .lp-section-h2 { margin-bottom: 1.5rem; }
 .lp-about-text .lp-btn-primary { margin-top: 1rem; }
