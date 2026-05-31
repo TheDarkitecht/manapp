@@ -22,7 +22,7 @@
   <% if (isTeaser) { %>
   <div class="teaser-top-bar">
     <span>⭐ Du ser en förhandsvisning — <strong><%= block.title %></strong> kräver Premium</span>
-    <a href="/upgrade" class="teaser-top-btn">Uppgradera — 199 kr/mån →</a>
+    <a href="/upgrade" class="teaser-top-btn">Uppgradera — <%= earlyBird && earlyBird.active ? earlyBird.earlyPrice : 199 %> kr/mån →</a>
   </div>
   <% } %>
 
@@ -202,7 +202,7 @@
             <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
             <input type="hidden" name="tier" value="premium" />
             <button type="submit" style="padding:0.85rem 1.5rem;background:linear-gradient(135deg,#fbbf24,#f59e0b);color:#0f172a;border:none;border-radius:10px;font-weight:800;font-size:1rem;cursor:pointer;box-shadow:0 4px 12px rgba(251,191,36,0.35);">
-              🔓 Fortsätt med Premium — 199 kr/mån →
+              🔓 Fortsätt med Premium — <%= earlyBird && earlyBird.active ? earlyBird.earlyPrice : 199 %> kr/mån →
             </button>
           </form>
           <a href="/priser" style="color:#a5b4fc;font-size:0.88rem;text-decoration:none;padding:0.85rem 1rem;">
@@ -298,7 +298,7 @@
               <div class="teaser-check">🧠 10-frågorsprov</div>
               <div class="teaser-check">🤖 Jocke — din AI-säljcoach</div>
             </div>
-            <a href="/upgrade" class="teaser-upgrade-cta">⭐ Uppgradera till Premium — 199 kr/mån →</a>
+            <a href="/upgrade" class="teaser-upgrade-cta">⭐ Uppgradera till Premium — <%= earlyBird && earlyBird.active ? earlyBird.earlyPrice : 199 %> kr/mån →</a>
             <p class="teaser-price-hint">Avsluta när som helst. Säker betalning via Stripe.</p>
           </div>
         </div>
@@ -464,9 +464,13 @@
       <!-- ─── 3. TEORI — studiematerial under videon ─────────────────── -->
       <section class="lesson-section lesson-theory" aria-labelledby="lesson-theory-h">
         <h2 id="lesson-theory-h" class="lesson-section-eyebrow">📖 Studiematerial — fördjupa det videon visar</h2>
-        <div class="theory-body">
+        <div class="theory-body theory-protected" data-licensee="<%= username %>" data-license-id="<%= sessionUserId %>">
           <%- block.theory %>
         </div>
+        <!-- Watermark: personligt licensierat — vid läckage spårbart till specifikt konto -->
+        <p class="theory-watermark" aria-hidden="true">
+          Personligt licensierat innehåll — <strong><%= username %></strong> · konto #<%= sessionUserId %> · joakimjaksen.se
+        </p>
       </section>
 
       <!-- ─── 4. BOTTOM-CTA — server-beräknat nästa-steg ─────────────── -->
@@ -753,5 +757,41 @@
   </nav>
 
   <script src="/heartbeat.js" defer></script>
+
+  <!-- Light copy-friktion: stoppar casual copy-paste från teori. DevTools kringgår,
+       men höjer friktionen för "markera → Ctrl+C → klistra i Slack"-spridning. -->
+  <script>
+    (function() {
+      const targets = document.querySelectorAll('.theory-protected');
+      if (!targets.length) return;
+      let toastTimer = null;
+      function flashToast(msg) {
+        let t = document.getElementById('theory-toast');
+        if (!t) {
+          t = document.createElement('div');
+          t.id = 'theory-toast';
+          t.setAttribute('role', 'status');
+          t.style.cssText = 'position:fixed;bottom:5rem;left:50%;transform:translateX(-50%);background:rgba(15,23,42,0.96);color:#fde68a;padding:0.75rem 1.25rem;border-radius:10px;border:1px solid rgba(245,158,11,0.4);font-size:0.88rem;font-weight:600;z-index:9999;box-shadow:0 8px 30px rgba(0,0,0,0.5);opacity:0;transition:opacity .2s;';
+          document.body.appendChild(t);
+        }
+        t.textContent = msg;
+        t.style.opacity = '1';
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => { t.style.opacity = '0'; }, 2400);
+      }
+      const block = (msg) => (e) => {
+        e.preventDefault();
+        flashToast(msg);
+        return false;
+      };
+      targets.forEach(el => {
+        el.addEventListener('copy',        block('🔒 Innehållet är personligt licensierat — använd Loggboken för egna anteckningar.'));
+        el.addEventListener('cut',         block('🔒 Innehållet är personligt licensierat.'));
+        el.addEventListener('contextmenu', block('🔒 Innehållet är skyddat.'));
+        el.addEventListener('selectstart', (e) => e.preventDefault());
+        el.addEventListener('dragstart',   (e) => e.preventDefault());
+      });
+    })();
+  </script>
 </body>
 </html>

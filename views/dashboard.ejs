@@ -154,14 +154,14 @@
             Du är redan igång. Lås upp de <strong style="color:#c4b5fd;"><%= lockedBlockCount %> block</strong> du inte fått tillgång till än.
           </h2>
           <p style="color:#cbd5e1;font-size:1rem;line-height:1.55;margin:0 0 1.25rem;max-width:620px;">
-            Tonfall, invändningshantering, mental styrka, avslutsteknik, AI-verktyg och mer — det är där det skruvas upp. <strong style="color:#a5b4fc;">199 kr/månad</strong>, ingen bindningstid.
+            Tonfall, invändningshantering, mental styrka, avslutsteknik, AI-verktyg och mer — det är där det skruvas upp. <strong style="color:#a5b4fc;"><%= earlyBird && earlyBird.active ? earlyBird.earlyPrice : 199 %> kr/månad</strong>, ingen bindningstid.
           </p>
           <div style="display:flex;gap:0.75rem;flex-wrap:wrap;align-items:center;">
             <form method="POST" action="/upgrade/checkout" style="display:inline;">
               <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
               <input type="hidden" name="tier" value="premium" />
               <button type="submit" style="padding:0.85rem 1.5rem;background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;border:none;border-radius:10px;font-weight:700;font-size:1rem;cursor:pointer;box-shadow:0 4px 12px rgba(99,102,241,0.3);">
-                🔓 Lås upp <%= lockedBlockCount %> block — 199 kr/mån →
+                🔓 Lås upp <%= lockedBlockCount %> block — <%= earlyBird && earlyBird.active ? earlyBird.earlyPrice : 199 %> kr/mån →
               </button>
             </form>
             <a href="/priser" style="color:#a5b4fc;font-size:0.88rem;text-decoration:none;padding:0.85rem 1rem;border-radius:10px;">

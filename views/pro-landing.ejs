@@ -63,16 +63,16 @@
           <form method="POST" action="/upgrade/checkout" style="display:inline;">
             <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
             <input type="hidden" name="tier" value="pro" />
-            <button type="submit" class="pro-cta-btn">🎁 Prova Pro gratis i 24h →</button>
+            <button type="submit" class="pro-cta-btn">Kom igång med Pro →</button>
           </form>
           <p class="pro-paywall-fine">
-            Gratis i 24 timmar · sen 599 kr/mån · avbryt utan kostnad under trial<br>
+            599 kr/mån · avsluta när som helst<br>
             15 samtal/månad · max 60 min per samtal
           </p>
         </div>
 
         <div class="pro-paywall-compare">
-          <div><strong>Premium 199 kr</strong> — teorin</div>
+          <div><strong>Premium <%= earlyBird && earlyBird.active ? earlyBird.earlyPrice : 199 %> kr</strong> — teorin</div>
           <div style="color:#a5b4fc;"><strong>Pro 599 kr</strong> — dina verkliga samtal analyserade</div>
         </div>
       </div>

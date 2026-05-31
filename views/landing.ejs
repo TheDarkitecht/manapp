@@ -65,10 +65,11 @@
       {
         "@type": "Offer",
         "name": "Premium — Alla <%= blocks.length %> block",
-        "price": "199",
+        "price": "<%= earlyBird && earlyBird.active ? earlyBird.earlyPrice : 199 %>",
         "priceCurrency": "SEK",
         "billingDuration": "P1M",
-        "availability": "https://schema.org/InStock"
+        "availability": "https://schema.org/InStock"<% if (earlyBird && earlyBird.active) { %>,
+        "priceValidUntil": "<%= earlyBird.endDateISO %>"<% } %>
       },
       {
         "@type": "Offer",
@@ -93,7 +94,7 @@
         "name": "Vad kostar Joakim Jaksens säljutbildning?",
         "acceptedAnswer": {
           "@type": "Answer",
-          "text": "Gratis (block 1 & 2), Premium 199 kr/månad för alla <%= blocks.length %> block, Pro 599 kr/månad med AI-samtalsanalys, eller skräddarsytt för företag och team."
+          "text": "Gratis (block 1 & 2), Premium <%= earlyBird && earlyBird.active ? earlyBird.earlyPrice : 199 %> kr/månad<%= earlyBird && earlyBird.active ? ' (early-bird livstidslåst t.o.m. ' + earlyBird.endDateHuman + ')' : '' %> för alla <%= blocks.length %> block, Pro 599 kr/månad med AI-samtalsanalys, eller skräddarsytt för företag och team."
         }
       },
       {
@@ -169,8 +170,20 @@
     </div>
   </nav>
 
-  <!-- ══ HERO ══════════════════════════════════════════════════════════════ -->
   <main id="main-content">
+
+  <!-- ══ EARLY-BIRD BANNER (visas bara när EARLY_BIRD_END_DATE är aktiv) ══ -->
+  <% if (earlyBird && earlyBird.active) { %>
+    <a href="#pris" class="lp-early-bird-banner" aria-label="Gå till early-bird-erbjudandet">
+      <span class="lp-eb-emoji">🔥</span>
+      <span class="lp-eb-text">
+        <strong>Early bird:</strong> Premium <%= earlyBird.earlyPrice %> kr/mån livstidslåst <span class="lp-eb-strike">(<%= earlyBird.originalPrice %> kr)</span> · slut <strong><%= earlyBird.endDateHuman %></strong> · <strong><%= earlyBird.daysLeft %> dagar kvar</strong>
+      </span>
+      <span class="lp-eb-arrow" aria-hidden="true">→</span>
+    </a>
+  <% } %>
+
+  <!-- ══ HERO ══════════════════════════════════════════════════════════════ -->
   <section class="lp-hero">
     <div class="lp-hero-glow lp-hero-glow-1"></div>
     <div class="lp-hero-glow lp-hero-glow-2"></div>
@@ -351,11 +364,23 @@
         </div>
 
         <div class="lp-price-card lp-price-featured">
-          <div class="lp-price-popular">⭐ Populärast</div>
+          <% if (earlyBird && earlyBird.active) { %>
+            <div class="lp-price-popular" style="background:linear-gradient(135deg,#f59e0b,#dc2626);">🔥 Early bird</div>
+          <% } else { %>
+            <div class="lp-price-popular">⭐ Populärast</div>
+          <% } %>
           <div class="lp-price-header">
             <h3>Premium</h3>
-            <div class="lp-price-amount">199 kr<span>/mån</span></div>
-            <p>Avsluta när som helst</p>
+            <% if (earlyBird && earlyBird.active) { %>
+              <div class="lp-price-amount" style="display:flex;align-items:baseline;justify-content:center;gap:0.6rem;flex-wrap:wrap;">
+                <span style="text-decoration:line-through;color:#64748b;font-size:1.4rem;font-weight:600;"><%= earlyBird.originalPrice %> kr</span>
+                <span><%= earlyBird.earlyPrice %> kr<span>/mån</span></span>
+              </div>
+              <p style="color:#fbbf24;font-weight:700;">🔒 Livstidslåst — slut <%= earlyBird.endDateHuman %> · <%= earlyBird.daysLeft %> dagar kvar</p>
+            <% } else { %>
+              <div class="lp-price-amount"><%= earlyBird ? earlyBird.originalPrice : 199 %> kr<span>/mån</span></div>
+              <p>Avsluta när som helst</p>
+            <% } %>
           </div>
           <ul class="lp-price-features">
             <li>✅ Alla <%= blocks.length %> block upplåsta</li>
@@ -480,7 +505,7 @@
             Vad ingår i Premium? <span class="lp-faq-arrow" aria-hidden="true">▾</span>
           </button>
           <div class="lp-faq-a" id="lp-faq-a-2">
-            <p>Premium ger dig: alla <%= blocks.length %> block upplåsta, teori + video + prov per block, AI-assistenten Jocke, Säljordboken med 60+ termer, progressspårning och alla framtida block utan extra kostnad. Allt för 199 kr/mån.</p>
+            <p>Premium ger dig: alla <%= blocks.length %> block upplåsta, teori + video + prov per block, AI-assistenten Jocke, Säljordboken med 60+ termer, progressspårning och alla framtida block utan extra kostnad. Allt för <%= earlyBird && earlyBird.active ? earlyBird.earlyPrice : 199 %> kr/mån<%= earlyBird && earlyBird.active ? ' under early-bird (livstidslåst till ' + earlyBird.endDateHuman + '), sen ' + earlyBird.originalPrice + ' kr/mån' : '' %>.</p>
           </div>
         </div>
 

@@ -202,6 +202,33 @@ app.locals.freeBlockCount = FREE_BLOCK_IDS.length;
 // Sätts vid serverstart → byts vid varje deploy → tvingar browser+CF att hämta nya assets.
 app.locals.assetVersion   = Date.now().toString(36);
 
+// ── Early-bird pricing ────────────────────────────────────────────────────────
+// EARLY_BIRD_END_DATE i ISO-format ("2026-06-30"). När datumet passerats blir
+// active=false automatiskt — inga deploys eller env-byten behövs då.
+// PRIS-LOGIK: stripe-priserna bytes via STRIPE_PRICE_ID-env. När early-bird är
+// aktiv pekar STRIPE_PRICE_ID på 99-kr-prisen; efter 30 juni byter du tillbaka
+// till 199-kr-prisen i Railway. UI:t här används bara för visning + countdown.
+const ORIGINAL_PREMIUM_PRICE  = 199;
+const EARLY_BIRD_PREMIUM_PRICE = 99;
+function computeEarlyBird() {
+  const raw = process.env.EARLY_BIRD_END_DATE;
+  if (!raw) return { active: false, originalPrice: ORIGINAL_PREMIUM_PRICE, earlyPrice: EARLY_BIRD_PREMIUM_PRICE };
+  const end = new Date(raw + 'T23:59:59+02:00'); // Sluttid 23:59 svensk tid
+  if (isNaN(end.getTime())) return { active: false, originalPrice: ORIGINAL_PREMIUM_PRICE, earlyPrice: EARLY_BIRD_PREMIUM_PRICE };
+  const now = new Date();
+  if (now > end) return { active: false, originalPrice: ORIGINAL_PREMIUM_PRICE, earlyPrice: EARLY_BIRD_PREMIUM_PRICE };
+  const msLeft  = end - now;
+  const daysLeft = Math.ceil(msLeft / (24*60*60*1000));
+  return {
+    active: true,
+    endDateISO: raw,
+    endDateHuman: end.toLocaleDateString('sv-SE', { day: 'numeric', month: 'long' }),
+    daysLeft,
+    originalPrice: ORIGINAL_PREMIUM_PRICE,
+    earlyPrice:    EARLY_BIRD_PREMIUM_PRICE,
+  };
+}
+
 const openai = new OpenAI({
   apiKey:  process.env.GROQ_API_KEY,
   baseURL: 'https://api.groq.com/openai/v1',
@@ -981,6 +1008,14 @@ app.use((req, res, next) => {
       }
     } catch (_) {}
   }
+
+  // Early-bird state — beräknas per request så countdown alltid är fresh
+  res.locals.earlyBird = computeEarlyBird();
+
+  // Session-userId exponeras globalt för watermarking + spårbarhet (skärmdumpar
+  // av låst content blir spårbara till specifik användare).
+  res.locals.sessionUserId = req.session?.userId || null;
+
   next();
 });
 
@@ -4224,10 +4259,10 @@ app.post('/upgrade/checkout', requireLogin, blockWhenImpersonating, verifyCsrf, 
   // Mätning per tier eftersom premium- och pro-funnel är olika historier.
   logFunnelEvent(req.session.userId, 'upgrade_clicked_' + targetTier, { tier: targetTier });
 
-  // Pro-trial: env-var-styrd. TRIAL_DAYS_PRO=1 → 24h gratis.
-  // Sätt till 0 för att stänga av trial helt.
+  // Pro-trial: env-var-styrd. TRIAL_DAYS_PRO=N → N dagars gratis.
+  // Default 0 (ingen trial). Sätt TRIAL_DAYS_PRO=1 i Railway om du vill ha 24h-trial igen.
   const proTrialDays = targetTier === 'pro'
-    ? parseInt(process.env.TRIAL_DAYS_PRO || '1')
+    ? parseInt(process.env.TRIAL_DAYS_PRO || '0')
     : 0;
 
   const priceId = targetTier === 'pro'

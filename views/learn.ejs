@@ -31,7 +31,7 @@
     <h1>Joakim Jaksens Säljutbildning</h1>
     <% if (role === 'free') { %>
       <p>Du har tillgång till <strong>Block 1 & 2</strong>. De övriga 18 blocken kräver Premium.</p>
-      <a href="/upgrade" class="learn-upgrade-cta">⭐ Lås upp alla 20 block — 199 kr/mån →</a>
+      <a href="/upgrade" class="learn-upgrade-cta">⭐ Lås upp alla <%= blockCount %> block — <%= earlyBird && earlyBird.active ? earlyBird.earlyPrice : 199 %> kr/mån →</a>
     <% } else { %>
       <p><%= completedCount %> av <%= total %> block avklarade</p>
       <% if (completedCount < total) { %>

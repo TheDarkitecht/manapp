@@ -64,7 +64,7 @@
           "name": "Pro",
           "price": "599",
           "priceCurrency": "SEK",
-          "description": "Allt i Premium + AI-samtalsanalys (15/mån). 24h gratis trial.",
+          "description": "Allt i Premium + AI-samtalsanalys (15/mån).",
           "priceValidUntil": "2027-12-31"
         }
       ]
@@ -189,10 +189,25 @@
 
       <!-- Premium -->
       <div class="pr-card featured">
-        <span class="ribbon">POPULÄRAST</span>
+        <% if (earlyBird && earlyBird.active) { %>
+          <span class="ribbon" style="background:linear-gradient(135deg,#f59e0b,#dc2626);">🔥 EARLY BIRD</span>
+        <% } else { %>
+          <span class="ribbon">POPULÄRAST</span>
+        <% } %>
         <h2>✓ Premium</h2>
         <p class="desc">Full kurs med alla <%= totalBlocks %> block, AI-coachning och gamification.</p>
-        <div class="price">199 kr<small>/mån</small></div>
+        <% if (earlyBird && earlyBird.active) { %>
+          <div class="price" style="display:flex;align-items:baseline;gap:0.6rem;flex-wrap:wrap;">
+            <span style="text-decoration:line-through;color:#64748b;font-size:1.4rem;font-weight:600;"><%= earlyBird.originalPrice %> kr</span>
+            <span><%= earlyBird.earlyPrice %> kr<small>/mån</small></span>
+          </div>
+          <div style="background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.32);border-radius:10px;padding:0.7rem 0.9rem;margin:0 0 1.25rem;">
+            <div style="color:#fbbf24;font-weight:800;font-size:0.88rem;margin-bottom:0.25rem;">🔒 Livstidslåst pris</div>
+            <div style="color:#cbd5e1;font-size:0.82rem;line-height:1.5;">Sign:a nu och stanna på <%= earlyBird.earlyPrice %> kr/mån för alltid. Erbjudandet slutar <strong><%= earlyBird.endDateHuman %></strong> · <strong><%= earlyBird.daysLeft %> dagar kvar</strong>.</div>
+          </div>
+        <% } else { %>
+          <div class="price"><%= earlyBird ? earlyBird.originalPrice : 199 %> kr<small>/mån</small></div>
+        <% } %>
         <ul>
           <li>Alla <%= totalBlocks %> block upplåsta</li>
           <li>AI-assistent Jocke — alltid tillgänglig</li>
@@ -206,19 +221,17 @@
 
       <!-- Pro -->
       <div class="pr-card" style="position:relative;">
-        <span class="ribbon" style="background:linear-gradient(135deg,#fbbf24,#f59e0b);color:#0f172a;right:auto;left:1.5rem;">🎁 24H GRATIS</span>
         <h2>⚡ Pro</h2>
         <p class="desc">Allt i Premium + ladda upp dina verkliga samtal för AI-feedback.</p>
         <div class="price">599 kr<small>/mån</small></div>
         <ul>
-          <li><strong style="color:#fbbf24;">24h gratis prova-på</strong> — avbryt utan kostnad</li>
           <li>Allt i Premium</li>
           <li>AI-samtalsanalys: ladda upp, få feedback</li>
           <li>15 samtal/månad (max 60 min/samtal)</li>
           <li>Transkribering + coachning per samtal</li>
           <li>Konkreta formuleringar att säga istället</li>
         </ul>
-        <a href="/register?plan=pro" class="cta pr-cta-primary">Prova Pro gratis →</a>
+        <a href="/register?plan=pro" class="cta pr-cta-primary">Starta Pro →</a>
       </div>
 
       <!-- Företag -->
@@ -241,6 +254,13 @@
     <!-- FAQ -->
     <div class="pr-faq">
       <h2>Vanliga frågor</h2>
+
+      <% if (earlyBird && earlyBird.active) { %>
+      <details open>
+        <summary>🔥 Vad är "Livstidslåst pris" — och vad händer efter <%= earlyBird.endDateHuman %>?</summary>
+        <p>Under early-bird-perioden (slut <%= earlyBird.endDateHuman %>) får du Premium för <%= earlyBird.earlyPrice %> kr/mån istället för <%= earlyBird.originalPrice %> kr/mån. Tecknar du nu **låses ditt pris på <%= earlyBird.earlyPrice %> kr/mån för alltid** — så länge du har en aktiv prenumeration. Säger du upp och kommer tillbaka senare gäller ordinarie pris (<%= earlyBird.originalPrice %> kr/mån). Stripe sköter låsningen automatiskt. Efter <%= earlyBird.endDateHuman %> går Premium tillbaka till <%= earlyBird.originalPrice %> kr/mån för nya kunder.</p>
+      </details>
+      <% } %>
 
       <details>
         <summary>Kan jag säga upp när som helst?</summary>
