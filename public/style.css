@@ -2508,12 +2508,12 @@ body.landing-page {
 
 /* About */
 .lp-about { padding: 6rem 0; border-top: 1px solid rgba(255,255,255,0.06); }
-.lp-about-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 5rem; align-items: center; }
-.lp-about-grid > * { min-width: 0; }   /* Tillåter video (intrinsic 1920px) att krympa till kolumnens 1fr istället för att tvinga grid:en utskåning */
+.lp-about-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 5rem; align-items: center; }
+.lp-about-grid > * { min-width: 0; max-width: 100%; }   /* minmax(0,1fr) + min-width:0 + max-width:100% = tre lager skydd mot att video's intrinsic 1920px tvingar grid-utskåning */
 .lp-about-text p { color: #94a3b8; line-height: 1.75; margin-bottom: 1.1rem; font-size: 1.02rem; }
 .lp-about-text .lp-section-h2 { margin-bottom: 1.5rem; }
 .lp-about-text .lp-btn-primary { margin-top: 1rem; }
-.lp-video-wrap { border-radius: 16px; overflow: hidden; aspect-ratio: 16/9; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); }
+.lp-video-wrap { width: 100%; max-width: 100%; border-radius: 16px; overflow: hidden; aspect-ratio: 16/9; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); }
 .lp-video-wrap iframe { width: 100%; height: 100%; display: block; }
 .lp-video-wrap video  { width: 100%; height: 100%; display: block; object-fit: cover; background: #0f172a; }
 .lp-video-placeholder { width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; background: linear-gradient(145deg, #1e1b4b 0%, #1a1a2e 100%); transition: opacity 0.2s; }
