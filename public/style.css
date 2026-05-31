@@ -2449,24 +2449,25 @@ body.landing-page {
 .lp-mobile-menu a { color: #94a3b8; text-decoration: none; font-size: 1rem; font-weight: 500; padding: 0.4rem 0; border-bottom: 1px solid rgba(255,255,255,0.06); }
 .lp-mobile-cta { color: #a5b4fc !important; font-weight: 700 !important; }
 
-/* Early-bird banner — slim strip under nav, klickbar till #pris */
+/* Early-bird banner — prominent strip under nav, klickbar till #pris */
 .lp-early-bird-banner {
-  display: flex; align-items: center; justify-content: center; gap: 0.75rem;
-  padding: 0.65rem 1.25rem; text-decoration: none;
-  background: linear-gradient(135deg, rgba(245,158,11,0.18), rgba(220,38,38,0.18));
-  border-bottom: 1px solid rgba(245,158,11,0.35);
-  color: #fde68a; font-size: 0.92rem; line-height: 1.4;
+  display: flex; align-items: center; justify-content: center; gap: 0.9rem;
+  padding: 0.95rem 1.5rem; text-decoration: none;
+  background: linear-gradient(135deg, rgba(245,158,11,0.28), rgba(220,38,38,0.28));
+  border-bottom: 1px solid rgba(245,158,11,0.5);
+  color: #fde68a; font-size: 1.02rem; font-weight: 600; line-height: 1.45;
   transition: filter 0.2s;
 }
-.lp-early-bird-banner:hover { filter: brightness(1.15); }
+.lp-early-bird-banner:hover { filter: brightness(1.18); }
 .lp-early-bird-banner strong { color: #fff; font-weight: 800; }
-.lp-eb-emoji { font-size: 1.1rem; flex-shrink: 0; }
+.lp-eb-emoji { font-size: 1.45rem; flex-shrink: 0; }
 .lp-eb-text  { text-align: center; }
-.lp-eb-strike { text-decoration: line-through; color: #cbd5e1; font-weight: 600; }
-.lp-eb-arrow { font-size: 1rem; flex-shrink: 0; transition: transform 0.2s; }
-.lp-early-bird-banner:hover .lp-eb-arrow { transform: translateX(3px); }
+.lp-eb-strike { text-decoration: line-through; color: rgba(254,243,199,0.6); font-weight: 600; }
+.lp-eb-arrow { font-size: 1.2rem; flex-shrink: 0; transition: transform 0.2s; font-weight: 800; }
+.lp-early-bird-banner:hover .lp-eb-arrow { transform: translateX(4px); }
 @media (max-width: 720px) {
-  .lp-early-bird-banner { font-size: 0.82rem; padding: 0.6rem 1rem; gap: 0.5rem; }
+  .lp-early-bird-banner { font-size: 0.88rem; padding: 0.75rem 1rem; gap: 0.55rem; line-height: 1.35; }
+  .lp-eb-emoji { font-size: 1.2rem; }
   .lp-eb-strike { display: none; }
 }
 

@@ -373,10 +373,10 @@
           <div class="lp-price-header">
             <h3>Premium</h3>
             <% if (earlyBird && earlyBird.active) { %>
-              <div class="lp-price-amount" style="display:flex;align-items:baseline;justify-content:center;gap:0.6rem;flex-wrap:wrap;">
-                <span style="text-decoration:line-through;color:#64748b;font-size:1.4rem;font-weight:600;"><%= earlyBird.originalPrice %> kr</span>
-                <span><%= earlyBird.earlyPrice %> kr<span>/mån</span></span>
+              <div style="color:#94a3b8;font-size:1.15rem;line-height:1;margin-bottom:0.4rem;">
+                <span style="text-decoration:line-through;"><%= earlyBird.originalPrice %> kr/mån</span>
               </div>
+              <div class="lp-price-amount"><%= earlyBird.earlyPrice %> kr<span>/mån</span></div>
               <p style="color:#fbbf24;font-weight:700;">🔒 Livstidslåst — slut <%= earlyBird.endDateHuman %> · <%= earlyBird.daysLeft %> dagar kvar</p>
             <% } else { %>
               <div class="lp-price-amount"><%= earlyBird ? earlyBird.originalPrice : 199 %> kr<span>/mån</span></div>
@@ -404,11 +404,11 @@
           <div class="lp-price-header">
             <h3>Pro</h3>
             <% if (earlyBird && earlyBird.active) { %>
-              <div class="lp-price-amount" style="display:flex;align-items:baseline;justify-content:center;gap:0.6rem;flex-wrap:wrap;">
-                <span style="text-decoration:line-through;color:#64748b;font-size:1.4rem;font-weight:600;"><%= earlyBird.originalProPrice %> kr</span>
-                <span><%= earlyBird.earlyProPrice %> kr<span>/mån</span></span>
+              <div style="color:#94a3b8;font-size:1.15rem;line-height:1;margin-bottom:0.4rem;">
+                <span style="text-decoration:line-through;"><%= earlyBird.originalProPrice %> kr/mån</span>
               </div>
-              <p style="color:#fbbf24;font-weight:700;">🔒 Livstidslåst · <%= earlyBird.daysLeft %> dagar kvar</p>
+              <div class="lp-price-amount"><%= earlyBird.earlyProPrice %> kr<span>/mån</span></div>
+              <p style="color:#fbbf24;font-weight:700;">🔒 Livstidslåst — slut <%= earlyBird.endDateHuman %> · <%= earlyBird.daysLeft %> dagar kvar</p>
             <% } else { %>
               <div class="lp-price-amount">599 kr<span>/mån</span></div>
               <p style="color:#fbbf24;">⚡ För seriösa säljare</p>
