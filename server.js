@@ -198,6 +198,10 @@ const FREE_BLOCK_IDS = ['inledning', 'fundamenten'];
 app.locals.blockCount     = salesBlocks.length;
 app.locals.freeBlockCount = FREE_BLOCK_IDS.length;
 
+// Asset-version för cache-busting av statiska filer (style.css etc).
+// Sätts vid serverstart → byts vid varje deploy → tvingar browser+CF att hämta nya assets.
+app.locals.assetVersion   = Date.now().toString(36);
+
 const openai = new OpenAI({
   apiKey:  process.env.GROQ_API_KEY,
   baseURL: 'https://api.groq.com/openai/v1',
