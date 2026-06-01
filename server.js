@@ -191,21 +191,25 @@ async function sendEmailReliable({ to, subject, html, from, kind }) {
 }
 
 // Notify the platform owner (Joakim) when important events happen — nya konton, nya köp.
-// Default: skickar till alla admin-konton i DB. Kan override:as med
-// OWNER_NOTIFICATION_EMAIL env-var för en specifik adress (om Joakim vill ha det till
-// privat mejl istället för admin-kontots mejl).
+// Mejl skickas till BÅDA:
+//   1) Alla admin-konton i DB (deras registrerade email)
+//   2) OWNER_NOTIFICATION_EMAIL env-var om satt (privat adress, kan vara samma som admin)
+// Adresser dedupliceras case-insensitivt så ingen får dubbla mejl.
 async function notifyOwner(subject, html) {
   if (!resend) return; // ingen Resend-key konfigurerad
   try {
-    let recipients;
-    if (process.env.OWNER_NOTIFICATION_EMAIL) {
-      recipients = [process.env.OWNER_NOTIFICATION_EMAIL];
-    } else {
-      // Lazy lookup — vi har inte db-funktioner i scope än vid require-tid
-      recipients = (typeof getAllUsers === 'function')
-        ? getAllUsers().filter(u => u.role === 'admin' && u.email).map(u => u.email)
-        : [];
+    const set = new Set();
+    // Admin-mejl från DB (lazy lookup — db kanske inte är redo vid require-tid)
+    if (typeof getAllUsers === 'function') {
+      for (const u of getAllUsers()) {
+        if (u.role === 'admin' && u.email) set.add(u.email.trim().toLowerCase());
+      }
     }
+    // Override / extra adress via env
+    if (process.env.OWNER_NOTIFICATION_EMAIL) {
+      set.add(process.env.OWNER_NOTIFICATION_EMAIL.trim().toLowerCase());
+    }
+    const recipients = [...set];
     if (!recipients.length) return;
     await Promise.all(recipients.map(email =>
       sendEmailReliable({ to: email, subject, html, kind: 'owner-notification' })
