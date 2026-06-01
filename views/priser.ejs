@@ -202,7 +202,7 @@
           </div>
           <div class="price"><%= earlyBird.earlyPrice %> kr<small>/mån</small></div>
           <div style="background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.32);border-radius:10px;padding:0.7rem 0.9rem;margin:0 0 1.25rem;">
-            <div style="color:#fbbf24;font-weight:800;font-size:0.88rem;margin-bottom:0.25rem;">🔒 Livstidslåst pris</div>
+            <div style="color:#fbbf24;font-weight:800;font-size:0.88rem;margin-bottom:0.25rem;">🔒 Priset låst för alltid · ingen bindning</div>
             <div style="color:#cbd5e1;font-size:0.82rem;line-height:1.5;">Sign:a nu och stanna på <%= earlyBird.earlyPrice %> kr/mån för alltid. Erbjudandet slutar <strong><%= earlyBird.endDateHuman %></strong> · <strong><%= earlyBird.daysLeft %> dagar kvar</strong>.</div>
           </div>
         <% } else { %>
@@ -232,7 +232,7 @@
           </div>
           <div class="price"><%= earlyBird.earlyProPrice %> kr<small>/mån</small></div>
           <div style="background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.32);border-radius:10px;padding:0.7rem 0.9rem;margin:0 0 1.25rem;">
-            <div style="color:#fbbf24;font-weight:800;font-size:0.88rem;margin-bottom:0.25rem;">🔒 Livstidslåst pris</div>
+            <div style="color:#fbbf24;font-weight:800;font-size:0.88rem;margin-bottom:0.25rem;">🔒 Priset låst för alltid · ingen bindning</div>
             <div style="color:#cbd5e1;font-size:0.82rem;line-height:1.5;">Sign:a nu och stanna på <%= earlyBird.earlyProPrice %> kr/mån för alltid. Slut <strong><%= earlyBird.endDateHuman %></strong> · <strong><%= earlyBird.daysLeft %> dagar kvar</strong>.</div>
           </div>
         <% } else { %>
@@ -271,8 +271,8 @@
 
       <% if (earlyBird && earlyBird.active) { %>
       <details open>
-        <summary>🔥 Vad är "Livstidslåst pris" — och vad händer efter <%= earlyBird.endDateHuman %>?</summary>
-        <p>Under early-bird-perioden (slut <%= earlyBird.endDateHuman %>) får du <strong>Premium <%= earlyBird.earlyPrice %> kr/mån</strong> (ord. <%= earlyBird.originalPrice %>) eller <strong>Pro <%= earlyBird.earlyProPrice %> kr/mån</strong> (ord. <%= earlyBird.originalProPrice %>). Tecknar du nu <strong>låses ditt pris för alltid</strong> — så länge du har en aktiv prenumeration. Säger du upp och kommer tillbaka senare gäller ordinarie pris. Stripe sköter låsningen automatiskt per prenumeration. Efter <%= earlyBird.endDateHuman %> går priserna tillbaka till <%= earlyBird.originalPrice %> respektive <%= earlyBird.originalProPrice %> kr/mån för nya kunder.</p>
+        <summary>🔥 Vad innebär "priset låst för alltid" — och är det bindningstid?</summary>
+        <p><strong>Nej, ingen bindningstid.</strong> Du kan säga upp när som helst utan kostnad. Det som låses är <strong>priset</strong>, inte avtalet. Under early-bird (slut <%= earlyBird.endDateHuman %>) får du <strong>Premium <%= earlyBird.earlyPrice %> kr/mån</strong> (ord. <%= earlyBird.originalPrice %>) eller <strong>Pro <%= earlyBird.earlyProPrice %> kr/mån</strong> (ord. <%= earlyBird.originalProPrice %>). Tecknar du nu så stannar ditt pris kvar så länge du har en aktiv prenumeration — även om vi höjer priset för nya kunder efter <%= earlyBird.endDateHuman %>. Säger du upp och kommer tillbaka senare gäller då aktuellt pris (<%= earlyBird.originalPrice %> resp. <%= earlyBird.originalProPrice %> kr/mån). Stripe sköter pris-låsningen automatiskt per prenumeration.</p>
       </details>
       <% } %>
 

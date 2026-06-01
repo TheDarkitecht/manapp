@@ -67,7 +67,7 @@
           </form>
           <p class="pro-paywall-fine">
             <% if (earlyBird && earlyBird.active) { %>
-              <strong style="color:#fbbf24;">🔥 Early bird: <%= earlyBird.earlyProPrice %> kr/mån livstidslåst</strong> <span style="text-decoration:line-through;color:#64748b;">(<%= earlyBird.originalProPrice %> kr)</span> · slut <%= earlyBird.endDateHuman %><br>
+              <strong style="color:#fbbf24;">🔥 Early bird: <%= earlyBird.earlyProPrice %> kr/mån — priset låst för alltid, ingen bindning</strong> <span style="text-decoration:line-through;color:#64748b;">(<%= earlyBird.originalProPrice %> kr)</span> · slut <%= earlyBird.endDateHuman %><br>
             <% } else { %>
               599 kr/mån · avsluta när som helst<br>
             <% } %>
