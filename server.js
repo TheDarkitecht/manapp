@@ -190,6 +190,32 @@ async function sendEmailReliable({ to, subject, html, from, kind }) {
   }
 }
 
+// Notify the platform owner (Joakim) when important events happen — nya konton, nya köp.
+// Default: skickar till alla admin-konton i DB. Kan override:as med
+// OWNER_NOTIFICATION_EMAIL env-var för en specifik adress (om Joakim vill ha det till
+// privat mejl istället för admin-kontots mejl).
+async function notifyOwner(subject, html) {
+  if (!resend) return; // ingen Resend-key konfigurerad
+  try {
+    let recipients;
+    if (process.env.OWNER_NOTIFICATION_EMAIL) {
+      recipients = [process.env.OWNER_NOTIFICATION_EMAIL];
+    } else {
+      // Lazy lookup — vi har inte db-funktioner i scope än vid require-tid
+      recipients = (typeof getAllUsers === 'function')
+        ? getAllUsers().filter(u => u.role === 'admin' && u.email).map(u => u.email)
+        : [];
+    }
+    if (!recipients.length) return;
+    await Promise.all(recipients.map(email =>
+      sendEmailReliable({ to: email, subject, html, kind: 'owner-notification' })
+        .catch(err => console.error(`Owner notification failed för ${email}:`, err.message))
+    ));
+  } catch (err) {
+    console.error('notifyOwner error:', err.message);
+  }
+}
+
 // Block 1 (Inledning) and Block 2 (Fundamenten) are free; 3–23 require premium (teaser shown for locked blocks)
 const FREE_BLOCK_IDS = ['inledning', 'fundamenten'];
 
@@ -336,6 +362,44 @@ app.post('/webhook', express.raw({ type: 'application/json' }), async (req, res)
       // Funnel: upgrade slutförd — pengar har faktiskt rört sig (eller trial startad).
       // Per tier eftersom premium- och pro-konvertering är separata processer.
       logFunnelEvent(userId, 'upgrade_completed_' + tier, { tier });
+
+      // ── Notifiera plattform-ägaren om nytt köp — separat hook från registrering ──
+      // Fire-and-forget. Slå upp användarens uppgifter för att få namn/email i mailet.
+      try {
+        const buyer = (typeof getAllUsers === 'function')
+          ? getAllUsers().find(u => u.id === userId)
+          : null;
+        const eb = computeEarlyBird();
+        const tierLabel = tier === 'pro' ? 'Pro' : 'Premium';
+        const price = tier === 'pro'
+          ? (eb.active ? eb.earlyProPrice : eb.originalProPrice)
+          : (eb.active ? eb.earlyPrice    : eb.originalPrice);
+        const priceLabel = `${price} kr/mån${eb.active ? ' (early bird — låst för alltid)' : ''}`;
+        const buyerName  = buyer ? `${buyer.first_name || ''} ${buyer.last_name || ''}`.trim() || buyer.username : `User #${userId}`;
+        const buyerEmail = buyer && buyer.email ? buyer.email : '(okänd)';
+        const buyerUser  = buyer && buyer.username ? buyer.username : '(okänd)';
+        const tsHuman    = new Date().toLocaleString('sv-SE', { dateStyle: 'short', timeStyle: 'short' });
+        notifyOwner(
+          `💳 Nytt köp: ${tierLabel} — ${buyerName} (${price} kr)`,
+          `<div style="font-family:system-ui,-apple-system,sans-serif;max-width:560px;margin:0 auto;padding:1.5rem;color:#1e293b;">
+             <div style="background:linear-gradient(135deg,#fbbf24,#f59e0b);color:#1e293b;padding:1rem 1.25rem;border-radius:12px 12px 0 0;font-weight:800;font-size:1.05rem;">💳 Nytt köp — ${tierLabel}</div>
+             <div style="background:#f8fafc;border:1px solid #e2e8f0;border-top:0;border-radius:0 0 12px 12px;padding:1.25rem;">
+               <div style="font-size:1.6rem;font-weight:800;color:#059669;margin-bottom:0.75rem;">${priceLabel}</div>
+               <table style="border-collapse:collapse;width:100%;font-size:0.95rem;">
+                 <tr><td style="padding:0.35rem 0;color:#64748b;width:130px;">Köpare:</td><td style="padding:0.35rem 0;font-weight:600;">${buyerName}</td></tr>
+                 <tr><td style="padding:0.35rem 0;color:#64748b;">E-post:</td><td style="padding:0.35rem 0;"><a href="mailto:${buyerEmail}" style="color:#2563eb;">${buyerEmail}</a></td></tr>
+                 <tr><td style="padding:0.35rem 0;color:#64748b;">Användarnamn:</td><td style="padding:0.35rem 0;">${buyerUser}</td></tr>
+                 <tr><td style="padding:0.35rem 0;color:#64748b;">Tier:</td><td style="padding:0.35rem 0;"><strong>${tierLabel}</strong></td></tr>
+                 <tr><td style="padding:0.35rem 0;color:#64748b;">Tid:</td><td style="padding:0.35rem 0;">${tsHuman}</td></tr>
+                 <tr><td style="padding:0.35rem 0;color:#64748b;">Stripe customer:</td><td style="padding:0.35rem 0;font-family:ui-monospace,monospace;font-size:0.82rem;">${sess.customer || '(saknas)'}</td></tr>
+                 <tr><td style="padding:0.35rem 0;color:#64748b;">Session id:</td><td style="padding:0.35rem 0;font-family:ui-monospace,monospace;font-size:0.82rem;">${sess.id || ''}</td></tr>
+               </table>
+             </div>
+           </div>`
+        ).catch(() => {});
+      } catch (err) {
+        console.error('Owner purchase notification error:', err.message);
+      }
 
       // ── Pro-trial-tracking: om detta var en Pro-subscription med trial,
       // fetch:a subscriptionen för att få trial_end-timestamp.
@@ -1277,6 +1341,24 @@ app.post('/register', registerLimiter, async (req, res) => {
   } catch (emailErr) {
     console.error('Welcome email error:', emailErr.message);
   }
+
+  // ── Notifiera plattform-ägaren (Joakim) om nytt konto ──────────────────────
+  // Fire-and-forget — vi väntar inte (returnerar inte) eftersom registreringen
+  // är klar. Fel här ska aldrig påverka användarens flöde.
+  notifyOwner(
+    `🎯 Nytt konto: ${cleanFirst} ${cleanLast}`,
+    `<div style="font-family:system-ui,sans-serif;max-width:520px;margin:0 auto;padding:1.5rem;">
+      <h2 style="margin:0 0 1rem;color:#1e293b;">🎯 Nytt konto registrerat</h2>
+      <table style="border-collapse:collapse;width:100%;">
+        <tr><td style="padding:0.4rem 0.6rem 0.4rem 0;color:#64748b;font-size:0.9rem;">Namn:</td><td style="padding:0.4rem 0;font-weight:600;">${cleanFirst} ${cleanLast}</td></tr>
+        <tr><td style="padding:0.4rem 0.6rem 0.4rem 0;color:#64748b;font-size:0.9rem;">E-post:</td><td style="padding:0.4rem 0;"><a href="mailto:${email.trim()}">${email.trim()}</a></td></tr>
+        <tr><td style="padding:0.4rem 0.6rem 0.4rem 0;color:#64748b;font-size:0.9rem;">Användarnamn:</td><td style="padding:0.4rem 0;font-family:monospace;">${username}</td></tr>
+        <tr><td style="padding:0.4rem 0.6rem 0.4rem 0;color:#64748b;font-size:0.9rem;">Tid:</td><td style="padding:0.4rem 0;">${new Date().toLocaleString('sv-SE', { dateStyle: 'medium', timeStyle: 'short' })}</td></tr>
+        <tr><td style="padding:0.4rem 0.6rem 0.4rem 0;color:#64748b;font-size:0.9rem;">Roll:</td><td style="padding:0.4rem 0;">free</td></tr>
+      </table>
+      <p style="margin:1.5rem 0 0;color:#64748b;font-size:0.85rem;">Logga in på <a href="${baseUrl}/admin">${baseUrl}/admin</a> för att se profilen.</p>
+    </div>`
+  ).catch(() => {}); // svälj alla fel — får aldrig blockera registrering
 
   // ── Auto-login: spara steg 1 av onboarding-friktion ───────────────────────
   // Industry standard — ingen mening att tvinga användaren att ange lösenordet direkt
