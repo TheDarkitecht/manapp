@@ -655,7 +655,7 @@ const blocks = [
     id: 'tonfall',
     title: 'Tonfall & Psykologisk Påverkan',
     subtitle: 'Hur du säger det är viktigare än vad du säger',
-    outcomeTitle: "Få kunder att lyssna när du pratar",
+    outcomeTitle: "Få kunder att förstå det du vill när du pratar",
     tldr: "Efter detta block kan du växla mellan 9 strategiska tonfall i samma samtal — från förvirrad ton (när kunden är vag) till auktoritativ (vid summering) till tystnad (efter en laddad fråga). Du behärskar 10 psykologiska påverkanstekniker (framing, anchoring, social proof, labeling, mirroring m.fl.) och vet när du ska använda vilken etiskt. Hur du säger det blir lika viktigt som vad du säger. Du står på 2 500 års retoriktradition — från Sokrates och Cicero till Voss och Cialdini — och kan tillämpa det i varje kundsamtal.",
     concreteScripts: ["Stanna…? Du menar…? Tills…?","Det låter som att du är orolig för bindningstiden."],
     icon: '🎙️',
