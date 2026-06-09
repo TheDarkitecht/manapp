@@ -232,6 +232,10 @@ app.locals.freeBlockCount = FREE_BLOCK_IDS.length;
 // Sätts vid serverstart → byts vid varje deploy → tvingar browser+CF att hämta nya assets.
 app.locals.assetVersion   = Date.now().toString(36);
 
+// Boot timestamp för dynamisk sitemap lastmod — varje deploy = nytt datum.
+// Signal till Google: "innehållet kan ha ändrats sedan sist du crawlade".
+const BOOT_DATE_ISO = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+
 // ── Early-bird pricing ────────────────────────────────────────────────────────
 // EARLY_BIRD_END_DATE i ISO-format ("2026-06-30"). När datumet passerats blir
 // active=false automatiskt — inga deploys eller env-byten behövs då.
@@ -591,6 +595,49 @@ app.use(compression({
   },
   threshold: 1024, // <1 KB = inte värt att gzip:a
 }));
+
+// ── Dynamisk sitemap.xml ───────────────────────────────────────────────────
+// Definierad FÖRE express.static så denna route tar över istället för en
+// eventuell statisk public/sitemap.xml. Genererar XML vid varje request med
+// boot-datum som lastmod = signal till Google "innehållet kan ha uppdaterats".
+// Cache 1h på CDN för att avlasta servern utan att förlora freshness.
+app.get('/sitemap.xml', (req, res) => {
+  const urls = [
+    { loc: 'https://joakimjaksen.se/',                  changefreq: 'weekly',  priority: '1.0', video: true },
+    { loc: 'https://joakimjaksen.se/foretag',           changefreq: 'monthly', priority: '0.9' },
+    { loc: 'https://joakimjaksen.se/priser',            changefreq: 'monthly', priority: '0.9' },
+    { loc: 'https://joakimjaksen.se/register',          changefreq: 'monthly', priority: '0.8' },
+    { loc: 'https://joakimjaksen.se/login',             changefreq: 'monthly', priority: '0.5' },
+    { loc: 'https://joakimjaksen.se/terms',             changefreq: 'yearly',  priority: '0.3' },
+    { loc: 'https://joakimjaksen.se/integritetspolicy', changefreq: 'yearly',  priority: '0.3' },
+  ];
+  const videoBlock = `
+    <video:video>
+      <video:thumbnail_loc>https://joakimjaksen.se/videos/hero-poster.jpg</video:thumbnail_loc>
+      <video:title>Joakim Jaksen — introduktion till säljakademin</video:title>
+      <video:description>Joakim Jaksen presenterar säljakademin: 22+ års säljerfarenhet, bolag som omsatt 200+ MSEK och 1000+ tränade säljare. Online säljutbildning som täcker hela säljprocessen.</video:description>
+      <video:content_loc>https://joakimjaksen.se/videos/hero.mp4</video:content_loc>
+      <video:duration>105</video:duration>
+      <video:publication_date>2026-06-01T00:00:00+02:00</video:publication_date>
+      <video:family_friendly>yes</video:family_friendly>
+      <video:requires_subscription>no</video:requires_subscription>
+      <video:live>no</video:live>
+    </video:video>`;
+  const body = urls.map(u => `
+  <url>
+    <loc>${u.loc}</loc>
+    <lastmod>${BOOT_DATE_ISO}</lastmod>
+    <changefreq>${u.changefreq}</changefreq>
+    <priority>${u.priority}</priority>${u.video ? videoBlock : ''}
+  </url>`).join('');
+  const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:video="http://www.google.com/schemas/sitemap-video/1.1">${body}
+</urlset>`;
+  res.set('Content-Type', 'application/xml; charset=utf-8');
+  res.set('Cache-Control', 'public, max-age=3600'); // 1h på CDN, browser
+  res.send(xml);
+});
 
 // Static files med 30-dagars cache-headers — CSS/JS uppdateras sällan,
 // browsers behöver inte refetcha varje page-load. För dev (NODE_ENV ej satt)
