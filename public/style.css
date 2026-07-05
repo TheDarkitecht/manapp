@@ -2430,7 +2430,8 @@ body.landing-page {
   max-width: 1180px; margin: 0 auto; padding: 0 2rem;
   display: flex; align-items: center; justify-content: space-between;
 }
-.lp-logo { font-size: 1.15rem; font-weight: 800; color: #a5b4fc; text-decoration: none; letter-spacing: 0.02em; }
+.lp-logo { font-size: 1.15rem; font-weight: 800; color: #a5b4fc; text-decoration: none; letter-spacing: 0.02em; display: inline-flex; align-items: center; }
+.lp-logo img { height: 38px; width: auto; display: block; }
 .lp-nav-links { display: flex; align-items: center; gap: 2rem; }
 .lp-nav-link, .lp-nav-login { color: #94a3b8; text-decoration: none; font-size: 0.9rem; font-weight: 500; transition: color 0.2s; }
 .lp-nav-link:hover, .lp-nav-login:hover { color: #f1f5f9; }
@@ -2658,6 +2659,7 @@ body:has(.lp-early-bird-banner) .lp-nav { top: 54px; }
 .lp-footer { background: #070710; border-top: 1px solid rgba(255,255,255,0.06); padding: 3rem 2rem 0; }
 .lp-footer-inner { max-width: 1180px; margin: 0 auto; display: flex; justify-content: space-between; align-items: flex-start; gap: 3rem; padding-bottom: 2.5rem; }
 .lp-footer-logo { font-size: 1rem; font-weight: 800; color: #a5b4fc; margin-bottom: 0.75rem; }
+.lp-footer-logo img { height: 46px; width: auto; display: block; }
 .lp-footer-brand p { color: #475569; font-size: 0.85rem; line-height: 1.6; }
 .lp-footer-links { display: flex; gap: 2rem; flex-wrap: wrap; }
 .lp-footer-links a { color: #64748b; text-decoration: none; font-size: 0.875rem; transition: color 0.2s; }

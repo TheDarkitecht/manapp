@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100" role="img" aria-label="Joakim Jaksen">
+  <rect width="100" height="100" rx="24" fill="#6366F1"/>
+  <g transform="translate(8,2)" fill="none" stroke="#ffffff" stroke-width="12" stroke-linecap="square" stroke-linejoin="round">
+    <path d="M42 24 L42 58 Q42 72 29 72 Q19 72 19 64"/>
+    <path d="M66 24 L66 58 Q66 72 53 72 Q43 72 43 64"/>
+  </g>
+</svg>
