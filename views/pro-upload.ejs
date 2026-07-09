@@ -111,13 +111,40 @@
       const progressText = document.getElementById('progressText');
       const dropZone = document.getElementById('dropZone');
 
-      // Fil vald
+      // Match serverns gränser (server.js: multer 100 MB + ljud-filter).
+      const MAX_MB = 100;
+      const ALLOWED = ['mp3', 'm4a', 'wav', 'webm', 'aac', 'ogg', 'flac', 'mp4'];
+      let fileOk = false;
+
+      function validateFile(f) {
+        const ext = (f.name.split('.').pop() || '').toLowerCase();
+        const sizeMB = f.size / (1024 * 1024);
+        if (!ALLOWED.includes(ext)) {
+          return { ok: false, msg: `Filformatet .${ext || '?'} stöds inte. Ladda upp ljud: ${ALLOWED.join(', ')}. (Har du en video? Exportera ljudspåret först.)` };
+        }
+        if (sizeMB > MAX_MB) {
+          return { ok: false, msg: `Filen är ${Math.round(sizeMB)} MB — max är ${MAX_MB} MB. Komprimera till mp3/m4a eller korta ner samtalet.` };
+        }
+        return { ok: true };
+      }
+
+      // Fil vald (gäller även drag-and-drop, som dispatchar 'change')
       input.addEventListener('change', () => {
-        if (input.files.length) {
-          const f = input.files[0];
-          const sizeMB = (f.size / (1024 * 1024)).toFixed(1);
+        if (!input.files.length) { fileOk = false; return; }
+        const f = input.files[0];
+        const res = validateFile(f);
+        const sizeMB = (f.size / (1024 * 1024)).toFixed(1);
+        if (res.ok) {
+          fileOk = true;
           label.textContent = `✓ ${f.name} (${sizeMB} MB)`;
           label.style.color = '#34d399';
+          submitBtn.disabled = false;
+        } else {
+          fileOk = false;
+          label.textContent = `⚠️ ${res.msg}`;
+          label.style.color = '#f87171';
+          submitBtn.disabled = true;
+          try { input.value = ''; } catch (_) {}
         }
       });
 
@@ -135,8 +162,16 @@
         }
       });
 
-      // Submit → visa progress
-      form.addEventListener('submit', () => {
+      // Submit → validera en sista gång, sen visa progress
+      form.addEventListener('submit', (e) => {
+        if (!input.files.length || !fileOk) {
+          e.preventDefault();
+          if (!input.files.length) {
+            label.textContent = '⚠️ Välj en ljudfil först.';
+            label.style.color = '#f87171';
+          }
+          return;
+        }
         submitBtn.disabled = true;
         submitBtn.textContent = '⏳ Bearbetar...';
         progress.style.display = 'block';
