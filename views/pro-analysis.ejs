@@ -90,6 +90,11 @@
       const el = document.getElementById('analysisContent');
       if (!el) return;
       let html = el.textContent;
+      // Escape HTML FÖRST (annars blir AI-text som innehåller <img onerror=…>/<script> live
+      // HTML via innerHTML nedan). Markdown-mönstren nedan använder * # - som inte escapas,
+      // så formateringen fungerar fortfarande. Samma mönster som block-ova-chat.ejs.
+      html = html.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+                 .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
       // Headings
       html = html.replace(/^## (.+)$/gm, '<h2>$1</h2>');
       html = html.replace(/^### (.+)$/gm, '<h3>$1</h3>');
