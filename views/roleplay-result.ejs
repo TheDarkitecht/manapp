@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>📊 Resultat — <%= roleplay.title %> — Joakim Jaksen</title>
+  <meta name="robots" content="noindex" />
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="/style.css?v=<%= assetVersion %>" />
+  <link rel="stylesheet" href="/journey.css?v=<%= assetVersion %>" />
+  <style>
+    .rr-wrap { max-width: 760px; margin: 0 auto; padding: 1.5rem 1.25rem 5rem; }
+    .rr-note { color:#64748b; font-size:0.82rem; font-style:italic; margin:0 0 1.25rem; }
+    .rr-empty { text-align:center; padding:3rem 1rem; color:#94a3b8; }
+    .rr-empty .rr-empty-icon { font-size:2.5rem; }
+    .rr-score-card { display:flex; align-items:center; gap:1.25rem; padding:1.4rem 1.5rem; border-radius:16px;
+      border:1px solid rgba(255,255,255,0.08); background:linear-gradient(145deg,#1e293b,#0f172a); margin-bottom:1.25rem; flex-wrap:wrap; }
+    .rr-score-num { font-size:2.8rem; font-weight:800; line-height:1; min-width:96px; text-align:center; }
+    .rr-band-needs_work .rr-score-num { color:#f87171; }
+    .rr-band-developing .rr-score-num { color:#fbbf24; }
+    .rr-band-strong .rr-score-num { color:#34d399; }
+    .rr-score-meta { flex:1; min-width:180px; }
+    .rr-band-label { font-weight:800; font-size:1.05rem; color:#f1f5f9; }
+    .rr-band-copy { color:#94a3b8; font-size:0.9rem; margin-top:0.2rem; }
+    .rr-caveat { margin-top:0.6rem; font-size:0.8rem; color:#fbbf24; }
+    .rr-section { margin:1.5rem 0; }
+    .rr-section h3 { color:#f1f5f9; font-size:1.05rem; margin:0 0 0.75rem; }
+    .rr-crit { border:1px solid rgba(255,255,255,0.08); border-radius:12px; padding:0.9rem 1rem; margin-bottom:0.7rem; background:rgba(255,255,255,0.02); }
+    .rr-crit-head { display:flex; align-items:center; gap:0.6rem; }
+    .rr-crit-status { font-size:0.72rem; font-weight:700; padding:0.15rem 0.55rem; border-radius:999px; white-space:nowrap; }
+    .rr-met { background:rgba(52,211,153,0.15); color:#34d399; }
+    .rr-partially_met { background:rgba(251,191,36,0.15); color:#fbbf24; }
+    .rr-not_demonstrated { background:rgba(148,163,184,0.15); color:#94a3b8; }
+    .rr-crit-title { font-weight:600; color:#e2e8f0; font-size:0.95rem; }
+    .rr-evidence { margin-top:0.55rem; padding:0.5rem 0.75rem; border-left:3px solid rgba(129,140,248,0.5);
+      background:rgba(99,102,241,0.06); border-radius:0 8px 8px 0; color:#cbd5e1; font-size:0.88rem; font-style:italic; }
+    .rr-evidence-speaker { font-style:normal; font-weight:700; color:#818cf8; font-size:0.72rem; text-transform:uppercase; letter-spacing:0.05em; }
+    .rr-crit-expl { color:#94a3b8; font-size:0.86rem; margin-top:0.4rem; }
+    .rr-list { list-style:none; padding:0; margin:0; }
+    .rr-list li { padding:0.5rem 0.75rem; margin-bottom:0.4rem; border-radius:8px; font-size:0.9rem; color:#cbd5e1; background:rgba(255,255,255,0.02); }
+    .rr-better { border-left:3px solid rgba(52,211,153,0.5); }
+    .rr-better .rr-instead { color:#f87171; } .rr-better .rr-say { color:#34d399; }
+    .rr-priority { padding:1rem 1.25rem; border-radius:12px; border:1px solid rgba(251,191,36,0.3);
+      background:rgba(251,191,36,0.06); margin-bottom:0.75rem; }
+    .rr-priority strong, .rr-next strong { color:#fbbf24; }
+    .rr-next { padding:1rem 1.25rem; border-radius:12px; border:1px solid rgba(129,140,248,0.3); background:rgba(99,102,241,0.06); }
+    .rr-actions { display:flex; gap:0.75rem; flex-wrap:wrap; margin:1.5rem 0; }
+    .rr-btn { display:inline-block; padding:0.7rem 1.2rem; border-radius:10px; font-weight:700; text-decoration:none; font-size:0.92rem; border:0; cursor:pointer; }
+    .rr-btn-primary { background:linear-gradient(135deg,#6366f1,#8b5cf6); color:#fff; }
+    .rr-btn-ghost { background:rgba(255,255,255,0.06); color:#e2e8f0; border:1px solid rgba(255,255,255,0.12); }
+    .rr-progress { border:1px solid rgba(255,255,255,0.08); border-radius:14px; padding:1.1rem 1.25rem; margin-top:1.5rem; background:rgba(255,255,255,0.02); }
+    .rr-progress-stats { display:flex; gap:1.5rem; flex-wrap:wrap; margin-bottom:0.85rem; }
+    .rr-stat b { display:block; font-size:1.4rem; color:#f1f5f9; } .rr-stat span { color:#64748b; font-size:0.78rem; }
+    .rr-attempt { display:flex; align-items:center; gap:0.75rem; padding:0.45rem 0; text-decoration:none; }
+    .rr-attempt.is-selected { font-weight:700; }
+    .rr-attempt-bar { flex:1; height:8px; border-radius:999px; background:rgba(255,255,255,0.06); overflow:hidden; }
+    .rr-attempt-fill { height:100%; background:linear-gradient(90deg,#6366f1,#8b5cf6); }
+    .rr-attempt-score { min-width:44px; text-align:right; color:#cbd5e1; font-size:0.85rem; }
+    .rr-attempt-date { color:#64748b; font-size:0.75rem; min-width:96px; }
+    .rr-trend-up { color:#34d399; } .rr-trend-down { color:#f87171; } .rr-trend-flat { color:#94a3b8; }
+  </style>
+</head>
+<body class="block-page">
+
+  <a href="#main-content" class="skip-to-main">Hoppa till innehåll</a>
+
+  <nav class="learn-nav">
+    <a href="/learn/<%= block.id %>/ova/<%= roleplay.id %>" class="learn-nav-back">← Tillbaka till rollspelet</a>
+    <span class="learn-nav-title">📊 Resultat</span>
+    <span class="learn-nav-user"><%= username %></span>
+  </nav>
+
+  <main id="main-content" class="rr-wrap">
+
+    <p class="rr-note">Jockes coaching-bedömning utifrån scenariots kriterier — vägledning, inte en absolut sanning.</p>
+
+    <% if (!selected) { %>
+      <div class="rr-empty">
+        <div class="rr-empty-icon">🎭</div>
+        <h2>Ingen utvärdering än</h2>
+        <p>Kör rollspelet <strong><%= roleplay.title %></strong> och tryck “Utvärdera rollspelet” för att få din första bedömning.</p>
+        <a class="rr-btn rr-btn-primary" href="/learn/<%= block.id %>/ova/<%= roleplay.id %>">Starta rollspelet →</a>
+      </div>
+    <% } else { %>
+
+      <% var band = scoreBand(selected.overall_score || 0); %>
+      <% if (selected.session_status === 'insufficient') { %>
+        <div class="rr-score-card rr-band-needs_work">
+          <div class="rr-score-meta">
+            <div class="rr-band-label">För kort session</div>
+            <div class="rr-band-copy">Den här sessionen var för kort för en rättvis bedömning. Kör ett par repliker till och utvärdera igen.</div>
+          </div>
+        </div>
+      <% } else { %>
+        <div class="rr-score-card rr-band-<%= band.key %>">
+          <div class="rr-score-num"><%= selected.overall_score %></div>
+          <div class="rr-score-meta">
+            <div class="rr-band-label"><%= band.label %> · <span style="color:#64748b;font-size:0.85rem;">av 100</span></div>
+            <div class="rr-band-copy"><%= band.copy %></div>
+            <% if (selected.confidence) { %><div class="rr-band-copy" style="margin-top:0.3rem;">Jockes säkerhet: <%= selected.confidence %></div><% } %>
+            <% if (!selected.grounded) { %>
+              <div class="rr-caveat">⚠️ Delar av bedömningen kunde inte beläggas med citat ur samtalet och räknas därför inte till din poäng.</div>
+            <% } %>
+          </div>
+        </div>
+      <% } %>
+
+      <!-- Per-criterion -->
+      <div class="rr-section">
+        <h3>Kriterier</h3>
+        <% (selected.criteria || []).forEach(function(c){
+             var st = c.status || 'not_demonstrated';
+             var stLabel = st === 'met' ? '✓ Uppfyllt' : st === 'partially_met' ? '◐ Delvis' : '✗ Ej visat';
+             var speaker = c.evidence_speaker === 'seller' ? 'Du' : c.evidence_speaker === 'customer' ? 'Kund' : ''; %>
+          <div class="rr-crit">
+            <div class="rr-crit-head">
+              <span class="rr-crit-status rr-<%= st %>"><%= stLabel %></span>
+              <span class="rr-crit-title"><%= c.criterion %></span>
+            </div>
+            <% if (c.evidence_quote) { %>
+              <div class="rr-evidence"><% if (speaker) { %><span class="rr-evidence-speaker"><%= speaker %>: </span><% } %>”<%= c.evidence_quote %>”</div>
+            <% } %>
+            <% if (c.explanation) { %><div class="rr-crit-expl"><%= c.explanation %></div><% } %>
+          </div>
+        <% }); %>
+      </div>
+
+      <% if ((selected.positives || []).length) { %>
+        <div class="rr-section"><h3>✅ Det här gjorde du bra</h3>
+          <ul class="rr-list"><% selected.positives.forEach(function(p){ %><li><%= p %></li><% }); %></ul>
+        </div>
+      <% } %>
+
+      <% if ((selected.missed_opportunities || []).length) { %>
+        <div class="rr-section"><h3>🔍 Missade möjligheter</h3>
+          <ul class="rr-list"><% selected.missed_opportunities.forEach(function(m){ %><li><%= m %></li><% }); %></ul>
+        </div>
+      <% } %>
+
+      <% if ((selected.better_formulations || []).length) { %>
+        <div class="rr-section"><h3>💬 Bättre formuleringar</h3>
+          <ul class="rr-list">
+            <% selected.better_formulations.forEach(function(b){ %>
+              <li class="rr-better"><span class="rr-instead">Istället för:</span> <%= b.instead_of %><br><span class="rr-say">Säg:</span> <%= b.say %></li>
+            <% }); %>
+          </ul>
+        </div>
+      <% } %>
+
+      <% if (selected.priority_improvement) { %>
+        <div class="rr-priority"><strong>🎯 Prioriterad förbättring:</strong> <%= selected.priority_improvement %></div>
+      <% } %>
+      <% if (selected.next_drill) { %>
+        <div class="rr-next"><strong>🏋️ Nästa övning:</strong> <%= selected.next_drill %></div>
+      <% } %>
+      <% if (selected.limitations) { %>
+        <p class="rr-note" style="margin-top:1rem;">Begränsning: <%= selected.limitations %></p>
+      <% } %>
+
+      <div class="rr-actions">
+        <a class="rr-btn rr-btn-primary" href="/learn/<%= block.id %>/ova/<%= roleplay.id %>">🔁 Kör scenariot igen</a>
+        <a class="rr-btn rr-btn-ghost" href="/learn/<%= block.id %>/ova">Alla rollspel i blocket</a>
+      </div>
+
+      <!-- Progress across attempts -->
+      <% if (progress.attempts >= 1) { %>
+        <div class="rr-progress">
+          <h3 style="margin:0 0 0.75rem;color:#f1f5f9;font-size:1rem;">Din utveckling · <%= progress.attempts %> försök</h3>
+          <div class="rr-progress-stats">
+            <div class="rr-stat"><b><%= progress.best %></b><span>Bästa</span></div>
+            <div class="rr-stat"><b><%= progress.last %></b><span>Senaste</span></div>
+            <% if (progress.delta !== null) { %>
+              <div class="rr-stat">
+                <b class="rr-trend-<%= progress.trend %>"><%= progress.delta > 0 ? '+' : '' %><%= progress.delta %></b>
+                <span>Första → senaste</span>
+              </div>
+            <% } %>
+          </div>
+          <% history.forEach(function(h){ %>
+            <a class="rr-attempt <%= (selected && h.id === selected.id) ? 'is-selected' : '' %>" href="/learn/<%= block.id %>/ova/<%= roleplay.id %>/resultat?a=<%= h.id %>">
+              <span class="rr-attempt-date"><%= new Date(h.created_at + 'Z').toLocaleDateString('sv-SE', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' }) %></span>
+              <span class="rr-attempt-bar"><span class="rr-attempt-fill" style="width: <%= Math.max(2, Math.min(100, h.overall_score || 0)) %>%"></span></span>
+              <span class="rr-attempt-score"><%= (h.overall_score === null || h.overall_score === undefined) ? '—' : h.overall_score %></span>
+            </a>
+          <% }); %>
+          <p class="rr-note" style="margin:0.75rem 0 0;">Poängen är en grov vägledning per försök — titta på riktningen över tid, inte enskilda siffror.</p>
+        </div>
+      <% } %>
+
+    <% } %>
+
+  </main>
+
+  <script src="/heartbeat.js" defer></script>
+</body>
+</html>

@@ -103,6 +103,33 @@ async function initDatabase() {
     )
   `);
 
+  // Roleplay evaluations (Jocke Coach upgrade) — structured, transcript-grounded verdicts.
+  // Additive + inert unless COACH_MODE is enabled. One row per evaluated attempt.
+  db.run(`
+    CREATE TABLE IF NOT EXISTS roleplay_evaluations (
+      id                   INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id              INTEGER NOT NULL,
+      block_id             TEXT    NOT NULL,
+      roleplay_id          TEXT    NOT NULL,
+      overall_score        INTEGER,
+      session_status       TEXT    NOT NULL DEFAULT 'evaluated',
+      confidence           TEXT,
+      grounded             INTEGER NOT NULL DEFAULT 1,
+      criteria_json        TEXT,
+      positives_json       TEXT,
+      missed_json          TEXT,
+      better_json          TEXT,
+      priority_improvement TEXT,
+      next_drill           TEXT,
+      limitations          TEXT,
+      turn_count           INTEGER NOT NULL DEFAULT 0,
+      created_at           TEXT    NOT NULL DEFAULT (datetime('now')),
+      FOREIGN KEY (user_id) REFERENCES users(id)
+    )
+  `);
+  db.run(`CREATE INDEX IF NOT EXISTS idx_rp_eval_user_scenario
+          ON roleplay_evaluations (user_id, block_id, roleplay_id, created_at)`);
+
   // User missions (field missions with real-world action + reflection)
   db.run(`
     CREATE TABLE IF NOT EXISTS user_missions (
@@ -1205,6 +1232,79 @@ function getAllRoleplaysForUser(userId) {
   while (s.step()) rows.push(s.getAsObject());
   s.free();
   return rows;
+}
+
+// ── Roleplay evaluations (Jocke Coach upgrade) ───────────────────────────────
+// Persist a structured, grounded verdict. `evalObj` is the finalized verdict
+// (see coachEvaluation.finalizeEvaluation). All arrays are JSON-serialised.
+function saveRoleplayEvaluation(userId, blockId, roleplayId, evalObj) {
+  const v = evalObj || {};
+  db.run(
+    `INSERT INTO roleplay_evaluations
+       (user_id, block_id, roleplay_id, overall_score, session_status, confidence, grounded,
+        criteria_json, positives_json, missed_json, better_json,
+        priority_improvement, next_drill, limitations, turn_count)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      userId, blockId, roleplayId,
+      Number.isFinite(Number(v.overall_score)) ? Number(v.overall_score) : null,
+      v.session_status || 'evaluated',
+      v.confidence || null,
+      v.grounded ? 1 : 0,
+      JSON.stringify(v.criteria || []),
+      JSON.stringify(v.positives || []),
+      JSON.stringify(v.missed_opportunities || []),
+      JSON.stringify(v.better_formulations || []),
+      v.priority_improvement || null,
+      v.next_drill || null,
+      v.limitations || null,
+      Number.isFinite(Number(v.turn_count)) ? Number(v.turn_count) : 0,
+    ]
+  );
+  // Capture the new row id BEFORE saveDb() (db.export can reset last_insert_rowid).
+  const s = db.prepare('SELECT last_insert_rowid() AS id');
+  let id = null;
+  if (s.step()) id = s.getAsObject().id;
+  s.free();
+  saveDb();
+  return id;
+}
+
+function _hydrateEvaluationRow(row) {
+  if (!row) return null;
+  const parse = (t, fallback) => { try { return JSON.parse(t); } catch { return fallback; } };
+  return {
+    ...row,
+    grounded: !!row.grounded,
+    criteria: parse(row.criteria_json, []),
+    positives: parse(row.positives_json, []),
+    missed_opportunities: parse(row.missed_json, []),
+    better_formulations: parse(row.better_json, []),
+  };
+}
+
+// Attempt history for one scenario, newest first — user-scoped.
+function getRoleplayEvaluations(userId, blockId, roleplayId) {
+  const s = db.prepare(
+    `SELECT * FROM roleplay_evaluations
+     WHERE user_id = ? AND block_id = ? AND roleplay_id = ?
+     ORDER BY created_at DESC, id DESC`
+  );
+  s.bind([userId, blockId, roleplayId]);
+  const rows = [];
+  while (s.step()) rows.push(_hydrateEvaluationRow(s.getAsObject()));
+  s.free();
+  return rows;
+}
+
+// Single evaluation by id — returns null if it does not belong to userId (cross-user denial).
+function getRoleplayEvaluationById(userId, id) {
+  const s = db.prepare('SELECT * FROM roleplay_evaluations WHERE id = ? AND user_id = ?');
+  s.bind([Number(id), userId]);
+  let row = null;
+  if (s.step()) row = _hydrateEvaluationRow(s.getAsObject());
+  s.free();
+  return row;
 }
 
 function getAllReflectionsForUser(userId) {
@@ -3679,6 +3779,8 @@ module.exports = {
   // 4-step pedagogical tracking
   saveReflection, getReflectionsForBlock, countReflectionsForBlock,
   recordRoleplayCompletion, getRoleplaysForBlock,
+  // Jocke Coach upgrade — structured roleplay evaluations
+  saveRoleplayEvaluation, getRoleplayEvaluations, getRoleplayEvaluationById,
   startMission, updateMissionProgress, completeMission, getMissionForBlock,
   getJourneyStatus,
   // Recommendations engine

@@ -20,6 +20,7 @@ const {
   createResetToken, findValidResetToken, deleteResetToken, updateUserPassword,
   saveReflection, getReflectionsForBlock,
   recordRoleplayCompletion, getRoleplaysForBlock,
+  saveRoleplayEvaluation, getRoleplayEvaluations, getRoleplayEvaluationById,
   startMission, updateMissionProgress, completeMission, getMissionForBlock,
   getJourneyStatus, getUserLearningState,
   logUserAction, getUserActions, deleteUserAction, getActionsToday,
@@ -47,6 +48,7 @@ const {
 } = require('./database');
 const gamification = require('./gamification');
 const emails = require('./emails');
+const coach = require('./coachEvaluation'); // Jocke Coach upgrade — pure eval logic
 const proAnalysis = require('./proCallAnalysis');
 const { notifyAdmin } = require('./services/alerting');
 const { fetchWithTimeout, TIMEOUT } = require('./services/fetchTimeout');
@@ -235,6 +237,33 @@ app.locals.assetVersion   = Date.now().toString(36);
 // Boot timestamp för dynamisk sitemap lastmod — varje deploy = nytt datum.
 // Signal till Google: "innehållet kan ha ändrats sedan sist du crawlade".
 const BOOT_DATE_ISO = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+
+// ── Feature flag: Jocke Coach (structured roleplay evaluation) ────────────────
+// COACH_MODE styr vem som ser den schema-validerade, transkript-grundade rollspels-
+// utvärderingen. Default AV → befintlig fri-text-[KLAR]-feedback bevaras oförändrad.
+//   COACH_MODE=on|1|true|yes  → PÅ för alla premium-användare
+//   COACH_MODE=admin          → PÅ endast för admin-konton (intern test i prod)
+//   COACH_MODE_USER_IDS=1,5,9 → PÅ även för dessa specifika user-id (kompletterar ovan)
+//   (osatt/falsy)             → AV
+// Rollback = sätt env till falsy; nya tabeller/funktioner är additiva och inerta.
+const COACH_MODE       = /^(1|true|on|yes)$/i.test(String(process.env.COACH_MODE || ''));
+const COACH_MODE_ADMIN = /^admin$/i.test(String(process.env.COACH_MODE || ''));
+const COACH_USER_IDS   = new Set(
+  String(process.env.COACH_MODE_USER_IDS || '')
+    .split(',').map(s => parseInt(s.trim(), 10)).filter(Number.isFinite)
+);
+// Per-request gate: global on, OR admin-only mode + admin, OR explicit user allowlist.
+function coachEnabledFor(req) {
+  if (COACH_MODE) return true;
+  if (COACH_MODE_ADMIN && req.session && req.session.role === 'admin') return true;
+  if (req.session && req.session.userId && COACH_USER_IDS.has(req.session.userId)) return true;
+  return false;
+}
+app.locals.coachMode = COACH_MODE; // global default för vyer (roleplay-vyerna använder per-request-gaten)
+
+// Turn authentication for Jocke Coach: customer (assistant) roleplay turns are HMAC-signed
+// so the evaluator cannot be fed a forged transcript (see roleplayTurnAuth.js).
+const { signRoleplayTurn, authenticateTranscript } = require('./roleplayTurnAuth');
 
 // ── Early-bird pricing ────────────────────────────────────────────────────────
 // EARLY_BIRD_END_DATE i ISO-format ("2026-06-30"). När datumet passerats blir
@@ -2021,6 +2050,10 @@ app.get('/learn/:id/ova/:rpid', requireLogin, (req, res) => {
     block,
     roleplay: rp,
     csrfToken: generateCsrfToken(req),
+    coachMode: coachEnabledFor(req),
+    // Sign the opening customer line so it authenticates like any other customer turn.
+    openingSig: (coachEnabledFor(req) && rp.openingLine)
+      ? signRoleplayTurn(req.session.userId, block.id, rp.id, rp.openingLine) : null,
   });
 });
 
@@ -2116,6 +2149,111 @@ app.post('/learn/:id/ova/:rpid/klar', requireLogin, verifyCsrf, (req, res) => {
   const turnCount = parseInt(req.body.turnCount) || 0;
   recordRoleplayCompletion(req.session.userId, block.id, rp.id, turnCount);
   res.redirect('/learn/' + block.id + '/ova');
+});
+
+// ── Roleplay structured evaluation (Jocke Coach upgrade — COACH_MODE) ─────────
+// Grades a completed roleplay against the scenario's successCriteria, grounds every
+// cited quote in the transcript (fabrication rejection), recomputes the overall score
+// server-side, and persists a per-user attempt. Flag-gated + premium-gated.
+app.post('/learn/:id/ova/:rpid/utvardera', requireLogin, chatLimiter, verifyCsrf, async (req, res) => {
+  if (!coachEnabledFor(req)) return res.status(404).json({ error: 'Funktionen är inte aktiverad.' });
+  if (!isPremiumOrHigher(req.session.role))
+    return res.status(403).json({ error: 'Rollspel är tillgängligt för Premium-användare.' });
+
+  const block = salesBlocks.find(b => b.id === req.params.id);
+  if (!block) return res.status(400).json({ error: 'Ogiltigt block.' });
+  const rp = (block.roleplays || []).find(r => r.id === req.params.rpid);
+  if (!rp) return res.status(400).json({ error: 'Ogiltigt rollspel.' });
+  if (!Array.isArray(rp.successCriteria) || rp.successCriteria.length === 0)
+    return res.status(422).json({ error: 'Scenariot saknar kriterier och kan inte utvärderas.' });
+
+  // Authenticate customer (assistant) turns via HMAC so a forged transcript cannot be
+  // graded. Unsigned/forged customer turns are dropped; seller (user) turns pass through.
+  const authedMessages = authenticateTranscript(req.session.userId, block.id, rp.id, req.body.messages);
+  const sanitized = coach.sanitizeTranscript(authedMessages);
+  const pre = coach.precheckSession(sanitized);
+  if (!pre.ok)
+    return res.json({ status: pre.session_status, insufficient: true, reason: pre.reason });
+
+  if (!process.env.GROQ_API_KEY)
+    return res.status(503).json({ error: 'Utvärderaren är inte tillgänglig just nu. Försök senare.' });
+
+  const evalMessages = coach.buildEvaluationMessages(rp, block, sanitized);
+  const turnCount = coach.transcriptStats(sanitized).sellerTurns;
+
+  // One call + one retry on invalid model output (EVALUATION-FAILURE-MODES F7–F10, F12).
+  let final = null;
+  for (let attempt = 0; attempt < 2 && (!final || !final.ok); attempt++) {
+    let raw;
+    try {
+      const completion = await openai.chat.completions.create({
+        model: 'llama-3.3-70b-versatile',
+        messages: attempt === 0 ? evalMessages : [
+          ...evalMessages,
+          { role: 'user', content: 'Ditt förra svar var ogiltigt. Returnera ENBART giltig JSON enligt schemat, inget annat.' },
+        ],
+        temperature: 0.1,
+        response_format: { type: 'json_object' },
+        max_tokens: 1400,
+      });
+      raw = completion.choices?.[0]?.message?.content || '';
+    } catch (err) {
+      console.error('Coach eval provider error:', err.message);
+      return res.status(503).json({ error: 'Kunde inte nå utvärderaren just nu. Försök igen.' });
+    }
+    final = coach.finalizeEvaluation(raw, rp, sanitized);
+  }
+
+  if (!final || !final.ok) {
+    // Invalid output twice → surfaced as a soft error, NOT persisted as a real score.
+    return res.json({ status: 'error', error: 'Utvärderingen misslyckades — försök igen om en stund.' });
+  }
+
+  // Only a genuinely 'evaluated' session carries a numeric score; insufficient/off_topic
+  // verdicts store null so they never inflate progress/best (they are still recorded).
+  const isEvaluated = final.verdict.session_status === 'evaluated';
+  const verdict = {
+    ...final.verdict,
+    overall_score: isEvaluated ? final.verdict.overall_score : null,
+    turn_count: turnCount,
+  };
+  const id = saveRoleplayEvaluation(req.session.userId, block.id, rp.id, verdict);
+  // NOTE: we deliberately do NOT write a user_roleplays completion row here — that would
+  // let repeated /utvardera calls farm XP/journey completion. Marking a roleplay "klart"
+  // remains the explicit, existing /klar action. The evaluation row is its own record.
+  logFunnelEvent(req.session.userId, 'roleplay_evaluated', { blockId: block.id, roleplayId: rp.id, score: verdict.overall_score });
+
+  res.json({ status: 'ok', id, redirect: `/learn/${block.id}/ova/${rp.id}/resultat?a=${id}` });
+});
+
+// ── Roleplay result + attempt history + progress (COACH_MODE) ────────────────
+app.get('/learn/:id/ova/:rpid/resultat', requireLogin, (req, res) => {
+  if (!coachEnabledFor(req)) return res.redirect(`/learn/${req.params.id}/ova/${req.params.rpid}`);
+  const block = resolveBlock(req, res, { requiresPremium: true });
+  if (!block) return;
+  const rp = (block.roleplays || []).find(r => r.id === req.params.rpid);
+  if (!rp) return res.redirect('/learn/' + block.id + '/ova');
+
+  const history = getRoleplayEvaluations(req.session.userId, block.id, rp.id);
+  // Selected attempt via ?a=<id>, ownership-enforced (returns null for another user's row).
+  let selected = null;
+  if (req.query.a) selected = getRoleplayEvaluationById(req.session.userId, req.query.a);
+  // Scope the selected attempt to THIS scenario — an id for the user's own OTHER roleplay
+  // must not render under this scenario's title/criteria.
+  if (selected && (selected.block_id !== block.id || selected.roleplay_id !== rp.id)) selected = null;
+  if (!selected) selected = history[0] || null;
+  const progress = coach.computeProgress(history);
+
+  res.render('roleplay-result', {
+    username: req.session.username,
+    role:     req.session.role,
+    block,
+    roleplay: rp,
+    selected,
+    history,
+    progress,
+    scoreBand: coach.scoreBand,
+  });
 });
 
 // ── Quiz result — save score to DB ───────────────────────────────────────────
@@ -4868,7 +5006,9 @@ ${ROLEPLAY_COACH_INSTRUCTION}
       max_tokens: jockeMaxTokens(req.session.role),
     });
     const reply = completion.choices?.[0]?.message?.content || 'Inget svar mottogs.';
-    res.json({ reply });
+    // Sign the customer turn so it can later be authenticated by the evaluator (COACH_MODE).
+    const sig = signRoleplayTurn(req.session.userId, blockId, roleplayId, reply);
+    res.json({ reply, sig });
   } catch (err) {
     console.error('Groq roleplay error:', err.message);
     res.status(500).json({ error: 'Kunde inte nå assistenten just nu.' });

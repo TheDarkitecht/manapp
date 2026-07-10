@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>🎭 <%= roleplay.title %> — Joakim Jaksen</title>
   <meta name="robots" content="noindex" />
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎯</text></svg>" />
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
   <link rel="stylesheet" href="/style.css?v=<%= assetVersion %>" />
   <link rel="stylesheet" href="/journey.css?v=<%= assetVersion %>" />
 </head>
@@ -102,6 +102,18 @@
       <span class="rp-done-hint" id="rpDoneHint">Vi rekommenderar 5+ turns och feedback-runda innan du markerar klart.</span>
     </form>
 
+    <% if (typeof coachMode !== 'undefined' && coachMode) { %>
+    <!-- Jocke Coach (COACH_MODE): strukturerad, kriteriegrundad utvärdering -->
+    <div class="rp-evaluate" id="rpEvaluate" style="display:none;">
+      <div class="rp-evaluate-head">
+        <strong>🧭 Få en strukturerad bedömning</strong>
+        <p>Jocke betygsätter mot scenariots kriterier — med citat ur ditt samtal, vad du gjorde bra, vad som missades, och en konkret nästa övning. Sparas så du kan följa din utveckling.</p>
+      </div>
+      <button type="button" class="rp-btn-evaluate" id="rpEvaluateBtn" onclick="evaluateRoleplay()">📊 Utvärdera rollspelet</button>
+      <span class="rp-evaluate-msg" id="rpEvaluateMsg" role="status" aria-live="polite"></span>
+    </div>
+    <% } %>
+
   </main>
 
   <script>
@@ -117,7 +129,7 @@
 
       const messages = [];
       <% if (roleplay.openingLine) { %>
-        messages.push({ role: 'assistant', content: <%- JSON.stringify(roleplay.openingLine) %> });
+        messages.push({ role: 'assistant', content: <%- JSON.stringify(roleplay.openingLine) %><% if (typeof openingSig !== 'undefined' && openingSig) { %>, sig: <%- JSON.stringify(openingSig) %><% } %> });
       <% } %>
       let turns = 0;
 
@@ -227,6 +239,9 @@
         }
         // Visa KLAR-prompt efter 8 turns
         if (readyPrompt) readyPrompt.style.display = turns >= 8 ? 'flex' : 'none';
+        // COACH_MODE: reveal utvärdera-boxen när sessionen är lång nog för en rättvis bedömning
+        const evaluateBox = document.getElementById('rpEvaluate');
+        if (evaluateBox && turns >= 2) evaluateBox.style.display = '';
         // Hint på done-knappen
         if (doneHint) {
           if (turns >= 5) doneHint.textContent = 'Du har en ordentlig runda. Kör gärna feedback först.';
@@ -261,7 +276,8 @@
           }
           const data = await res.json();
           const reply = data.reply || 'Inget svar.';
-          messages.push({ role: 'assistant', content: reply });
+          // Store the server signature so this customer turn can be authenticated at evaluation.
+          messages.push({ role: 'assistant', content: reply, sig: data.sig });
           render('assistant', reply, { isFeedback });
         } catch (e) {
           removeTyping();
@@ -304,6 +320,40 @@
       window.sendMessage = function(text) {
         try { localStorage.removeItem(DRAFT_KEY); } catch(_){}
         return origSendMessage(text);
+      };
+
+      // ── COACH_MODE: strukturerad utvärdering ──────────────────────────────
+      // Postar transkriptet till /utvardera; vid framgång → resultatsidan.
+      window.evaluateRoleplay = async function() {
+        const btn = document.getElementById('rpEvaluateBtn');
+        const msg = document.getElementById('rpEvaluateMsg');
+        if (!btn) return;
+        const prevLabel = btn.textContent;
+        btn.disabled = true;
+        btn.textContent = 'Jocke utvärderar…';
+        if (msg) msg.textContent = '';
+        try {
+          const res = await fetch('/learn/' + encodeURIComponent(blockId) + '/ova/' + encodeURIComponent(rpId) + '/utvardera', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrf },
+            body: JSON.stringify({ messages })
+          });
+          const data = await res.json().catch(() => ({}));
+          if (data.status === 'ok' && data.redirect) {
+            try { localStorage.removeItem(DRAFT_KEY); } catch(_){}
+            window.location.href = data.redirect;
+            return;
+          }
+          if (msg) {
+            msg.textContent = data.insufficient
+              ? (data.reason || 'För kort rollspel för en rättvis bedömning — kör ett par repliker till.')
+              : (data.error || 'Utvärderingen misslyckades — försök igen om en stund.');
+          }
+        } catch (e) {
+          if (msg) msg.textContent = 'Kunde inte nå servern — försök igen.';
+        }
+        btn.disabled = false;
+        btn.textContent = prevLabel;
       };
     })();
   </script>

@@ -18,12 +18,14 @@ hashes in parentheses.
   `logo-mark.svg` (`36f6ac6`).
 - **Temp:** preview video-thumbnail in block 11 (avslut) video slot (`c29797d`, `9ec2ce6`).
 
-## Staged, not deployed
-- **COACH_MODE — Jocke roleplay evaluation.** Schema-validated, transcript-grounded evaluation of
-  roleplays against each scenario's `successCriteria`, with per-user persistence, progress, and
-  HMAC-signed transcript anti-forgery. Behind the `COACH_MODE` flag (default off); the legacy
-  free-text `[KLAR]` path is preserved. Has a `node:test` suite (`npm test`). See `FINAL-REPORT.md`.
-  **Not yet committed/deployed** — awaiting go-ahead.
+## COACH_MODE — Jocke roleplay evaluation (deployed behind an admin gate)
+- Schema-validated, transcript-grounded evaluation of roleplays against each scenario's
+  `successCriteria`, with per-user persistence, progress across attempts, and HMAC-signed
+  transcript anti-forgery. The legacy free-text `[KLAR]` path is preserved.
+- **Gating:** `COACH_MODE=admin` → visible only to admin accounts (internal prod testing);
+  `COACH_MODE=on` → all premium users; `COACH_MODE_USER_IDS=1,5` → specific users; unset → off.
+- Shipped code behind the flag (off by default). `node:test` suite (`npm test`, 29 tests).
+  Full write-up: `FINAL-REPORT.md` + `jocke-coach/` (local mission artifacts, not committed).
 
 ## 2026-06 — SEO + growth
 - Dynamic `/sitemap.xml` route with per-deploy `lastmod` (`5098531`).
