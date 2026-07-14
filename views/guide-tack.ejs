@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Tack — din guide är på väg — Joakim Jaksen</title>
+  <meta name="robots" content="noindex" />
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="/style.css?v=<%= assetVersion %>" />
+  <style>
+    body { background:#0B1020; color:#EEF1F8; margin:0; font-family:system-ui,-apple-system,"Segoe UI",sans-serif;
+      background-image:radial-gradient(120% 70% at 50% -10%, rgba(99,102,241,.18), transparent 60%); }
+    .t-wrap { max-width:520px; margin:0 auto; padding:64px 24px; text-align:center; }
+    .t-logo { height:46px; margin:0 auto 32px; }
+    .t-check { width:64px; height:64px; border-radius:50%; background:rgba(52,211,153,.15); color:#34D399;
+      font-size:32px; display:flex; align-items:center; justify-content:center; margin:0 auto 20px; }
+    h1 { font-size:26px; margin:0 0 12px; font-weight:800; }
+    p { color:#9AA3BC; line-height:1.6; font-size:16px; margin:0 auto 18px; max-width:42ch; }
+    .t-btn { display:inline-block; text-decoration:none; padding:14px 24px; border-radius:12px; font-weight:800; font-size:16px; color:#fff;
+      background:linear-gradient(135deg,#6366F1,#8B5CF6); margin:8px 0; }
+    .t-next { margin-top:36px; padding:22px; background:#141A2C; border:1px solid rgba(255,255,255,.08); border-radius:16px; }
+    .t-next h2 { font-size:17px; margin:0 0 8px; color:#EEF1F8; }
+    .t-next a { color:#A5B4FC; font-weight:700; }
+    .t-back { display:block; margin-top:28px; color:#64748B; font-size:14px; text-decoration:none; }
+  </style>
+</head>
+<body>
+  <main class="t-wrap">
+    <img class="t-logo" src="/logo-signature-white.png" alt="Joakim Jaksen" />
+    <div class="t-check">✓</div>
+    <h1>Tack — kolla mejlen!</h1>
+    <p>Din guide är på väg till din inkorg. Hittar du den inte om ett par minuter, kolla skräpposten. Du kan också ladda ner den direkt här:</p>
+    <a class="t-btn" href="<%= pdf %>">Ladda ner guiden (PDF)</a>
+
+    <div class="t-next">
+      <h2>Vill du bolla dina svar med mig?</h2>
+      <p style="margin-bottom:14px;">Sist i guiden finns en övning på de vanligaste invändningarna. Skapa ett konto så bjuder jag på en fri välkomstsession — och Block 1 &amp; 2 är gratis.</p>
+      <a href="/register">Skapa gratiskonto på joakimjaksen.se →</a>
+    </div>
+
+    <a class="t-back" href="/">← Till startsidan</a>
+  </main>
+</body>
+</html>

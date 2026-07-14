@@ -34,6 +34,7 @@ const {
   getContinueTarget, getBlockTimeAnalytics,
   logPageView, updateLastPageViewDuration, cleanupOldPageViews, flushAnalytics,
   logFunnelEvent, getFunnelStats, getRecentFunnelEvents, backfillRegisterEvents,
+  saveLead, countLeads,
   upsertBlockAudio, getBlockAudio, listBlockAudios, deleteBlockAudio,
   sessionGet, sessionSet, sessionDestroy, sessionCleanupExpired,
   isStripeEventProcessed, markStripeEventProcessed, cleanupOldStripeEvents,
@@ -795,6 +796,15 @@ const registerLimiter = rateLimit({
       turnstileSiteKey: TURNSTILE_SITE_KEY,
     });
   },
+});
+
+// ── Rate limiter — lead-magnet email capture (/guide) ────────────────────────
+const guideLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  handler: (req, res) => res.redirect('/guide?fel=rate'),
 });
 
 // ── Rate limiter — max 30 chat messages per 10 min per user ──────────────────
@@ -4839,6 +4849,48 @@ app.get(['/priser', '/pricing'], (req, res) => {
     totalBlocks: salesBlocks.length,
     premiumBlocks: salesBlocks.length - FREE_BLOCK_IDS.length,
   });
+});
+
+// ── Lead magnet: gratis invändningsguide (email capture → PDF) ────────────────
+// Publikt. Kommentar-keyword på TikTok/IG → "länk i bio" → denna sida.
+const GUIDE_PDF = '/pdf/joakim-jaksen-invandningsguide.pdf';
+
+app.get('/guide', (req, res) => {
+  res.render('guide', { csrfToken: generateCsrfToken(req), fel: req.query.fel || null });
+});
+
+app.post('/guide', guideLimiter, verifyCsrf, (req, res) => {
+  const email   = String(req.body.email || '').trim().toLowerCase();
+  const consent = !!req.body.consent;
+  const honey   = String(req.body.company || '').trim(); // honeypot — bots fyller i dolda fält
+  if (honey) return res.redirect('/guide/tack');          // låtsas lyckas, spara inget
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return res.redirect('/guide?fel=email');
+  if (!consent) return res.redirect('/guide?fel=consent');
+
+  try { saveLead(email, String(req.body.source || 'guide').slice(0, 60), consent, req.ip); }
+  catch (e) { console.error('saveLead error:', e.message); }
+
+  const base = process.env.APP_URL || `${req.protocol}://${req.get('host')}`;
+  const link = base + GUIDE_PDF;
+  sendEmailReliable({
+    to: email,
+    subject: 'Din gratis invändningsguide — Joakim Jaksen',
+    kind: 'lead-guide',
+    html: `<div style="font-family:system-ui,-apple-system,'Segoe UI',sans-serif;max-width:520px;margin:0 auto;padding:1.5rem;color:#1e293b;">
+      <h2 style="color:#4B4FD6;margin:0 0 0.75rem;">Här är din guide 🎯</h2>
+      <p style="line-height:1.6;">Tack! Här är <strong>Invändningshandboken — Grunderna</strong>. Konsten att vända ett "nej" till ett samtal, oavsett vad du säljer.</p>
+      <p style="margin:1.5rem 0;"><a href="${link}" style="background:#4B4FD6;color:#fff;text-decoration:none;padding:0.8rem 1.5rem;border-radius:10px;font-weight:700;display:inline-block;">Ladda ner guiden (PDF)</a></p>
+      <p style="line-height:1.6;color:#475569;">Sist i guiden finns en övning på de vanligaste invändningarna. Vill du bolla dina svar med mig? <a href="${base}/register" style="color:#4B4FD6;">Skapa ett konto på joakimjaksen.se</a> — så bjuder jag på en fri välkomstsession. Block 1 &amp; 2 är dessutom gratis.</p>
+      <p style="color:#94a3b8;font-size:0.85rem;margin-top:1.5rem;">Du får det här mejlet för att du hämtade guiden på joakimjaksen.se. Vill du inte ha fler mejl — svara bara "avreg" så tar jag bort dig.</p>
+      <p style="margin-top:1rem;">— Joakim Jaksen</p>
+    </div>`,
+  }).catch(err => console.error('guide email error:', err.message));
+
+  res.redirect('/guide/tack');
+});
+
+app.get('/guide/tack', (req, res) => {
+  res.render('guide-tack', { pdf: GUIDE_PDF });
 });
 
 // ── Chat ──────────────────────────────────────────────────────────────────────

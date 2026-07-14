@@ -413,6 +413,19 @@ async function initDatabase() {
     )
   `);
 
+  // Leads (lead-magnet email capture — /guide). Separate from user accounts.
+  db.run(`
+    CREATE TABLE IF NOT EXISTS leads (
+      id         INTEGER PRIMARY KEY AUTOINCREMENT,
+      email      TEXT    NOT NULL UNIQUE,
+      source     TEXT,
+      consent    INTEGER NOT NULL DEFAULT 1,
+      ip         TEXT,
+      created_at TEXT    NOT NULL DEFAULT (datetime('now')),
+      last_sent_at TEXT
+    )
+  `);
+
   // Migration: add new columns if they don't exist yet.
   // SQLite doesn't support "ADD COLUMN IF NOT EXISTS" so we catch errors.
   const migrations = [
@@ -1305,6 +1318,21 @@ function getRoleplayEvaluationById(userId, id) {
   if (s.step()) row = _hydrateEvaluationRow(s.getAsObject());
   s.free();
   return row;
+}
+
+// ── Leads (lead-magnet email capture, /guide) ────────────────────────────────
+function saveLead(email, source, consent, ip) {
+  db.run(
+    `INSERT INTO leads (email, source, consent, ip, last_sent_at)
+     VALUES (?, ?, ?, ?, datetime('now'))
+     ON CONFLICT(email) DO UPDATE SET source = excluded.source, consent = excluded.consent, last_sent_at = datetime('now')`,
+    [String(email || '').trim().toLowerCase(), source || null, consent ? 1 : 0, ip || null]
+  );
+  saveDb();
+}
+function countLeads() {
+  const s = db.prepare('SELECT COUNT(*) AS n FROM leads');
+  let n = 0; if (s.step()) n = s.getAsObject().n; s.free(); return n;
 }
 
 function getAllReflectionsForUser(userId) {
@@ -3808,6 +3836,8 @@ module.exports = {
   logPageView, updateLastPageViewDuration, cleanupOldPageViews, flushAnalytics,
   // Funnel events (aktivering/konvertering)
   logFunnelEvent, getFunnelStats, getRecentFunnelEvents, backfillRegisterEvents,
+  // Lead-magnet email capture (/guide)
+  saveLead, countLeads,
   // Block audio (TTS/inspelat per block)
   upsertBlockAudio, getBlockAudio, listBlockAudios, deleteBlockAudio,
   // Session store
