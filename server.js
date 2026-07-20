@@ -4853,7 +4853,9 @@ app.get(['/priser', '/pricing'], (req, res) => {
 
 // ── Lead magnet: gratis invändningsguide (email capture → PDF) ────────────────
 // Publikt. Kommentar-keyword på TikTok/IG → "länk i bio" → denna sida.
-const GUIDE_PDF = '/pdf/joakim-jaksen-invandningsguide.pdf';
+// Version-suffix busts Cloudflare's 30-day edge cache when the PDF is updated.
+// Bump the ?v= date whenever public/pdf/joakim-jaksen-invandningsguide.pdf changes.
+const GUIDE_PDF = '/pdf/joakim-jaksen-invandningsguide.pdf?v=20260720';
 
 app.get('/guide', (req, res) => {
   res.render('guide', { csrfToken: generateCsrfToken(req), fel: req.query.fel || null });
