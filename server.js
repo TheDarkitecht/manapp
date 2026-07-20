@@ -34,7 +34,7 @@ const {
   getContinueTarget, getBlockTimeAnalytics,
   logPageView, updateLastPageViewDuration, cleanupOldPageViews, flushAnalytics,
   logFunnelEvent, getFunnelStats, getRecentFunnelEvents, backfillRegisterEvents,
-  saveLead, countLeads,
+  saveLead, countLeads, getLeads,
   upsertBlockAudio, getBlockAudio, listBlockAudios, deleteBlockAudio,
   sessionGet, sessionSet, sessionDestroy, sessionCleanupExpired,
   isStripeEventProcessed, markStripeEventProcessed, cleanupOldStripeEvents,
@@ -3501,6 +3501,53 @@ app.get('/admin', requireLogin, requireAdmin, (req, res) => {
   });
 });
 
+// ── Admin: leads (lead-magnet-nedladdningar från /guide) ───────────────────────
+app.get('/admin/leads', requireLogin, requireAdmin, (req, res) => {
+  const leads = getLeads(2000);
+  const esc = (s) => String(s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const bySource = leads.reduce((acc, l) => { const k = l.source || 'okänd'; acc[k] = (acc[k] || 0) + 1; return acc; }, {});
+  const sourceChips = Object.entries(bySource).sort((a, b) => b[1] - a[1])
+    .map(([k, n]) => `<span style="padding:0.15rem 0.5rem;background:rgba(99,102,241,0.15);color:#a5b4fc;border-radius:5px;font-size:0.72rem;margin-right:0.4rem;">${esc(k)}: ${n}</span>`).join('');
+  const rows = leads.map(l => `
+    <tr>
+      <td style="font-size:0.72rem;color:#64748b;">#${l.id}</td>
+      <td style="font-size:0.85rem;color:#f1f5f9;">${esc(l.email)}</td>
+      <td><span style="font-size:0.72rem;color:#a5b4fc;">${esc(l.source || '')}</span></td>
+      <td style="font-size:0.72rem;color:${l.consent ? '#34d399' : '#f87171'};">${l.consent ? 'ja' : 'nej'}</td>
+      <td style="font-size:0.72rem;color:#64748b;">${esc(l.created_at)}</td>
+    </tr>`).join('');
+  const allEmails = leads.map(l => l.email).join(', ');
+  res.send(`
+    <!DOCTYPE html><html lang="sv"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Leads — nedladdningar</title>
+    <style>body{margin:0;padding:1.5rem;font-family:system-ui;background:#0f172a;color:#e2e8f0;}
+    h1{margin:0 0 0.5rem;font-size:1.4rem;}
+    .nav a{color:#a5b4fc;text-decoration:none;margin-right:1rem;}
+    .stats{display:flex;gap:1rem;flex-wrap:wrap;margin:1rem 0 1rem;}
+    .stat{padding:0.85rem 1.25rem;background:#1e293b;border:1px solid rgba(255,255,255,0.07);border-radius:10px;}
+    .stat strong{display:block;font-size:1.6rem;color:#f1f5f9;}
+    .stat span{font-size:0.78rem;color:#94a3b8;}
+    table{width:100%;border-collapse:collapse;background:#1e293b;border-radius:10px;overflow:hidden;border:1px solid rgba(255,255,255,0.07);}
+    th{padding:0.6rem 0.8rem;text-align:left;background:rgba(255,255,255,0.04);color:#94a3b8;font-size:0.72rem;text-transform:uppercase;letter-spacing:0.05em;font-weight:600;}
+    td{padding:0.5rem 0.8rem;border-bottom:1px solid rgba(255,255,255,0.04);vertical-align:top;}
+    tr:last-child td{border-bottom:none;}
+    textarea{width:100%;box-sizing:border-box;margin-top:1.5rem;background:#1e293b;color:#cbd5e1;border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:0.7rem;font-size:0.78rem;min-height:70px;}
+    </style></head><body>
+    <div class="nav"><a href="/admin">← Admin</a></div>
+    <h1>📥 Leads — nedladdningar av guiden</h1>
+    <p style="color:#94a3b8;font-size:0.88rem;margin:0;">Alla som fyllt i mejl på /guide. Nyast först. Du får även ett mejl varje gång någon laddar ner.</p>
+    <div class="stats">
+      <div class="stat"><strong>${leads.length}</strong><span>Totalt antal leads</span></div>
+    </div>
+    <div style="margin:0 0 1rem;">${sourceChips || '<span style="color:#64748b;font-size:0.8rem;">Inga leads än.</span>'}</div>
+    <table>
+      <thead><tr><th>ID</th><th>E-post</th><th>Källa</th><th>Consent</th><th>Nedladdad</th></tr></thead>
+      <tbody>${rows || '<tr><td colspan="5" style="text-align:center;padding:2rem;color:#64748b;">Inga nedladdningar än.</td></tr>'}</tbody>
+    </table>
+    ${leads.length ? `<label style="font-size:0.78rem;color:#94a3b8;display:block;margin-top:1.2rem;">Alla mejl (kopiera för utskick):</label><textarea readonly onclick="this.select()">${esc(allEmails)}</textarea>` : ''}
+    </body></html>
+  `);
+});
+
 // Cache för admin-analytics: dessa queries är dyra (~12 separata SQL-anrop
 // per render). 60-sekunders TTL. Räcker långt eftersom data uppdateras långsamt
 // och flera admins som refreshar samtidigt får samma cached snapshot.
@@ -4869,10 +4916,21 @@ app.post('/guide', guideLimiter, verifyCsrf, (req, res) => {
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return res.redirect('/guide?fel=email');
   if (!consent) return res.redirect('/guide?fel=consent');
 
-  try { saveLead(email, String(req.body.source || 'guide').slice(0, 60), consent, req.ip); }
+  const source = String(req.body.source || 'guide').slice(0, 60);
+  const base = process.env.APP_URL || `${req.protocol}://${req.get('host')}`;
+  try { saveLead(email, source, consent, req.ip); }
   catch (e) { console.error('saveLead error:', e.message); }
 
-  const base = process.env.APP_URL || `${req.protocol}://${req.get('host')}`;
+  // Notify owner (Joakim) on each download — samma inbox som signup/köp-notiser.
+  const escLead = s => String(s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  notifyOwner('📥 Ny nedladdning – invändningsguiden',
+    `<div style="font-family:system-ui,'Segoe UI',sans-serif;color:#1e293b;">
+       <p style="font-size:1rem;"><strong>${escLead(email)}</strong> laddade just ner invändningsguiden.</p>
+       <p style="color:#64748b;font-size:0.85rem;">Källa: ${escLead(source)}</p>
+       <p style="margin-top:1rem;"><a href="${base}/admin/leads" style="color:#4B4FD6;">Se alla nedladdningar →</a></p>
+     </div>`
+  ).catch(err => console.error('lead notify error:', err.message));
+
   const link = base + GUIDE_PDF;
   sendEmailReliable({
     to: email,

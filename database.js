@@ -1334,6 +1334,15 @@ function countLeads() {
   const s = db.prepare('SELECT COUNT(*) AS n FROM leads');
   let n = 0; if (s.step()) n = s.getAsObject().n; s.free(); return n;
 }
+// All leads, newest first. Used by the /admin/leads view.
+function getLeads(limit = 1000) {
+  const s = db.prepare('SELECT id, email, source, consent, ip, created_at, last_sent_at FROM leads ORDER BY datetime(created_at) DESC, id DESC LIMIT ?');
+  s.bind([limit]);
+  const rows = [];
+  while (s.step()) rows.push(s.getAsObject());
+  s.free();
+  return rows;
+}
 
 function getAllReflectionsForUser(userId) {
   const s = db.prepare('SELECT * FROM user_reflections WHERE user_id = ? ORDER BY created_at DESC');
@@ -3837,7 +3846,7 @@ module.exports = {
   // Funnel events (aktivering/konvertering)
   logFunnelEvent, getFunnelStats, getRecentFunnelEvents, backfillRegisterEvents,
   // Lead-magnet email capture (/guide)
-  saveLead, countLeads,
+  saveLead, countLeads, getLeads,
   // Block audio (TTS/inspelat per block)
   upsertBlockAudio, getBlockAudio, listBlockAudios, deleteBlockAudio,
   // Session store
