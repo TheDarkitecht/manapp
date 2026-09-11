@@ -633,8 +633,8 @@ app.use(compression({
 // Cache 1h på CDN för att avlasta servern utan att förlora freshness.
 app.get('/sitemap.xml', (req, res) => {
   const urls = [
-    { loc: 'https://joakimjaksen.se/',                  changefreq: 'weekly',  priority: '1.0', video: true },
-    { loc: 'https://joakimjaksen.se/foretag',           changefreq: 'monthly', priority: '0.9' },
+    { loc: 'https://joakimjaksen.se/',                  changefreq: 'weekly',  priority: '1.0', video: true, images: ['https://joakimjaksen.se/joakim-jaksen-saljcoach.jpg'] },
+    { loc: 'https://joakimjaksen.se/foretag',           changefreq: 'monthly', priority: '0.9', images: ['https://joakimjaksen.se/joakim-jaksen-foretag.jpg'] },
     { loc: 'https://joakimjaksen.se/priser',            changefreq: 'monthly', priority: '0.9' },
     { loc: 'https://joakimjaksen.se/register',          changefreq: 'monthly', priority: '0.8' },
     { loc: 'https://joakimjaksen.se/login',             changefreq: 'monthly', priority: '0.5' },
@@ -653,15 +653,20 @@ app.get('/sitemap.xml', (req, res) => {
       <video:requires_subscription>no</video:requires_subscription>
       <video:live>no</video:live>
     </video:video>`;
+  const imgBlock = (imgs) => (imgs || []).map(loc => `
+    <image:image>
+      <image:loc>${loc}</image:loc>
+    </image:image>`).join('');
   const body = urls.map(u => `
   <url>
     <loc>${u.loc}</loc>
     <lastmod>${BOOT_DATE_ISO}</lastmod>
     <changefreq>${u.changefreq}</changefreq>
-    <priority>${u.priority}</priority>${u.video ? videoBlock : ''}
+    <priority>${u.priority}</priority>${u.video ? videoBlock : ''}${imgBlock(u.images)}
   </url>`).join('');
   const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:image="http://www.google.com/schemas/sitemap-image/1.1"
         xmlns:video="http://www.google.com/schemas/sitemap-video/1.1">${body}
 </urlset>`;
   res.set('Content-Type', 'application/xml; charset=utf-8');
