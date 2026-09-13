@@ -633,8 +633,8 @@ app.use(compression({
 // Cache 1h på CDN för att avlasta servern utan att förlora freshness.
 app.get('/sitemap.xml', (req, res) => {
   const urls = [
-    { loc: 'https://joakimjaksen.se/',                  changefreq: 'weekly',  priority: '1.0', video: true, images: ['https://joakimjaksen.se/joakim-jaksen-saljcoach.jpg', 'https://joakimjaksen.se/joakim-jaksen-saljexpert.jpg'] },
-    { loc: 'https://joakimjaksen.se/foretag',           changefreq: 'monthly', priority: '0.9', images: ['https://joakimjaksen.se/joakim-jaksen-foretag.jpg', 'https://joakimjaksen.se/joakim-jaksen-saljutbildning.jpg'] },
+    { loc: 'https://joakimjaksen.se/',                  changefreq: 'weekly',  priority: '1.0', video: true, images: ['https://joakimjaksen.se/joakim-jaksen-saljcoach.jpg'] },
+    { loc: 'https://joakimjaksen.se/foretag',           changefreq: 'monthly', priority: '0.9', images: ['https://joakimjaksen.se/joakim-jaksen-foretag.jpg', 'https://joakimjaksen.se/joakim-jaksen-foretagsutbildning.jpg'] },
     { loc: 'https://joakimjaksen.se/priser',            changefreq: 'monthly', priority: '0.9' },
     { loc: 'https://joakimjaksen.se/register',          changefreq: 'monthly', priority: '0.8' },
     { loc: 'https://joakimjaksen.se/login',             changefreq: 'monthly', priority: '0.5' },
