@@ -646,7 +646,7 @@ app.get('/sitemap.xml', (req, res) => {
       <video:thumbnail_loc>https://joakimjaksen.se/videos/hero-poster.jpg</video:thumbnail_loc>
       <video:title>Joakim Jaksen — introduktion till säljakademin</video:title>
       <video:description>Joakim Jaksen presenterar säljakademin: 22+ års säljerfarenhet, bolag som omsatt 200+ MSEK och 1000+ tränade säljare. Online säljutbildning som täcker hela säljprocessen.</video:description>
-      <video:content_loc>https://joakimjaksen.se/videos/hero.mp4</video:content_loc>
+      <video:content_loc>https://joakimjaksen.se/videos/joakim-jaksen-intro.mp4</video:content_loc>
       <video:duration>105</video:duration>
       <video:publication_date>2026-06-01T00:00:00+02:00</video:publication_date>
       <video:family_friendly>yes</video:family_friendly>
