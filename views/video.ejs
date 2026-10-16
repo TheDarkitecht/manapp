@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Filmen — Joakim Jaksen presenterar säljakademin</title>
+  <meta name="description" content="Se filmen där Joakim Jaksen presenterar säljakademin: 22+ års säljerfarenhet, bolag som omsatt 200+ MSEK och över 1000 tränade säljare. 1 minut 45." />
+  <meta name="keywords" content="joakim jaksen film, säljutbildning video, säljakademi introduktion, säljcoach film" />
+
+  <!-- Open Graph -->
+  <meta property="og:type"        content="video.other" />
+  <meta property="og:url"         content="https://joakimjaksen.se/video" />
+  <meta property="og:title"       content="Joakim Jaksen — introduktion till säljakademin" />
+  <meta property="og:description" content="1 minut 45 om varför säljakademin finns — och vad du får ut av den." />
+  <meta property="og:image"       content="https://joakimjaksen.se/videos/hero-poster.jpg" />
+  <meta property="og:locale"      content="sv_SE" />
+  <meta property="og:video"       content="https://joakimjaksen.se/videos/joakim-jaksen-intro.mp4" />
+  <meta property="og:video:type"  content="video/mp4" />
+
+  <!-- Twitter -->
+  <meta name="twitter:card"        content="player" />
+  <meta name="twitter:title"       content="Joakim Jaksen — introduktion till säljakademin" />
+  <meta name="twitter:description" content="1 minut 45 om varför säljakademin finns." />
+  <meta name="twitter:image"       content="https://joakimjaksen.se/videos/hero-poster.jpg" />
+
+  <link rel="canonical" href="https://joakimjaksen.se/video" />
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="/style.css?v=<%= assetVersion %>" />
+  <link rel="stylesheet" href="/gamification.css?v=<%= assetVersion %>" />
+
+  <!-- Structured data — VideoObject. Den här sidan ÄR videons watch page:
+       sidans syfte är att spela filmen. Därför bor schemat här och inte på
+       startsidan (Google indexerar bara video som ligger på en watch page). -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "VideoObject",
+    "name": "Joakim Jaksen — introduktion till säljakademin",
+    "description": "Joakim Jaksen presenterar säljakademin: 22+ års säljerfarenhet, bolag som omsatt 200+ MSEK och 1000+ tränade säljare. <%= blocks.length %> utbildningsblock som täcker hela säljprocessen — från första intrycket till mental styrka, AI-verktyg och rekommenderad läsning.",
+    "thumbnailUrl": "https://joakimjaksen.se/videos/hero-poster.jpg",
+    "uploadDate": "2026-06-01T00:00:00+02:00",
+    "duration": "PT1M45S",
+    "contentUrl": "https://joakimjaksen.se/videos/joakim-jaksen-intro.mp4",
+    "embedUrl": "https://joakimjaksen.se/video",
+    "publisher": {
+      "@type": "Person",
+      "name": "Joakim Jaksen",
+      "url": "https://joakimjaksen.se"
+    },
+    "inLanguage": "sv"
+  }
+  </script>
+
+  <style>
+    .vid-wrap{background:#0f172a;border:1px solid rgba(255,255,255,0.08);border-radius:16px;overflow:hidden;
+              box-shadow:0 18px 44px rgba(0,0,0,0.45);}
+    .vid-wrap video{display:block;width:100%;height:auto;background:#000;}
+    .vid-meta{display:flex;gap:1.25rem;flex-wrap:wrap;color:#94a3b8;font-size:0.85rem;margin-top:0.85rem;}
+    .vid-facts{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:0.75rem;margin:2rem 0;}
+    .vid-fact{background:#141a2c;border:1px solid rgba(255,255,255,0.07);border-radius:12px;padding:1rem;text-align:center;}
+    .vid-fact strong{display:block;font-size:1.5rem;color:#f1f5f9;}
+    .vid-fact span{font-size:0.78rem;color:#94a3b8;}
+    @media (max-width:640px){ .vid-h1{font-size:1.6rem !important;} }
+  </style>
+</head>
+<body class="block-page">
+
+  <a href="#main-content" class="skip-to-main">Hoppa till innehåll</a>
+
+  <nav class="learn-nav">
+    <a href="/" class="learn-nav-back">← Hem</a>
+    <span class="learn-nav-title">🎬 Filmen</span>
+    <span class="learn-nav-user"><%= username || '' %></span>
+  </nav>
+
+  <main id="main-content" style="max-width:820px;margin:0 auto;padding:2rem 1.25rem 3rem;">
+
+    <h1 class="vid-h1" style="color:#f1f5f9;font-size:2rem;margin:0 0 0.5rem;line-height:1.2;">
+      Joakim Jaksen — introduktion till säljakademin
+    </h1>
+    <p style="color:#94a3b8;margin:0 0 1.5rem;font-size:1.02rem;line-height:1.6;">
+      1 minut 45 om varför akademin finns, vem som byggt den — och vad du får ut av den.
+    </p>
+
+    <div class="vid-wrap">
+      <video controls preload="metadata" playsinline
+             poster="/videos/hero-poster.jpg"
+             aria-label="Joakim Jaksen presenterar säljakademin">
+        <source src="/videos/joakim-jaksen-intro.mp4" type="video/mp4" />
+        Din webbläsare stöder inte HTML5-video.
+      </video>
+    </div>
+    <div class="vid-meta">
+      <span>⏱ 1:45</span>
+      <span>🇸🇪 Svenska</span>
+      <span>📅 Inspelad 2026</span>
+    </div>
+
+    <div class="vid-facts">
+      <div class="vid-fact"><strong>22+</strong><span>år i säljbranschen</span></div>
+      <div class="vid-fact"><strong>200+</strong><span>MSEK i säljresultat</span></div>
+      <div class="vid-fact"><strong>1000+</strong><span>tränade säljare</span></div>
+      <div class="vid-fact"><strong><%= blocks.length %></strong><span>utbildningsblock</span></div>
+    </div>
+
+    <h2 style="color:#f1f5f9;font-size:1.3rem;margin:2rem 0 0.75rem;">Vad filmen handlar om</h2>
+    <p style="color:#cbd5e1;line-height:1.7;margin:0 0 1rem;">
+      Jag heter Joakim Jaksen och har arbetat med sälj i över 22 år — som säljare, teamledare och säljchef.
+      Under den tiden har jag byggt och lett organisationer som omsatt mer än 200 miljoner kronor och tränat
+      över 1000 säljare. Filmen är en kort introduktion till varför jag byggt den här akademin.
+    </p>
+    <p style="color:#cbd5e1;line-height:1.7;margin:0 0 1rem;">
+      Kärnan är enkel: sälj är inte en talang man föds med, det är en färdighet man tränar. Det jag lär ut
+      kommer inte från böcker, utan från tusentals riktiga samtal — och det är uppdelat i
+      <%= blocks.length %> block som täcker hela säljprocessen, från första intrycket och behovsanalys till
+      invändningshantering, avslutstekniker, mental styrka och AI som säljverktyg.
+    </p>
+    <p style="color:#cbd5e1;line-height:1.7;margin:0 0 2rem;">
+      Vill du hellre läsa än titta hittar du hela upplägget på
+      <a href="/" style="color:#a5b4fc;">startsidan</a> och alla block under
+      <a href="/priser" style="color:#a5b4fc;">priser</a>.
+    </p>
+
+    <div style="text-align:center;padding:2rem 1.5rem;background:linear-gradient(145deg, rgba(99,102,241,0.1), rgba(139,92,246,0.05));border:1px solid rgba(99,102,241,0.3);border-radius:16px;">
+      <h2 style="color:#f1f5f9;margin:0 0 0.5rem;font-size:1.35rem;">Börja med Block 1 &amp; 2. Gratis.</h2>
+      <p style="color:#cbd5e1;margin:0 0 1.5rem;">Inget betalkort. Klart på 30 sekunder.</p>
+      <a href="/register" class="jc-btn" style="font-size:1rem;padding:0.85rem 1.75rem;">Skapa konto och börja nu →</a>
+    </div>
+
+  </main>
+</body>
+</html>

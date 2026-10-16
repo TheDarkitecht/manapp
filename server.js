@@ -633,9 +633,10 @@ app.use(compression({
 // Cache 1h på CDN för att avlasta servern utan att förlora freshness.
 app.get('/sitemap.xml', (req, res) => {
   const urls = [
-    { loc: 'https://joakimjaksen.se/',                  changefreq: 'weekly',  priority: '1.0', video: true, images: ['https://joakimjaksen.se/joakim-jaksen-saljcoach.jpg'] },
+    { loc: 'https://joakimjaksen.se/',                  changefreq: 'weekly',  priority: '1.0', images: ['https://joakimjaksen.se/joakim-jaksen-saljcoach.jpg'] },
     { loc: 'https://joakimjaksen.se/foretag',           changefreq: 'monthly', priority: '0.9', images: ['https://joakimjaksen.se/joakim-jaksen-foretag.jpg', 'https://joakimjaksen.se/joakim-jaksen-foretagsutbildning.jpg'] },
     { loc: 'https://joakimjaksen.se/priser',            changefreq: 'monthly', priority: '0.9' },
+    { loc: 'https://joakimjaksen.se/video',             changefreq: 'monthly', priority: '0.7', video: true },
     { loc: 'https://joakimjaksen.se/register',          changefreq: 'monthly', priority: '0.8' },
     { loc: 'https://joakimjaksen.se/login',             changefreq: 'monthly', priority: '0.5' },
     { loc: 'https://joakimjaksen.se/terms',             changefreq: 'yearly',  priority: '0.3' },
@@ -4890,6 +4891,17 @@ app.get('/foretag', (req, res) => {
   res.render('foretag', {
     username: req.session?.username || null,
     role:     req.session?.role || null,
+  });
+});
+
+// ── Public /video — watch page för hero-filmen ────────────────────────────────
+// Google indexerar bara video som ligger på en "watch page": en sida vars syfte
+// är att spela just den videon. Därför bor VideoObject-schemat här, inte på /.
+app.get('/video', (req, res) => {
+  res.render('video', {
+    username: req.session?.username || null,
+    role:     req.session?.role || null,
+    blocks:   salesBlocks,
   });
 });
 
