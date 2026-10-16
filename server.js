@@ -632,13 +632,15 @@ app.use(compression({
 // boot-datum som lastmod = signal till Google "innehållet kan ha uppdaterats".
 // Cache 1h på CDN för att avlasta servern utan att förlora freshness.
 app.get('/sitemap.xml', (req, res) => {
+  // OBS: lägg INTE tillbaka /login eller /register här. Båda renderar login.ejs som
+  // sätter <meta name="robots" content="noindex"> — att samtidigt anmäla dem i sitemappen
+  // ger Google motstridiga signaler och genererar "Exkluderad genom noindex-tagg" i GSC.
+  // Bara publika sidor UTAN noindex hör hemma i den här listan.
   const urls = [
     { loc: 'https://joakimjaksen.se/',                  changefreq: 'weekly',  priority: '1.0', images: ['https://joakimjaksen.se/joakim-jaksen-saljcoach.jpg'] },
     { loc: 'https://joakimjaksen.se/foretag',           changefreq: 'monthly', priority: '0.9', images: ['https://joakimjaksen.se/joakim-jaksen-foretag.jpg', 'https://joakimjaksen.se/joakim-jaksen-foretagsutbildning.jpg'] },
     { loc: 'https://joakimjaksen.se/priser',            changefreq: 'monthly', priority: '0.9' },
     { loc: 'https://joakimjaksen.se/video',             changefreq: 'monthly', priority: '0.7', video: true },
-    { loc: 'https://joakimjaksen.se/register',          changefreq: 'monthly', priority: '0.8' },
-    { loc: 'https://joakimjaksen.se/login',             changefreq: 'monthly', priority: '0.5' },
     { loc: 'https://joakimjaksen.se/terms',             changefreq: 'yearly',  priority: '0.3' },
     { loc: 'https://joakimjaksen.se/integritetspolicy', changefreq: 'yearly',  priority: '0.3' },
   ];
