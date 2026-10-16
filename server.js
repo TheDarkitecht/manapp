@@ -644,7 +644,7 @@ app.get('/sitemap.xml', (req, res) => {
   ];
   const videoBlock = `
     <video:video>
-      <video:thumbnail_loc>https://joakimjaksen.se/videos/hero-poster.jpg</video:thumbnail_loc>
+      <video:thumbnail_loc>https://joakimjaksen.se/videos/joakim-jaksen-intro-poster.jpg</video:thumbnail_loc>
       <video:title>Joakim Jaksen — introduktion till säljakademin</video:title>
       <video:description>Joakim Jaksen presenterar säljakademin: 22+ års säljerfarenhet, bolag som omsatt 200+ MSEK och 1000+ tränade säljare. Online säljutbildning som täcker hela säljprocessen.</video:description>
       <video:content_loc>https://joakimjaksen.se/videos/joakim-jaksen-intro.mp4</video:content_loc>
