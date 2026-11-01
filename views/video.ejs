@@ -18,7 +18,7 @@
   <meta property="og:video:type"  content="video/mp4" />
 
   <!-- Twitter -->
-  <meta name="twitter:card"        content="player" />
+  <meta name="twitter:card"        content="summary_large_image" />
   <meta name="twitter:title"       content="Joakim Jaksen — introduktion till säljakademin" />
   <meta name="twitter:description" content="1 minut 45 om varför säljakademin finns." />
   <meta name="twitter:image"       content="https://joakimjaksen.se/videos/joakim-jaksen-intro-poster.jpg" />
@@ -30,7 +30,18 @@
 
   <!-- Structured data — VideoObject. Den här sidan ÄR videons watch page:
        sidans syfte är att spela filmen. Därför bor schemat här och inte på
-       startsidan (Google indexerar bara video som ligger på en watch page). -->
+       startsidan (Google indexerar bara video som ligger på en watch page).
+
+       OBS, granskat 2026-11-01: att samma mp4 även är inbäddad på startsidan är
+       INTE ett fel och ska inte "städas bort". Google skriver ordagrant: "It's fine
+       to include the same video on both a watch page and another page alongside
+       other information." GSC-raden "Video isn't on a watch page" fäster på sidans
+       syfte, inte på filen — den försvinner inte av att startsidans spelare tas bort,
+       och en andra film där skulle få exakt samma rad. Lägg heller aldrig schemat på
+       startsidan: strukturerad data gör inte en säljsida till watch page.
+       Kopiera aldrig mp4:en till en andra URL — Google kan då blanda metadata.
+       Det som faktiskt behövs är att DEN HÄR sidan indexeras och börjar prestera
+       i Search; därför finns interna länkar hit från /, /foretag och /priser. -->
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
@@ -41,8 +52,7 @@
     "uploadDate": "2026-06-01T00:00:00+02:00",
     "duration": "PT1M45S",
     "contentUrl": "https://joakimjaksen.se/videos/joakim-jaksen-intro.mp4",
-    "embedUrl": "https://joakimjaksen.se/video",
-    "publisher": {
+    "creator": {
       "@type": "Person",
       "name": "Joakim Jaksen",
       "url": "https://joakimjaksen.se"

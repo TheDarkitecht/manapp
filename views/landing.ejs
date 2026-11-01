@@ -21,6 +21,10 @@
 
   <!-- Canonical -->
   <link rel="canonical" href="https://joakimjaksen.se/" />
+  <!-- Lanken rel=me tillbaka till Mastodon-kontot. Mastodon hamtar den har sidan och
+       satter gron bock pa falten Webbplats i profilen nar lanken gar at bada hall.
+       Tas den bort forsvinner verifieringen vid Mastodons nasta kontroll. -->
+  <link rel="me" href="https://mastodon.social/@joakimjaksen" />
 
   <!-- Structured data — Person -->
   <script type="application/ld+json">
@@ -41,7 +45,10 @@
       "https://www.linkedin.com/in/joakimjaksen/",
       "https://www.instagram.com/joakimjaksen",
       "https://www.youtube.com/@Joakim.Jaksen",
-      "https://www.tiktok.com/@joakimjaksen"
+      "https://www.tiktok.com/@joakimjaksen",
+      "https://www.facebook.com/profile.php?id=61595940608545",
+      "https://bsky.app/profile/joakimjaksen.se",
+      "https://mastodon.social/@joakimjaksen"
     ]
   }
   </script>
@@ -271,7 +278,10 @@
               Din webbläsare stöder inte HTML5-video.
             </video>
           </div>
-          <p style="text-align:center;margin:0.85rem 0 0;"><a href="/video" style="color:#a5b4fc;font-size:0.9rem;">Se filmen på egen sida →</a></p>
+          <!-- Enda interna inlanken till /video. /video maste indexeras for att filmen
+               ska kunna indexeras alls, och en lank racker inte langt pa en ung doman.
+               Ta aldrig bort den har - gor den hellre tydligare. -->
+          <p style="text-align:center;margin:1rem 0 0;"><a href="/video" class="lp-btn-ghost lp-btn-medium">Se hela filmen på egen sida →</a></p>
         </div>
 
       </div>
@@ -634,6 +644,7 @@
       </div>
       <div class="lp-footer-links">
         <a href="#akademin">Akademin</a>
+        <a href="/video">Filmen</a>
         <a href="/priser">Priser</a>
         <a href="/foretag">Företag & team</a>
         <a href="/login">Logga in</a>
