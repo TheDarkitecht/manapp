@@ -1,5 +1,6 @@
 // server.js
 const express     = require('express');
+const { GROQ_LLM_MODEL, GROQ_REASONING_EFFORT } = require('./services/llmModel');
 const session     = require('express-session');
 const bcrypt      = require('bcryptjs');
 const OpenAI      = require('openai');
@@ -2205,7 +2206,8 @@ app.post('/learn/:id/ova/:rpid/utvardera', requireLogin, chatLimiter, verifyCsrf
     let raw;
     try {
       const completion = await openai.chat.completions.create({
-        model: 'llama-3.3-70b-versatile',
+        model: GROQ_LLM_MODEL,
+        reasoning_effort: GROQ_REASONING_EFFORT,
         messages: attempt === 0 ? evalMessages : [
           ...evalMessages,
           { role: 'user', content: 'Ditt förra svar var ogiltigt. Returnera ENBART giltig JSON enligt schemat, inget annat.' },
@@ -4995,7 +4997,8 @@ app.post('/chat', requireLogin, chatLimiter, verifyCsrf, async (req, res) => {
 
   try {
     const completion = await openai.chat.completions.create({
-      model: 'llama-3.3-70b-versatile',
+      model: GROQ_LLM_MODEL,
+      reasoning_effort: GROQ_REASONING_EFFORT,
       messages: [{ role: 'system', content: JOCKE_SYSTEM_PROMPT }, ...sanitized],
       max_tokens: jockeMaxTokens(req.session.role), // Pro får 900, Premium 500
     });
@@ -5058,7 +5061,8 @@ REGLER:
 
   try {
     const completion = await openai.chat.completions.create({
-      model: 'llama-3.3-70b-versatile',
+      model: GROQ_LLM_MODEL,
+      reasoning_effort: GROQ_REASONING_EFFORT,
       messages: [{ role: 'system', content: blockChatSystemPrompt }, ...sanitized],
       max_tokens: jockeMaxTokens(req.session.role),
     });
@@ -5132,7 +5136,8 @@ ${ROLEPLAY_COACH_INSTRUCTION}
 
   try {
     const completion = await openai.chat.completions.create({
-      model: 'llama-3.3-70b-versatile',
+      model: GROQ_LLM_MODEL,
+      reasoning_effort: GROQ_REASONING_EFFORT,
       messages: [{ role: 'system', content: roleplaySystemPrompt }, ...sanitized],
       max_tokens: jockeMaxTokens(req.session.role),
     });

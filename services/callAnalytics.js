@@ -8,6 +8,7 @@
 // ═══════════════════════════════════════════════════════════════════════════
 
 const proAnalysis = require('../proCallAnalysis');
+const { GROQ_LLM_MODEL, GROQ_REASONING_EFFORT } = require('./llmModel');
 const prompts     = require('./prompts/feedback');
 const transcribeService = require('./transcribe');
 const { fetchWithTimeout, TIMEOUT } = require('./fetchTimeout');
@@ -200,7 +201,8 @@ async function identifySpeakers(rawText, apiKey) {
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      model: 'llama-3.3-70b-versatile',
+      model: GROQ_LLM_MODEL,
+      reasoning_effort: GROQ_REASONING_EFFORT,
       messages: [
         { role: 'system', content: DIARIZATION_SYSTEM },
         { role: 'user',   content: `RÅTRANSKRIPT:\n\n${rawText}` },
@@ -254,6 +256,7 @@ async function analyzeWithPrompt(transcript, apiKey, { promptVersion, userTitle 
     },
     body: JSON.stringify({
       model:       cfg.model,
+      reasoning_effort: GROQ_REASONING_EFFORT,
       messages,
       max_tokens:  cfg.maxTokens,
       temperature: cfg.temperature,
@@ -398,7 +401,8 @@ async function extractObjections(transcript, apiKey) {
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      model: 'llama-3.3-70b-versatile',
+      model: GROQ_LLM_MODEL,
+      reasoning_effort: GROQ_REASONING_EFFORT,
       messages: [
         { role: 'system', content: OBJECTION_EXTRACTOR_SYSTEM },
         { role: 'user',   content: `TRANSKRIPT:\n\n${transcript}` },
@@ -492,7 +496,8 @@ async function generateCaseStudy(transcript, analysis, apiKey, { methodology, sa
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      model: 'llama-3.3-70b-versatile',
+      model: GROQ_LLM_MODEL,
+      reasoning_effort: GROQ_REASONING_EFFORT,
       messages: [
         { role: 'system', content: CASE_STUDY_SYSTEM },
         { role: 'user',   content: userContent },

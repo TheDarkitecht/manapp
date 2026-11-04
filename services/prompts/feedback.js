@@ -36,6 +36,8 @@
 // inkluderar dem automatiskt om de finns.
 // ═══════════════════════════════════════════════════════════════════════════
 
+const { GROQ_LLM_MODEL } = require('../llmModel');
+
 // ─── SPEAKER-DISAMBIGUATION (används av alla metodiker) ─────────────────────
 // Whisper ger oss bara löpande text utan speaker-labels. När vi INTE har
 // kört diarization-pre-processing ("Säljare: / Kund:"-prefix) måste LLM:n
@@ -273,7 +275,7 @@ const versions = {
     name:         'Tempoförsäljning',
     description:  'Hälsokost, tävlingsvinnare, tidsbundna prenumerationer. Entusiasm, assumptive close, stäng luckor.',
     systemPrompt: TEMPO_SYSTEM,
-    model:        'llama-3.3-70b-versatile',
+    model:        GROQ_LLM_MODEL,
     maxTokens:    2000,
     temperature:  0.4,
     outputFormat: 'markdown',
@@ -288,7 +290,7 @@ const versions = {
     name:         'Ledd abonnemangsförsäljning',
     description:  'Telekom, el, TV, bredband. Vass intresseväckare, styrande frågor, tie-downs genom hela samtalet.',
     systemPrompt: ABONNEMANG_SYSTEM,
-    model:        'llama-3.3-70b-versatile',
+    model:        GROQ_LLM_MODEL,
     maxTokens:    2000,
     temperature:  0.4,
     outputFormat: 'markdown',
@@ -303,7 +305,7 @@ const versions = {
     name:         'Behovsstyrd dialog',
     description:  'Försäkringar, pension, ekonomi, bolån. Öppna frågor, lyssna, bygg behovet i kundens huvud.',
     systemPrompt: BEHOVSSTYRD_SYSTEM,
-    model:        'llama-3.3-70b-versatile',
+    model:        GROQ_LLM_MODEL,
     maxTokens:    2000,
     temperature:  0.4,
     outputFormat: 'markdown',
@@ -318,7 +320,7 @@ const versions = {
     name:         'B2B konsultativ',
     description:  'SaaS, företagstjänster, större avtal. Discovery, flera intressenter, ROI-argumentation.',
     systemPrompt: B2B_KONSULTATIV_SYSTEM,
-    model:        'llama-3.3-70b-versatile',
+    model:        GROQ_LLM_MODEL,
     maxTokens:    2000,
     temperature:  0.4,
     outputFormat: 'markdown',
@@ -333,7 +335,7 @@ const versions = {
     name:         'Inkommande support/upsell',
     description:  'Kundservice som även säljer, befintlig kund-merförsäljning, inkommande leads. Lös först, sälj mjukt.',
     systemPrompt: INKOMMANDE_SYSTEM,
-    model:        'llama-3.3-70b-versatile',
+    model:        GROQ_LLM_MODEL,
     maxTokens:    2000,
     temperature:  0.4,
     outputFormat: 'markdown',

@@ -3,10 +3,11 @@
 // Pure funktions: ingen DB-access, ingen filhantering — enbart API-anrop.
 
 const { fetchWithTimeout, TIMEOUT } = require('./services/fetchTimeout');
+const { GROQ_LLM_MODEL, GROQ_REASONING_EFFORT } = require('./services/llmModel');
 
 const GROQ_API_URL = 'https://api.groq.com/openai/v1';
 const WHISPER_MODEL = 'whisper-large-v3-turbo'; // Snabbast + billigast
-const LLM_MODEL = 'llama-3.3-70b-versatile';
+const LLM_MODEL = GROQ_LLM_MODEL;
 
 /**
  * Transkribera ljudfil via Groq Whisper.
@@ -97,6 +98,7 @@ VIKTIGT:
     },
     body: JSON.stringify({
       model: LLM_MODEL,
+      reasoning_effort: GROQ_REASONING_EFFORT,
       messages: [
         { role: 'system', content: systemPrompt },
         { role: 'user', content: userContent },
