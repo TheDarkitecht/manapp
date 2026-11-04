@@ -372,6 +372,15 @@ module.exports = function createCallsRouter(deps) {
     if (!job) return res.redirect('/admin/calls');
     if (job.status !== 'failed') return res.redirect(`/admin/calls/${jobId}`);
 
+    // Ljudfilen nådde aldrig lagringen (upload-felet) — retry skulle bara ge
+    // ett kryptiskt S3-fel om tom Key. Behåll failed med ett begripligt besked.
+    if (!job.storage_key) {
+      db.updateCallJob(jobId, {
+        error: 'Ljudfilen sparades aldrig (uppladdningen misslyckades). Ladda upp filen på nytt.',
+      });
+      return res.redirect(`/admin/calls/${jobId}`);
+    }
+
     db.updateCallJob(jobId, {
       status:       'pending',
       error:        null,
