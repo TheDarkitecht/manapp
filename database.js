@@ -3445,6 +3445,8 @@ function deleteCallJob(jobId) {
   const job = getCallJob(jobId);
   if (!job) return null;
   db.run('DELETE FROM call_word_frequencies WHERE job_id = ?', [jobId]);
+  db.run('DELETE FROM call_objections       WHERE job_id = ?', [jobId]);
+  db.run('DELETE FROM call_analysis_runs    WHERE job_id = ?', [jobId]);
   db.run('DELETE FROM call_analyses         WHERE job_id = ?', [jobId]);
   db.run('DELETE FROM call_transcripts      WHERE job_id = ?', [jobId]);
   db.run('DELETE FROM call_jobs             WHERE id = ?',     [jobId]);
