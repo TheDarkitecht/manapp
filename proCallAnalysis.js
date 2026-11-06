@@ -4,6 +4,7 @@
 
 const { fetchWithTimeout, TIMEOUT } = require('./services/fetchTimeout');
 const { GROQ_LLM_MODEL, GROQ_REASONING_EFFORT } = require('./services/llmModel');
+const { compressForWhisper } = require('./services/audioCompress');
 
 const GROQ_API_URL = 'https://api.groq.com/openai/v1';
 const WHISPER_MODEL = 'whisper-large-v3-turbo'; // Snabbast + billigast
@@ -19,9 +20,12 @@ const LLM_MODEL = GROQ_LLM_MODEL;
 async function transcribeAudio(audioBuffer, filename, apiKey) {
   if (!apiKey) throw new Error('GROQ_API_KEY saknas');
 
+  // Filer över Groqs 25 MB-gräns komprimeras först (se services/audioCompress.js)
+  const audio = await compressForWhisper(audioBuffer, filename);
+
   const form = new FormData();
-  const blob = new Blob([audioBuffer]);
-  form.append('file', blob, filename);
+  const blob = new Blob([audio.buffer]);
+  form.append('file', blob, audio.filename);
   form.append('model', WHISPER_MODEL);
   form.append('language', 'sv'); // svenska — fallback till auto-detect om tveksamt
   form.append('response_format', 'verbose_json');
